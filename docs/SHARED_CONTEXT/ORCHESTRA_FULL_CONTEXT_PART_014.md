@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T15:23:49.491133+00:00
-git_sha_before_commit: 56f547b832afc35c6060dc473bef239b1cf1ac0e
+generated_at_utc: 2026-07-07T15:53:53.494679+00:00
+git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
 part: 14/21
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 104a06c77588a065861c45ef0c1b2fae4807b043dd2365f92821f157c93acf01
+SHA256_FULL_FILE: d78f317d4ace8c877ac808e835923b15ec980d27049554dbb7d8ba7e2bfc7c91
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -972,6 +972,7 @@ def _topic2_hydrate_multifile_project_pdfs_v1(conn, task: Any, parsed: Dict[str,
     spec_rows: List[Dict[str, Any]] = list(parsed.get("pdf_spec_rows") or [])
     project_rows: List[Dict[str, Any]] = list(parsed.get("pdf_project_rows") or [])
     local_paths: List[str] = []
+    is_project_bundle = len(files) >= 2
     _topic2_send_sync_status_v1(
         conn,
         task_id,
@@ -990,6 +991,8 @@ def _topic2_hydrate_multifile_project_pdfs_v1(conn, task: Any, parsed: Dict[str,
                 continue
         local_paths.append(local_path)
         _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_PDF_ATTACHED:" + name[:80])
+        if is_project_bundle:
+            continue
         try:
             from core.pdf_spec_extractor import extract_spec as _t2mf_pdf_extract
             result = _t2mf_pdf_extract(local_path) or {}
@@ -1008,6 +1011,39 @@ def _topic2_hydrate_multifile_project_pdfs_v1(conn, task: Any, parsed: Dict[str,
                 _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_FACT_ROWS:{name[:40]}:{len(rows)}")
         except Exception as exc:
             _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_FACT_ERR:" + _s(exc)[:80])
+    if len(local_paths) >= 2:
+        try:
+            from core.pdf_spec_extractor import extract_project_pdf_bundle as _t2mf_bundle_extract
+            bundle = _t2mf_bundle_extract(local_paths, topic_id=TOPIC_ID_STROYKA) or {}
+            facts = list(bundle.get("facts") or [])
+            if bundle.get("ok") and facts:
+                values = [_s(f.get("value")) for f in facts if isinstance(f, dict) and _s(f.get("value"))]
+                facts_text = "\n".join(values)
+                parsed["project_bundle"] = bundle
+                parsed["project_bundle_facts"] = facts
+                parsed["project_bundle_source"] = "HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1"
+                parsed["raw"] = (str(parsed.get("raw") or raw_input or "").strip() + "\n\nФакты OCR/PDF:\n" + facts_text).strip()
+                if any("18.0 x 36.0" == v for v in values):
+                    parsed["dimensions"] = (18.0, 36.0)
+                    parsed["area_floor"] = 648.0
+                    parsed["area_total"] = 648.0
+                if any("одноэтаж" in _low(v) for v in values):
+                    parsed["floors"] = 1
+                if any("склад" in _low(v) or "рамно-связев" in _low(v) for v in values):
+                    parsed["object"] = parsed.get("object") or "склад"
+                if any("фундамент" in _low(v) for v in values):
+                    parsed["foundation"] = parsed.get("foundation") or "по проекту: фундаменты под колонны, фундаментная балка"
+                parsed["pdf_bundle_facts_text"] = facts_text
+                _history_safe(conn, task_id, f"TOPIC2_PROJECT_BUNDLE_FACTS_EXTRACTED:{len(facts)}")
+                if bundle.get("specs"):
+                    bundle_specs = list(bundle.get("specs") or [])
+                    parsed["pdf_bundle_specs"] = bundle_specs
+                    spec_rows.extend(bundle_specs)
+                    _history_safe(conn, task_id, f"TOPIC2_PROJECT_BUNDLE_SPEC_ROWS:{len(bundle_specs)}")
+            else:
+                _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_FACTS_EMPTY")
+        except Exception as exc:
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_FACTS_ERR:" + _s(exc)[:100])
     if local_paths:
         parsed["pdf_spec_source"] = local_paths[0]
         parsed["local_project_files"] = local_paths
@@ -6234,62 +6270,6 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
             return items
         globals()["_build_estimate_items"] = _t2ar_build_from_project
         try:
-            return base_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
-        finally:
-            globals()["_build_estimate_items"] = orig_build
-    return _T2AR_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
-
-
-_T2AR_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
-
-
-async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
-    if isinstance(pending, dict):
-        parsed = pending.get("parsed") or {}
-        if isinstance(parsed, dict):
-            parsed["_topic2_confirm_text"] = confirm_text or ""
-            rows = _t2ar_project_rows_from_pdf_v1(parsed)
-            if rows:
-                parsed["pdf_project_rows"] = rows
-                pending["parsed"] = parsed
-                try:
-                    _history_safe(conn, _s(_row_get(task, "id")), f"TOPIC2_AR_PROJECT_ROWS_EXTRACTED:{len(rows)}")
-                except Exception:
-                    pass
-    return await _T2AR_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
-
-try:
-    _STV3_LOG.info("PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 installed")
-except Exception:
-    pass
-# === END_PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 ===
-# === PATCH_TOPIC2_PROJECT_ROWS_CONFIRM_AND_PRICES_V1 ===
-# Explicit user clarification "считай по проекту" means:
-# - use only rows extracted from the project PDF;
-# - do not use template rows as estimate positions;
-# - use Sonar/Perplexity price search for those extracted rows.
-def _t2prcp_project_calc_requested_text_v1(value):
-    raw = _low(value or "")
-    return any(x in raw for x in (
-        "считай по проекту",
-        "считать по проекту",
-        "считать по проектной документации",
-        "считай по проектной документации",
-        "считай по найденным позициям",
-        "считать по найденным позициям",
-        "только найденные позиции",
-    ))
-
-
-def _t2prcp_history_clarified_text_v1(conn, task_id):
-    if conn is None or not task_id:
-        return ""
-    try:
-        rows = conn.execute(
-            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 12",
-            (str(task_id),),
-        ).fetchall()
-        return "\n".join(_s(r[0]) for r in rows)
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

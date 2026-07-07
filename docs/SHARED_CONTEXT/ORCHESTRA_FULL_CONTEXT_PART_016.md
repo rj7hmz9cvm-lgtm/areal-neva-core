@@ -1,8 +1,55 @@
 # ORCHESTRA_FULL_CONTEXT_PART_016
-generated_at_utc: 2026-07-07T15:23:49.492868+00:00
-git_sha_before_commit: 56f547b832afc35c6060dc473bef239b1cf1ac0e
+generated_at_utc: 2026-07-07T15:53:53.498588+00:00
+git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
 part: 16/21
 
+
+====================================================================================================
+BEGIN_FILE: core/temp_cleanup.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 2b7b91b8f6ba3a13518d234d8c24a426b85854300ae56a458fae4c6bcdb06194
+====================================================================================================
+# === TEMP_CLEANUP_V1 ===
+import os, logging, glob
+from pathlib import Path
+logger = logging.getLogger(__name__)
+
+TEMP_DIRS = ["/tmp", "/root/.areal-neva-core/data/temp"]
+
+def cleanup_file(path: str) -> bool:
+    try:
+        if path and os.path.exists(path):
+            os.remove(path)
+            logger.info("TEMP_CLEANED path=%s", path)
+            return True
+    except Exception as e:
+        logger.warning("TEMP_CLEANUP_ERR path=%s err=%s", path, e)
+    return False
+
+def cleanup_task_temps(task_id: str) -> int:
+    """Удалить все temp файлы связанные с task_id"""
+    count = 0
+    for d in TEMP_DIRS:
+        if not os.path.exists(d):
+            continue
+        for f in glob.glob(f"{d}/*{task_id}*"):
+            if cleanup_file(f):
+                count += 1
+    return count
+
+def cleanup_after_upload(local_paths: list) -> int:
+    count = 0
+    for p in (local_paths or []):
+        if p and isinstance(p, str) and "/tmp" in p:
+            if cleanup_file(p):
+                count += 1
+    return count
+# === END TEMP_CLEANUP_V1 ===
+
+====================================================================================================
+END_FILE: core/temp_cleanup.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/template_engine_v1.py

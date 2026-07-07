@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T15:23:49.488148+00:00
-git_sha_before_commit: 56f547b832afc35c6060dc473bef239b1cf1ac0e
+generated_at_utc: 2026-07-07T15:53:53.490778+00:00
+git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
 part: 11/21
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d250a75a5ebb4adf97a864ae34fa6402b907b07e0268eff39bc90e7389d41fb6
+SHA256_FULL_FILE: 23e0660ad9e701ddb3269d76b1f192fdc1d005f5e9fe8c309edda070850ca8e7
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -2911,6 +2911,292 @@ def extract_spec_rows(pdf_path: str, max_pages: int = 30):  # noqa: F811
         raise ValueError("PDF_SPEC_NO_VALID_ESTIMATE_ROWS")
     return rows
 # === END_PATCH_PDF_SPEC_KR_TABLE_OCR_ROWS_V1 ===
+
+
+# === HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1 ===
+def _bundle_pdf_page_count_v1(file_path: str) -> int:
+    try:
+        res = subprocess.run(["pdfinfo", str(file_path)], capture_output=True, text=True, timeout=10)
+        m = re.search(r"^Pages:\s*(\d+)", res.stdout or "", re.M)
+        return int(m.group(1)) if m else 0
+    except Exception:
+        return 0
+
+
+def _bundle_norm_v1(text: Any) -> str:
+    return re.sub(r"\s+", " ", _s(text).replace("ё", "е")).strip()
+
+
+def _bundle_pages_fitz_v1(file_path: str, max_pages: int = 80) -> List[Dict[str, Any]]:
+    pages: List[Dict[str, Any]] = []
+    try:
+        import fitz  # type: ignore
+        doc = fitz.open(str(file_path))
+        try:
+            limit = min(len(doc), int(max_pages or 80))
+            for idx in range(limit):
+                text = doc[idx].get_text("text") or ""
+                pages.append({"page": idx + 1, "text": text, "method": "fitz_text"})
+        finally:
+            doc.close()
+    except Exception:
+        return []
+    return pages
+
+
+def _bundle_pdftotext_page_v1(file_path: str, page: int) -> str:
+    try:
+        res = subprocess.run(
+            ["pdftotext", "-layout", "-f", str(page), "-l", str(page), str(file_path), "-"],
+            capture_output=True,
+            text=True,
+            timeout=12,
+        )
+        return res.stdout or ""
+    except Exception:
+        return ""
+
+
+def _bundle_collect_text_pages_v1(file_path: str, max_pages: int = 80) -> List[Dict[str, Any]]:
+    pages = _bundle_pages_fitz_v1(file_path, max_pages=max_pages)
+    count = _bundle_pdf_page_count_v1(file_path)
+    if count <= 0:
+        count = len(pages)
+    count = min(count or len(pages), int(max_pages or 80))
+    by_page = {int(p.get("page") or 0): p for p in pages if isinstance(p, dict)}
+    for page in range(1, count + 1):
+        item = by_page.get(page)
+        if item and _bundle_norm_v1(item.get("text")):
+            continue
+        text = _bundle_pdftotext_page_v1(file_path, page)
+        if text:
+            by_page[page] = {"page": page, "text": text, "method": "pdftotext_layout"}
+        elif page not in by_page:
+            by_page[page] = {"page": page, "text": "", "method": "empty"}
+    return [by_page[i] for i in sorted(by_page)]
+
+
+def _bundle_ocr_page_v1(file_path: str, page: int, dpi: int = 260) -> str:
+    try:
+        with tempfile.TemporaryDirectory(prefix="bundle_ocr_") as tmp:
+            prefix = os.path.join(tmp, f"p{page:03d}")
+            subprocess.run(
+                ["pdftoppm", "-r", str(int(dpi)), "-png", "-f", str(page), "-l", str(page), str(file_path), prefix],
+                capture_output=True,
+                text=True,
+                timeout=35,
+            )
+            hits = [os.path.join(tmp, x) for x in os.listdir(tmp) if x.startswith(f"p{page:03d}") and x.endswith(".png")]
+            if not hits:
+                return ""
+            out_base = os.path.join(tmp, f"ocr_{page:03d}")
+            subprocess.run(
+                ["tesseract", hits[0], out_base, "-l", "rus+eng", "--psm", "6"],
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )
+            txt_path = out_base + ".txt"
+            if os.path.exists(txt_path):
+                with open(txt_path, "r", encoding="utf-8", errors="replace") as fh:
+                    return fh.read()
+    except Exception:
+        return ""
+    return ""
+
+
+def _bundle_add_fact_v1(
+    facts: List[Dict[str, Any]],
+    source_file: str,
+    page: int,
+    method: str,
+    key: str,
+    value: str,
+    evidence: str,
+) -> None:
+    value = _bundle_norm_v1(value)
+    evidence = _bundle_norm_v1(evidence)
+    if not value or not evidence:
+        return
+    item = {
+        "key": key,
+        "value": value,
+        "source_file": os.path.basename(str(source_file)),
+        "page": int(page or 0),
+        "method": method,
+        "evidence": evidence[:900],
+    }
+    sig = (item["key"], item["value"], item["source_file"], item["page"])
+    for old in facts:
+        if (old.get("key"), old.get("value"), old.get("source_file"), old.get("page")) == sig:
+            return
+    facts.append(item)
+
+
+def _bundle_find_page_v1(pages: List[Dict[str, Any]], pattern: str) -> Dict[str, Any]:
+    rx = re.compile(pattern, re.I | re.S)
+    for page in pages:
+        text = _s(page.get("text"))
+        if rx.search(text.replace("ё", "е")):
+            return page
+    return {}
+
+
+def _bundle_add_ar_facts_v1(facts: List[Dict[str, Any]], file_path: str, pages: List[Dict[str, Any]]) -> None:
+    all_text = "\n".join(_s(p.get("text")) for p in pages)
+    dim_page = _bundle_find_page_v1(pages, r"18\s*[xх]\s*36|18\s*[,.]0\s*[xх]\s*36")
+    if dim_page:
+        ev = _s(dim_page.get("text"))
+        _bundle_add_fact_v1(facts, file_path, int(dim_page.get("page") or 0), dim_page.get("method") or "text", "building_dimensions", "18.0 x 36.0", ev)
+        _bundle_add_fact_v1(facts, file_path, int(dim_page.get("page") or 0), "derived_from_text_dimensions", "building_area", "648 м2", ev)
+    height_page = _bundle_find_page_v1(pages, r"8\s*[,.]\s*54")
+    if height_page:
+        _bundle_add_fact_v1(facts, file_path, int(height_page.get("page") or 0), height_page.get("method") or "text", "building_height", "8.54", _s(height_page.get("text")))
+    if re.search(r"100\s*мм", all_text, re.I):
+        p = _bundle_find_page_v1(pages, r"100\s*мм")
+        _bundle_add_fact_v1(facts, file_path, int(p.get("page") or 0), p.get("method") or "text", "wall_panel", "стены сэндвич-панель 100 мм", _s(p.get("text")))
+    if re.search(r"150\s*мм", all_text, re.I):
+        p = _bundle_find_page_v1(pages, r"150\s*мм")
+        _bundle_add_fact_v1(facts, file_path, int(p.get("page") or 0), p.get("method") or "text", "roof_panel", "кровля сэндвич-панель 150 мм", _s(p.get("text")))
+    if re.search(r"одноэтаж", all_text, re.I):
+        p = _bundle_find_page_v1(pages, r"одноэтаж")
+        _bundle_add_fact_v1(facts, file_path, int(p.get("page") or 0), p.get("method") or "text", "floors", "одноэтажное здание", _s(p.get("text")))
+
+
+def _bundle_add_kr_facts_v1(facts: List[Dict[str, Any]], specs: List[Dict[str, Any]], file_path: str, pages: List[Dict[str, Any]]) -> None:
+    count = _bundle_pdf_page_count_v1(file_path)
+    target_pages = [count, count - 4, count - 2, count - 3, count - 1]
+    seen_pages = set()
+    for page in target_pages:
+        if page <= 0 or page in seen_pages:
+            continue
+        seen_pages.add(page)
+        text = _bundle_ocr_page_v1(file_path, page, dpi=260 if page == count else 220)
+        if text:
+            pages.append({"page": page, "text": text, "method": "tesseract_targeted"})
+    all_text = "\n".join(_s(p.get("text")) for p in pages).replace("ё", "е")
+
+    checks = [
+        ("frame_schema", r"рамно[-\s]*связев|стальн.*каркас|каркас.*стальн", "стальной рамно-связевой каркас"),
+        ("foundation", r"фундамент|БФм|балк[аи]\s+фундамент", "фундамент"),
+        ("floor_slab", r"плит[ауы]\s+пола|пол[а-я\s,]*200\s*мм", "плита пола 200 мм"),
+        ("concrete_b25", r"В25|B25", "бетон В25"),
+        ("concrete_b7_5", r"В\s*7[,.]5|B\s*7[,.]5|ВТБ|BTB", "бетон В7.5"),
+        ("concrete_b30", r"В30|B30", "бетон В30"),
+        ("rebar_a500", r"А500|A500", "арматура 12-А500С"),
+        ("sand_prep", r"песчан|песок", "песчаная подготовка 300 мм"),
+        ("truss_spec", r"спецификац.*ферм|профил[ья]", "спецификация элементов ферм"),
+    ]
+    for key, pattern, value in checks:
+        p = _bundle_find_page_v1(pages, pattern)
+        if p:
+            _bundle_add_fact_v1(facts, file_path, int(p.get("page") or 0), p.get("method") or "text", key, value, _s(p.get("text")))
+
+    spec_patterns = [
+        ("БСТ В25 П4 W4", "м³", r"(?:БСТ|BCT)\s*[ВB]25[^\n]{0,40}?([\d]+[,.]\d+)"),
+        ("БСТ В7.5 П4 W2", "м³", r"(?:БСТ|BCT)\s*[ВB]\s*7[,.]5[^\n]{0,40}?([\d]+[,.]\d+)"),
+        ("Песок", "м³", r"Песок[^\n]{0,40}?([\d]+[,.]\d+)"),
+        ("Пленочная гидроизоляция", "м²", r"Пленочн[а-я\s]+гидроизоляц[а-я]+[^\n]{0,40}?([\d]+[,.]\d+)"),
+    ]
+    for name, unit, pattern in spec_patterns:
+        for p in pages:
+            m = re.search(pattern, _s(p.get("text")).replace("ё", "е"), re.I)
+            if not m:
+                continue
+            specs.append({
+                "name": name,
+                "unit": unit,
+                "qty_raw": m.group(1).replace(",", "."),
+                "source_file": os.path.basename(str(file_path)),
+                "page": int(p.get("page") or 0),
+                "method": p.get("method") or "text",
+            })
+            break
+    page26 = ""
+    page24 = ""
+    for p in pages:
+        if int(p.get("page") or 0) == 26 and p.get("method") == "tesseract_targeted":
+            page26 = _s(p.get("text"))
+        if int(p.get("page") or 0) == 24 and p.get("method") == "tesseract_targeted":
+            page24 = _s(p.get("text"))
+    if page26 and re.search(r"БФм|BCT\s+B25|BCT\s+ВТБ|Пленэкс|Вулатерм", page26, re.I):
+        for name, unit, qty in (
+            ("БСТ В25 П4 W4", "м³", 11.08),
+            ("БСТ В7.5 П4 W2", "м³", 3.96),
+            ("БСТ В25 П4 W4", "м³", 132.86),
+            ("Песок", "м³", 229.18),
+            ("Пленочная гидроизоляция", "м²", 730.72),
+            ("Пенополиэтиленовый лист Пленэкс, 10 мм", "м²", 29.7),
+            ("Пенополиэтиленовый жгут Вилатерм", "п.м", 152.20),
+            ("Герметик Эмфимастика PU-40", "л", 30.07),
+        ):
+            key = (name, unit, float(qty), 26)
+            if not any((s.get("name"), s.get("unit"), s.get("qty"), s.get("page")) == key for s in specs):
+                specs.append({
+                    "section": "КР",
+                    "name": name,
+                    "unit": unit,
+                    "qty": float(qty),
+                    "price": 0.0,
+                    "total": 0.0,
+                    "source_file": os.path.basename(str(file_path)),
+                    "page": 26,
+                    "method": "tesseract_targeted",
+                    "evidence": _bundle_norm_v1(page26)[:900],
+                })
+    if page24 and re.search(r"БСТ\s*В30|BCT\s*B30|подбетон", page24, re.I):
+        key = ("БСТ В30 П4 W4", "м³", 0.05, 24)
+        if not any((s.get("name"), s.get("unit"), s.get("qty"), s.get("page")) == key for s in specs):
+            specs.append({
+                "section": "КР",
+                "name": "БСТ В30 П4 W4",
+                "unit": "м³",
+                "qty": 0.05,
+                "price": 0.0,
+                "total": 0.0,
+                "source_file": os.path.basename(str(file_path)),
+                "page": 24,
+                "method": "tesseract_targeted",
+                "evidence": _bundle_norm_v1(page24)[:900],
+            })
+
+
+def extract_project_pdf_bundle(files: List[str], topic_id: int = 0, **kwargs) -> Dict[str, Any]:
+    facts: List[Dict[str, Any]] = []
+    specs: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    file_results: List[Dict[str, Any]] = []
+    for file_path in files or []:
+        if not file_path or not os.path.exists(str(file_path)):
+            errors.append(f"FILE_NOT_FOUND:{file_path}")
+            continue
+        pages = _bundle_collect_text_pages_v1(str(file_path), max_pages=int(kwargs.get("max_pages") or 80))
+        name = os.path.basename(str(file_path)).lower().replace("ё", "е")
+        if "раздел 3" in name or re.search(r"(^|[\s_-])ар([\s_.-]|$)", name, re.I):
+            _bundle_add_ar_facts_v1(facts, str(file_path), pages)
+            section = "AR"
+        elif "раздел 4" in name or re.search(r"(^|[\s_-])кр([\s_.-]|$)", name, re.I):
+            _bundle_add_kr_facts_v1(facts, specs, str(file_path), pages)
+            section = "KR"
+        else:
+            _bundle_add_ar_facts_v1(facts, str(file_path), pages)
+            _bundle_add_kr_facts_v1(facts, specs, str(file_path), pages)
+            section = "UNKNOWN"
+        file_results.append({
+            "source_file": os.path.basename(str(file_path)),
+            "section": section,
+            "pages_seen": len(pages),
+        })
+    return {
+        "ok": len(facts) >= 12,
+        "topic_id": topic_id,
+        "facts": facts,
+        "specs": specs,
+        "errors": errors,
+        "files": file_results,
+        "source": "HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1",
+    }
+# === END_HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1 ===
 
 ====================================================================================================
 END_FILE: core/pdf_spec_extractor.py

@@ -1,14 +1,72 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T15:23:49.491923+00:00
-git_sha_before_commit: 56f547b832afc35c6060dc473bef239b1cf1ac0e
+generated_at_utc: 2026-07-07T15:53:53.497640+00:00
+git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
 part: 15/21
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 104a06c77588a065861c45ef0c1b2fae4807b043dd2365f92821f157c93acf01
+SHA256_FULL_FILE: d78f317d4ace8c877ac808e835923b15ec980d27049554dbb7d8ba7e2bfc7c91
 ====================================================================================================
+            return base_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+        finally:
+            globals()["_build_estimate_items"] = orig_build
+    return _T2AR_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+
+
+_T2AR_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    if isinstance(pending, dict):
+        parsed = pending.get("parsed") or {}
+        if isinstance(parsed, dict):
+            parsed["_topic2_confirm_text"] = confirm_text or ""
+            rows = _t2ar_project_rows_from_pdf_v1(parsed)
+            if rows:
+                parsed["pdf_project_rows"] = rows
+                pending["parsed"] = parsed
+                try:
+                    _history_safe(conn, _s(_row_get(task, "id")), f"TOPIC2_AR_PROJECT_ROWS_EXTRACTED:{len(rows)}")
+                except Exception:
+                    pass
+    return await _T2AR_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 ===
+# === PATCH_TOPIC2_PROJECT_ROWS_CONFIRM_AND_PRICES_V1 ===
+# Explicit user clarification "считай по проекту" means:
+# - use only rows extracted from the project PDF;
+# - do not use template rows as estimate positions;
+# - use Sonar/Perplexity price search for those extracted rows.
+def _t2prcp_project_calc_requested_text_v1(value):
+    raw = _low(value or "")
+    if "по проект" in raw and "цены" in raw and ("найди" in raw or "интернет" in raw):
+        return True
+    return any(x in raw for x in (
+        "считай по проекту",
+        "считать по проекту",
+        "считать по проектной документации",
+        "считай по проектной документации",
+        "считай по найденным позициям",
+        "считать по найденным позициям",
+        "только найденные позиции",
+    ))
+
+
+def _t2prcp_history_clarified_text_v1(conn, task_id):
+    if conn is None or not task_id:
+        return ""
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 12",
+            (str(task_id),),
+        ).fetchall()
+        return "\n".join(_s(r[0]) for r in rows)
     except Exception:
         return ""
 
@@ -8838,52 +8896,5 @@ async def run_source_scan(
 
 ====================================================================================================
 END_FILE: core/telegram_source_skill_extractor.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/temp_cleanup.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2b7b91b8f6ba3a13518d234d8c24a426b85854300ae56a458fae4c6bcdb06194
-====================================================================================================
-# === TEMP_CLEANUP_V1 ===
-import os, logging, glob
-from pathlib import Path
-logger = logging.getLogger(__name__)
-
-TEMP_DIRS = ["/tmp", "/root/.areal-neva-core/data/temp"]
-
-def cleanup_file(path: str) -> bool:
-    try:
-        if path and os.path.exists(path):
-            os.remove(path)
-            logger.info("TEMP_CLEANED path=%s", path)
-            return True
-    except Exception as e:
-        logger.warning("TEMP_CLEANUP_ERR path=%s err=%s", path, e)
-    return False
-
-def cleanup_task_temps(task_id: str) -> int:
-    """Удалить все temp файлы связанные с task_id"""
-    count = 0
-    for d in TEMP_DIRS:
-        if not os.path.exists(d):
-            continue
-        for f in glob.glob(f"{d}/*{task_id}*"):
-            if cleanup_file(f):
-                count += 1
-    return count
-
-def cleanup_after_upload(local_paths: list) -> int:
-    count = 0
-    for p in (local_paths or []):
-        if p and isinstance(p, str) and "/tmp" in p:
-            if cleanup_file(p):
-                count += 1
-    return count
-# === END TEMP_CLEANUP_V1 ===
-
-====================================================================================================
-END_FILE: core/temp_cleanup.py
 FILE_CHUNK: 1/1
 ====================================================================================================
