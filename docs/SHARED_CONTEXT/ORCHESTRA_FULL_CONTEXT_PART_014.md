@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T16:54:01.557846+00:00
-git_sha_before_commit: 597bf6de80aa12d4a8ad71fb201f82040fd172fc
+generated_at_utc: 2026-07-07T17:24:03.206089+00:00
+git_sha_before_commit: e4b5fdc5234ada55a4a9968b15bd631bc175a65f
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 83baf567a13e13ab5a641f8ceb99888a021543a3250a00ce1fe884b33a51623d
+SHA256_FULL_FILE: 1dc7103ae8b01f49fd569dd4a539ec9c373731b18b03cbf93c29ae7d6dc7230a
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1094,37 +1094,57 @@ def parse_price_choice(text: str) -> Dict[str, Any]:
 
 def _topic2_volume_extract_requested_v1(text: str) -> bool:
     low = _low(text)
-    return any(x in low for x in ("объем", "объём", "обьем", "вытащи", "вытащить", "извлеки", "извлечь")) and any(
-        x in low for x in ("ар", "кр", "проект", "pdf", "файл")
-    )
+    return any(x in low for x in (
+        "объем", "объём", "обьем", "вытащи", "вытащить", "извлеки", "извлечь",
+        "найди объ", "проверь объ", "цены пока не искать", "сначала только объ",
+    ))
 
 
 def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
     bundle = (parsed or {}).get("project_bundle") or {}
+    properties = list(bundle.get("properties") or [])
+    quantities = list(bundle.get("quantities") or [])
+    derived_quantities = list(bundle.get("derived_quantities") or [])
     volumes = list(bundle.get("volumes") or (parsed or {}).get("project_bundle_volumes") or [])
     missing_items = list(bundle.get("missing_items") or [])
-    lines = ["Объёмы из АР/КР извлечены из текущего bundle.", "", "АР:"]
-    ar_count = 0
-    for row in volumes:
-        if not isinstance(row, dict) or _s(row.get("section")) != "АР":
-            continue
-        ar_count += 1
-        lines.append("- {}: {} {} | стр. {} | {}".format(
-            _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
-        ))
-    if not ar_count:
-        lines.append("- явные объёмы АР не найдены")
-    lines.extend(["", "КР:"])
-    kr_count = 0
-    for row in volumes:
-        if not isinstance(row, dict) or _s(row.get("section")) != "КР":
-            continue
-        kr_count += 1
-        lines.append("- {}: {} {} | стр. {} | {}".format(
-            _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
-        ))
-    if not kr_count:
-        lines.append("- явные табличные объёмы КР не найдены")
+    lines = ["✅ Объёмы извлечены", "", "Свойства материалов (не количества):"]
+    if properties:
+        for row in properties:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | стр. {} | {}".format(
+                _s(row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+            ))
+    else:
+        lines.append("- свойства не выделены")
+    lines.extend(["", "Количество из проекта:"])
+    if quantities:
+        for row in quantities:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | стр. {} | {}".format(
+                _s(row.get("item") or row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+            ))
+    else:
+        lines.append("- прямые количества не выделены")
+    lines.extend(["", "Расчётные количества из геометрии:"])
+    if derived_quantities:
+        for row in derived_quantities:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | {} | {}".format(
+                _s(row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("source")), _s(row.get("note"))
+            ))
+    else:
+        lines.append("- расчётные количества не получены")
+    if not (properties or quantities or derived_quantities) and volumes:
+        lines.extend(["", "Raw volumes:"])
+        for row in volumes:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | стр. {} | {}".format(
+                _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+            ))
     if missing_items:
         lines.extend(["", "Не найдено в проекте / требуется уточнение:"])
         for item in missing_items:
@@ -1132,6 +1152,11 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
         lines.extend(["", "VOLUMES_COMPLETE=False. Цены не ищу, смету не делаю до закрытия missing_items."])
     else:
         lines.extend(["", "VOLUMES_COMPLETE=True. Можно переходить к смете и ценам."])
+    lines.extend([
+        "",
+        "Цены и смету не запускаю, потому что текущая команда — только объёмы.",
+        "Дальше напиши: считать смету / искать цены / закрыть / уточнить объёмы.",
+    ])
     return "\n".join(lines)
 
 
@@ -2715,12 +2740,22 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _topic2_volume_extract_requested_v1(raw_input)
         or not ((parsed.get("project_bundle") or {}).get("VOLUMES_COMPLETE"))
     ):
+        (parsed.get("project_bundle") or {})["result_type"] = "VOLUMES_ONLY_RESULT"
         text = _topic2_bundle_volumes_message_v1(parsed)
         send_res = await _send_text(chat_id, text, reply_to, topic_id)
-        kwargs = {"state": "AWAITING_CONFIRMATION", "result": text, "error_message": ""}
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": ""}
         if isinstance(send_res, dict) and send_res.get("bot_message_id"):
             kwargs["bot_message_id"] = send_res.get("bot_message_id")
         _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_MODE")
+        _history_safe(conn, task_id, "TOPIC2_VOLUME_FACTS_NORMALIZED")
+        if (parsed.get("project_bundle") or {}).get("derived_quantities"):
+            _history_safe(conn, task_id, "TOPIC2_DERIVED_QUANTITIES_CALCULATED")
+        if (parsed.get("project_bundle") or {}).get("missing_items"):
+            _history_safe(conn, task_id, "TOPIC2_MISSING_ITEMS_REPORTED")
+        _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_RESULT_READY")
+        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUMES_ONLY_MODE")
+        _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUMES_ONLY_MODE")
         _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_VOLUMES_EXTRACTED")
         return True
 
@@ -2766,6 +2801,8 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                     parsed["pdf_spec_source"] = (_mhs_cached_parsed or {}).get("pdf_spec_source") or _mhs_local_path
                     _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_REUSED_FROM_PENDING:{len(_mhs_cached_rows)}_rows")
                     _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_cached_rows)}")
+                elif _topic2_volume_extract_requested_v1(raw_input):
+                    _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_SKIP_GENERIC_PDF_SPEC")
                 else:
                     _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
                     from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
@@ -2827,6 +2864,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _alg_count = 0
 
     parsed = _t2_pdf_text_fact_enrich(parsed, conn=conn, task_id=task_id)
+    parsed["_topic2_current_raw_input"] = raw_input
     question = _missing_question(parsed)
     if question:
         send_res = await _send_text(chat_id, question, reply_to, topic_id)
@@ -6228,48 +6266,6 @@ def _t2ar_project_rows_from_pdf_v1(parsed):
 
     win_pat = re.compile(r"\b(Ок-\d+(?:,\s*бДв-1)?)\s+(\d+)\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
     for mark, qty, size, area in win_pat.findall(text):
-        _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} оконный/балконный блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-19")
-
-    door_pat = re.compile(r"\b(Дв-\d+|нДв-1)\s+(\d+)\s+[0-9\s]+×[0-9\s]+\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
-    for mark, qty, size, area in door_pat.findall(text):
-        _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} дверной блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-20")
-
-    return rows
-
-
-def _t2ar_missing_from_pdf_v1(parsed):
-    text = _t2ar_pdf_text_v1(parsed)
-    low = _low(text)
-    missing = []
-    if "наружные стены дома" in low:
-        missing.append("объем/площадь наружных стен 375/300 мм")
-    if "внутренние несущие стены" in low:
-        missing.append("объем внутренних несущих стен 250 мм")
-    if "перегородки" in low:
-        missing.append("объем перегородок 150 мм и каркасных перегородок")
-    if "уточняется в разделе кж" in low or "разделе кж" in low:
-        missing.append("КЖ для ж/б балок, колонн, перемычек, армопояса и плит")
-    if "план ввода коммуникаций" in low:
-        missing.append("объемы инженерных коммуникаций")
-    return list(dict.fromkeys(missing))
-
-
-def _t2ar_project_rows_message_v1(parsed):
-    rows = _t2ar_project_rows_from_pdf_v1(parsed)
-    missing = _t2ar_missing_from_pdf_v1(parsed)
-    lines = [
-        "PDF прочитан. Нашёл проектные позиции и объёмы, которые можно использовать без шаблонной подмены:",
-    ]
-    for r in rows[:18]:
-        lines.append(f"- {r['section']}: {r['name']} — {r['qty']:g} {r['unit']}")
-    if len(rows) > 18:
-        lines.append(f"- ещё позиций: {len(rows) - 18}")
-    if missing:
-        lines.append("")
-        lines.append("Для полной сметы не хватает явных объёмов:")
-        for m in missing[:10]:
-            lines.append(f"- {m}")
-    lines.append("")
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

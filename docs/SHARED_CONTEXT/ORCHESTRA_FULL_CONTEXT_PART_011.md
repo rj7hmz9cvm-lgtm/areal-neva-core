@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T16:54:01.555757+00:00
-git_sha_before_commit: 597bf6de80aa12d4a8ad71fb201f82040fd172fc
+generated_at_utc: 2026-07-07T17:24:03.204316+00:00
+git_sha_before_commit: e4b5fdc5234ada55a4a9968b15bd631bc175a65f
 part: 11/22
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8a8e08095be393844fad79aff3bfe01df907f47927efc260a1978f57a1266aae
+SHA256_FULL_FILE: 18c1153c35f7956c50d66ad6f95554dcbbd9736de9acb867507bdacc50139801
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -1983,6 +1983,7 @@ from __future__ import annotations
 import re
 import logging
 import os
+import math
 import subprocess
 import tempfile
 from typing import Any, Dict, List
@@ -3300,34 +3301,218 @@ def _cad_parse_kr_ocr_specs_v1(file_path: str, pages: List[Dict[str, Any]], spec
                 _cad_add_spec_row_v1(specs, volumes, file_path, page_no, name, qty, unit, text)
 
 
-def _cad_missing_items_v1(volumes: List[Dict[str, Any]]) -> List[str]:
-    blob = _cad_low_v1(" ".join(_s(v.get("name")) + " " + _s(v.get("text")) for v in volumes))
-    name_blob = _cad_low_v1(" ".join(_s(v.get("name")) for v in volumes))
-    checks = [
-        ("габариты здания", ("габарит", "18.0 x 36.0", "18х36")),
-        ("площадь", ("площадь", "648")),
-        ("высота", ("высота", "8.54")),
-        ("стены 100 мм", ("стеновые сэндвич", "100")),
-        ("кровля 150 мм", ("кровельные сэндвич", "150")),
-        ("бетон фундаментов", ("фундаментной балки", "в25")),
-        ("бетон подготовки", ("бетон подготовки", "в7.5")),
-        ("бетон подливки", ("подливки", "в30")),
-        ("бетон плиты пола", ("плиты пола", "в25")),
-        ("песок", ("песок",)),
-        ("гидроизоляция", ("гидроизоляц",)),
-        ("арматура БФм1/пола", ("арматура бфм1", "арматура пола")),
-        ("фиксаторы/жгут/герметик", ("вилатерм", "герметик")),
-        ("масса/спецификация металлокаркаса", ("металлокаркас", "ферм")),
-        ("площадь стеновых панелей", ("площадь стеновых панелей",)),
-        ("площадь кровельных панелей", ("площадь кровельных панелей",)),
-        ("проёмы/ворота/окна", ("проемы", "проёмы", "ворота", "окна")),
-    ]
+def _topic2_norm_add_unique_v1(items: List[Dict[str, Any]], item: Dict[str, Any]) -> None:
+    sig = (
+        _s(item.get("name")).lower(),
+        _s(item.get("value")),
+        _s(item.get("unit")).lower(),
+        _s(item.get("source_file")),
+        _s(item.get("page")),
+    )
+    for old in items:
+        old_sig = (
+            _s(old.get("name")).lower(),
+            _s(old.get("value")),
+            _s(old.get("unit")).lower(),
+            _s(old.get("source_file")),
+            _s(old.get("page")),
+        )
+        if old_sig == sig:
+            return
+    items.append(item)
+
+
+def _topic2_fact_ref_v1(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "source_file": row.get("source_file"),
+        "page": row.get("page"),
+        "x": row.get("x"),
+        "y": row.get("y"),
+        "text": row.get("text"),
+    }
+
+
+def _topic2_quantity_kind_v1(unit: str) -> str:
+    u = _cad_unit_v1(unit)
+    if u == "м³":
+        return "volume_m3"
+    if u == "м²":
+        return "area_m2"
+    if u in ("п.м", "м"):
+        return "length_m"
+    if u == "кг":
+        return "mass_kg"
+    if u in ("т", "тн", "тонн"):
+        return "mass_t"
+    if u == "шт":
+        return "count_pcs"
+    if u == "л":
+        return "liters"
+    return ""
+
+
+def _topic2_project_geometry_v1(facts: List[Dict[str, Any]]) -> Dict[str, Any]:
+    geometry: Dict[str, Any] = {}
+    for row in facts or []:
+        name = _cad_low_v1(row.get("name"))
+        text = _s(row.get("text"))
+        value = _s(row.get("qty") if row.get("qty") is not None else row.get("value"))
+        hay = f"{name} {value} {text}".replace(",", ".")
+        if ("габарит" in name or "building_dimensions" in name) and "x" in hay.lower():
+            m = re.search(r"(\d+(?:\.\d+)?)\s*[xх]\s*(\d+(?:\.\d+)?)", hay, re.I)
+            if m:
+                a = float(m.group(1))
+                b = float(m.group(2))
+                geometry["building_length_m"] = max(a, b)
+                geometry["building_width_m"] = min(a, b)
+        if "высот" in name or "building_height" in name:
+            h = _cad_num_v1(value or text)
+            if h:
+                geometry["building_height_m"] = h
+        if "уклон" in hay.lower():
+            m = re.search(r"уклон[^\d]{0,20}(\d+(?:\.\d+)?)\s*%", hay, re.I)
+            if m:
+                geometry["roof_slope_percent"] = float(m.group(1))
+    return geometry
+
+
+def derive_quantities_from_geometry(
+    properties: List[Dict[str, Any]],
+    quantities: List[Dict[str, Any]],
+    project_geometry: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    derived: List[Dict[str, Any]] = []
+    prop_names = {_s(p.get("name")) for p in properties}
+    qty_names = {_s(q.get("name")) for q in quantities}
+    length = float(project_geometry.get("building_length_m") or 0)
+    width = float(project_geometry.get("building_width_m") or 0)
+    height = float(project_geometry.get("building_height_m") or 0)
+    slope_percent = float(project_geometry.get("roof_slope_percent") or 10)
+    slope = slope_percent / 100.0
+    if length > 0 and width > 0 and height > 0 and "wall_panel_thickness_mm" in prop_names:
+        if "wall_panel_area_m2" not in qty_names and "gross_wall_panel_area_m2" not in qty_names:
+            half_span = width / 2.0
+            roof_rise = half_span * slope
+            eave_height = height - roof_rise
+            gross_wall = 2 * length * eave_height + 2 * (width * eave_height + 0.5 * width * roof_rise)
+            derived.append({
+                "name": "gross_wall_panel_area_m2",
+                "value": round(gross_wall, 2),
+                "unit": "м²",
+                "source": "CALCULATED_FROM_AR_GEOMETRY",
+                "confidence": "derived",
+                "note": "без вычета ворот/окон/дверей, если проёмы не извлечены",
+            })
+    if length > 0 and width > 0 and "roof_panel_thickness_mm" in prop_names:
+        if "roof_panel_area_m2" not in qty_names and "gross_roof_panel_area_m2" not in qty_names:
+            gross_roof = length * width * math.sqrt(1 + slope * slope)
+            derived.append({
+                "name": "gross_roof_panel_area_m2",
+                "value": round(gross_roof, 2),
+                "unit": "м²",
+                "source": "CALCULATED_FROM_AR_GEOMETRY",
+                "confidence": "derived",
+                "note": "без учёта свесов, если свесы не извлечены",
+            })
+    return derived
+
+
+def normalize_extracted_facts(facts: List[Dict[str, Any]], project_geometry: Dict[str, Any] = None) -> Dict[str, Any]:
+    properties: List[Dict[str, Any]] = []
+    quantities: List[Dict[str, Any]] = []
+    evidence: List[Dict[str, Any]] = []
+    project_geometry = dict(project_geometry or _topic2_project_geometry_v1(facts))
+    for row in facts or []:
+        if not isinstance(row, dict):
+            continue
+        name = _s(row.get("name") or row.get("key"))
+        low = _cad_low_v1(f"{name} {row.get('qty')} {row.get('value')} {row.get('text')}")
+        unit = _cad_unit_v1(row.get("unit"))
+        value = row.get("qty") if row.get("qty") is not None else row.get("value")
+        ref = _topic2_fact_ref_v1(row)
+        if "стен" in low and "сэндвич" in low and unit == "мм":
+            _topic2_norm_add_unique_v1(properties, {"name": "wall_panel_thickness_mm", "value": _cad_num_v1(value), "unit": "мм", **ref})
+            continue
+        if "кров" in low and "сэндвич" in low and unit == "мм":
+            _topic2_norm_add_unique_v1(properties, {"name": "roof_panel_thickness_mm", "value": _cad_num_v1(value), "unit": "мм", **ref})
+            continue
+        if unit == "мм":
+            prop_name = "property_unknown"
+            if any(x in low for x in ("стена", "кладка", "перегород")):
+                prop_name = "masonry_thickness_mm"
+            elif any(x in low for x in ("доска", "брус")):
+                prop_name = "timber_section_mm"
+            _topic2_norm_add_unique_v1(properties, {"name": prop_name, "value": value, "unit": "мм", **ref})
+            continue
+        grade_matches = re.findall(r"[ВB]\s*\d+(?:[,.]\d+)?", low, re.I)
+        for grade in grade_matches:
+            _topic2_norm_add_unique_v1(properties, {
+                "name": "concrete_grade",
+                "value": grade.upper().replace("B", "В").replace(" ", "").replace(",", "."),
+                "unit": "",
+                **ref,
+            })
+        for dia, cls in re.findall(r"(\d{1,2})\s*[-–]?\s*([АA]240|[АA]500[СC])", low, re.I):
+            _topic2_norm_add_unique_v1(properties, {
+                "name": "rebar_diameter_mm",
+                "value": float(dia),
+                "unit": "мм",
+                "class": cls.upper().replace("A", "А").replace("C", "С"),
+                **ref,
+            })
+            _topic2_norm_add_unique_v1(properties, {
+                "name": "rebar_class",
+                "value": cls.upper().replace("A", "А").replace("C", "С"),
+                "unit": "",
+                **ref,
+            })
+        q_kind = _topic2_quantity_kind_v1(unit)
+        if q_kind:
+            q_name = q_kind
+            if "стен" in low and "сэндвич" in low and unit == "м²":
+                q_name = "wall_panel_area_m2"
+            elif "кров" in low and "сэндвич" in low and unit == "м²":
+                q_name = "roof_panel_area_m2"
+            elif "металлокаркас" in low and unit == "кг":
+                q_name = "steel_frame_mass_kg"
+            _topic2_norm_add_unique_v1(quantities, {
+                "name": q_name,
+                "item": name,
+                "value": _cad_num_v1(value),
+                "unit": unit,
+                "quantity_kind": q_kind,
+                **ref,
+            })
+            evidence.append({"type": "quantity", "name": name, **ref})
+        elif any(x in low for x in ("сечение", "профиль", "формат", "кирпич", "брус", "доска")):
+            _topic2_norm_add_unique_v1(properties, {"name": "material_property", "value": value or name, "unit": unit, **ref})
+    derived = derive_quantities_from_geometry(properties, quantities, project_geometry)
+    q_names = {_s(q.get("name")) for q in quantities}
+    d_names = {_s(q.get("name")) for q in derived}
+    p_names = {_s(p.get("name")) for p in properties}
     missing: List[str] = []
-    for label, terms in checks:
-        haystack = name_blob if label in ("площадь стеновых панелей", "площадь кровельных панелей", "проёмы/ворота/окна") else blob
-        if not any(t in haystack for t in terms):
-            missing.append(label)
-    return missing
+    if "wall_panel_thickness_mm" in p_names and "wall_panel_area_m2" not in q_names and "gross_wall_panel_area_m2" not in d_names:
+        missing.append("wall_panel_area_m2")
+    elif "wall_panel_thickness_mm" in p_names:
+        missing.append("openings_area_m2")
+    if "roof_panel_thickness_mm" in p_names and "roof_panel_area_m2" not in q_names and "gross_roof_panel_area_m2" not in d_names:
+        missing.append("roof_panel_area_m2")
+    elif "roof_panel_thickness_mm" in p_names:
+        missing.append("roof_overhangs")
+    has_metal = any("металлокаркас" in _cad_low_v1(f"{r.get('name')} {r.get('text')}") for r in facts or [])
+    if has_metal and "steel_frame_mass_kg" not in q_names:
+        missing.append("steel_frame_mass_kg")
+    return {
+        "properties": properties,
+        "quantities": quantities,
+        "derived_quantities": derived,
+        "missing_items": list(dict.fromkeys(missing)),
+        "evidence": evidence,
+    }
+
+
+def _cad_missing_items_v1(volumes: List[Dict[str, Any]]) -> List[str]:
+    return list(normalize_extracted_facts(volumes).get("missing_items") or [])
 
 
 def _cad_project_pdf_bundle_v1(files: List[str], topic_id: int = 0, **kwargs) -> Dict[str, Any]:
@@ -3365,7 +3550,8 @@ def _cad_project_pdf_bundle_v1(files: List[str], topic_id: int = 0, **kwargs) ->
             "drawings_pages": sum(1 for p in pages if int(p.get("drawings") or 0) > 0),
             "sheet_types": [x for x in (_cad_sheet_type_v1(p.get("text") or "") for p in pages) if x],
         })
-    missing_items = _cad_missing_items_v1(volumes)
+    normalized = normalize_extracted_facts(volumes)
+    missing_items = list(normalized.get("missing_items") or [])
     return {
         "ok": bool(volumes) and len(facts) >= 6,
         "topic_id": topic_id,
@@ -3373,6 +3559,10 @@ def _cad_project_pdf_bundle_v1(files: List[str], topic_id: int = 0, **kwargs) ->
         "facts": facts,
         "specs": specs,
         "volumes": volumes,
+        "properties": normalized.get("properties") or [],
+        "quantities": normalized.get("quantities") or [],
+        "derived_quantities": normalized.get("derived_quantities") or [],
+        "normalization_evidence": normalized.get("evidence") or [],
         "missing_items": missing_items,
         "VOLUMES_COMPLETE": not missing_items,
         "errors": errors,

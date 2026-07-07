@@ -1,14 +1,56 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T16:54:01.558588+00:00
-git_sha_before_commit: 597bf6de80aa12d4a8ad71fb201f82040fd172fc
+generated_at_utc: 2026-07-07T17:24:03.206785+00:00
+git_sha_before_commit: e4b5fdc5234ada55a4a9968b15bd631bc175a65f
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 83baf567a13e13ab5a641f8ceb99888a021543a3250a00ce1fe884b33a51623d
+SHA256_FULL_FILE: 1dc7103ae8b01f49fd569dd4a539ec9c373731b18b03cbf93c29ae7d6dc7230a
 ====================================================================================================
+        _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} оконный/балконный блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-19")
+
+    door_pat = re.compile(r"\b(Дв-\d+|нДв-1)\s+(\d+)\s+[0-9\s]+×[0-9\s]+\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
+    for mark, qty, size, area in door_pat.findall(text):
+        _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} дверной блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-20")
+
+    return rows
+
+
+def _t2ar_missing_from_pdf_v1(parsed):
+    text = _t2ar_pdf_text_v1(parsed)
+    low = _low(text)
+    missing = []
+    if "наружные стены дома" in low:
+        missing.append("объем/площадь наружных стен 375/300 мм")
+    if "внутренние несущие стены" in low:
+        missing.append("объем внутренних несущих стен 250 мм")
+    if "перегородки" in low:
+        missing.append("объем перегородок 150 мм и каркасных перегородок")
+    if "уточняется в разделе кж" in low or "разделе кж" in low:
+        missing.append("КЖ для ж/б балок, колонн, перемычек, армопояса и плит")
+    if "план ввода коммуникаций" in low:
+        missing.append("объемы инженерных коммуникаций")
+    return list(dict.fromkeys(missing))
+
+
+def _t2ar_project_rows_message_v1(parsed):
+    rows = _t2ar_project_rows_from_pdf_v1(parsed)
+    missing = _t2ar_missing_from_pdf_v1(parsed)
+    lines = [
+        "PDF прочитан. Нашёл проектные позиции и объёмы, которые можно использовать без шаблонной подмены:",
+    ]
+    for r in rows[:18]:
+        lines.append(f"- {r['section']}: {r['name']} — {r['qty']:g} {r['unit']}")
+    if len(rows) > 18:
+        lines.append(f"- ещё позиций: {len(rows) - 18}")
+    if missing:
+        lines.append("")
+        lines.append("Для полной сметы не хватает явных объёмов:")
+        for m in missing[:10]:
+            lines.append(f"- {m}")
+    lines.append("")
     lines.append("Финальную смету из шаблона не создаю. Пришли недостающие объёмы/КЖ/ВОР либо напиши: считай по найденным позициям.")
     return "\n".join(lines)
 
@@ -1982,6 +2024,8 @@ _T2FF_PREV_MISSING_QUESTION_V1 = _missing_question
 
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    if _topic2_volume_extract_requested_v1((parsed or {}).get("raw") or ""):
+        return None
     if _t2ff_file_context_v1(parsed):
         rows = list((parsed or {}).get("pdf_spec_rows") or []) + list((parsed or {}).get("ocr_table_rows") or [])
         confirm_text = (
@@ -2351,6 +2395,12 @@ _T2FMCR_PREV_MISSING_QUESTION_V1 = _missing_question
 
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    if _topic2_volume_extract_requested_v1(
+        _s((parsed or {}).get("_topic2_current_raw_input") or "")
+        + "\n"
+        + _s((parsed or {}).get("_topic2_history_clarified") or "")
+    ):
+        return None
     try:
         rows = list((parsed or {}).get("pdf_spec_rows") or []) + list((parsed or {}).get("ocr_table_rows") or [])
         if rows and _t2ff_file_context_v1(parsed) and _t2ff_confirmed_current_rows_v1(parsed):
