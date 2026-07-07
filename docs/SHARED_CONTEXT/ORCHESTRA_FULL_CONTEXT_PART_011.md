@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T18:24:06.938273+00:00
-git_sha_before_commit: 0c9de1986d34ab3eabf1532dd04c770c975a8d3d
+generated_at_utc: 2026-07-07T18:54:08.409294+00:00
+git_sha_before_commit: c68b0dc28c81012640c7c52bc5e4765016af155f
 part: 11/22
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b684c728e86195a91fd400a20467cb0ff33e12de39546f91aedc49f9cd09eaf0
+SHA256_FULL_FILE: f0bd2d514d7bff597b8bd2461f997cfdb346fcef6e18a0d40f7a44b1ea54b7b6
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -3696,7 +3696,7 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
         if item not in missing:
             missing.append(item)
     positions_complete = not any(x in missing for x in ("foundation_schedule_Fm1_Fm2", "foundation_concrete_volume_m3"))
-    return {
+    result = {
         "ok": bool(bundle.get("ok")) and bool(positions) and positions_complete,
         "result_type": "PROJECT_POSITIONS_ONLY_RESULT",
         "topic_id": topic_id,
@@ -3712,6 +3712,19 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
         "POSITIONS_EXTRACTION_COMPLETE": positions_complete,
         "project_bundle": bundle,
     }
+    try:
+        from core.construction_item_normalizer import normalize_construction_items
+
+        normalized = normalize_construction_items(result, project_context={"topic_id": topic_id, "files": files})
+        result["normalized_items"] = list(normalized.get("normalized_items") or [])
+        result["deduplicated_items"] = list(normalized.get("deduplicated_items") or [])
+        result["public_groups"] = list(normalized.get("public_groups") or [])
+        result["totals_by_material"] = list(normalized.get("totals_by_material") or [])
+        result["price_items"] = list(normalized.get("price_items") or [])
+        result["missing_items"] = list(normalized.get("missing_items") or result.get("missing_items") or [])
+    except Exception as exc:
+        result.setdefault("normalization_errors", []).append(str(exc))
+    return result
 
 
 def _bundle_find_page_v1(pages: List[Dict[str, Any]], pattern: str) -> Dict[str, Any]:

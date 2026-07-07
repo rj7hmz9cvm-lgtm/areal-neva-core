@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T18:24:06.940737+00:00
-git_sha_before_commit: 0c9de1986d34ab3eabf1532dd04c770c975a8d3d
+generated_at_utc: 2026-07-07T18:54:08.411507+00:00
+git_sha_before_commit: c68b0dc28c81012640c7c52bc5e4765016af155f
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 6517760efcd948d2ef8f41e4b62cfa131b30d416692fb0923c9c25c387c52cde
+SHA256_FULL_FILE: b6843f1c2d43cf262f810db30db01f9ef30c8900b040d42ef8787c043e3b6de2
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1114,8 +1114,40 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
     totals = list(bundle.get("totals") or [])
     volumes = list(bundle.get("volumes") or (parsed or {}).get("project_bundle_volumes") or [])
     missing_items = list(bundle.get("missing_items") or [])
+    public_groups = list(bundle.get("public_groups") or [])
+    price_items = list(bundle.get("price_items") or [])
     result_type = _s(bundle.get("result_type") or "VOLUMES_ONLY_RESULT")
     header = "✅ Проектные позиции и объёмы извлечены" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "✅ Объёмы извлечены"
+    if public_groups:
+        lines = [header, "", "Нормализованные позиции:"]
+        seen_public = set()
+        for row in public_groups:
+            if not isinstance(row, dict):
+                continue
+            name = _s(row.get("public_name"))
+            value = row.get("value")
+            unit = _s(row.get("unit"))
+            key = (name, _s(row.get("material_total_key")), _s(value), unit)
+            if not name or key in seen_public:
+                continue
+            seen_public.add(key)
+            qty = "{} {}".format(_s(value), unit).strip() if value not in (None, "") else "количество не выделено"
+            lines.append("- {}: {}".format(name, qty))
+        if price_items:
+            lines.extend(["", "Ключи для поиска цен без дублей:"])
+            for row in price_items:
+                if not isinstance(row, dict):
+                    continue
+                lines.append("- {} ({})".format(_s(row.get("public_name")), _s(row.get("material_total_key"))))
+        if missing_items:
+            lines.extend(["", "Нужно уточнить/добрать:"])
+            for item in missing_items:
+                lines.append("- {}".format(_s(item)))
+        lines.extend([
+            "",
+            "Цены не искал. Смету не собирал. Режим: извлечение/нормализация/дедупликация."
+        ])
+        return "\n".join(lines).strip()
     lines = [header, "", "Project facts:"]
     if project_facts:
         for row in project_facts[:12]:
@@ -6218,39 +6250,6 @@ def _t2_no_template_orient_allowed_v1(parsed):
 def _t2_no_valid_pdf_rows_message_v1():
     return (
         "PDF прочитан, но сметная ведомость объёмов / ВОР / спецификация материалов / раздел КЖ с объёмами не найдены. "
-        "Вижу только архитектурные данные и площади, поэтому финальную смету из шаблона не создаю, чтобы не подменять расчёт догадками.\n\n"
-        "Пришли ВОР / спецификацию / КЖ с объёмами либо прямо напиши: считать ориентировочно по проекту."
-    )
-
-
-_T2NT_ORIG_MISSING_QUESTION_V1 = _missing_question
-
-
-def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
-    rows = (parsed or {}).get("pdf_spec_rows") or []
-    if _t2_no_template_area_only_rows_v1(rows) and not _t2_no_template_orient_allowed_v1(parsed):
-        return _t2_no_valid_pdf_rows_message_v1()
-    return _T2NT_ORIG_MISSING_QUESTION_V1(parsed)
-
-
-_T2NT_ORIG_GENERATE_AND_SEND_V1 = _generate_and_send
-
-
-async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
-    parsed = (pending or {}).get("parsed") or {}
-    if _t2_no_template_area_only_rows_v1(parsed.get("pdf_spec_rows") or []) and not _t2_no_template_orient_allowed_v1(parsed):
-        task_id = _s(_row_get(task, "id"))
-        chat_id = _s(_row_get(task, "chat_id"))
-        topic_id = int(_row_get(task, "topic_id", 0) or 0)
-        reply_to = _row_get(task, "reply_to_message_id", None)
-        msg = _t2_no_valid_pdf_rows_message_v1()
-        try:
-            send_res = await _send_text(chat_id, msg, reply_to, topic_id)
-        except Exception:
-            send_res = {}
-        kwargs = {
-            "state": "WAITING_CLARIFICATION",
-            "result": msg,
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
