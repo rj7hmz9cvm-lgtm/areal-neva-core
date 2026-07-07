@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T16:23:54.166281+00:00
-git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+generated_at_utc: 2026-07-07T16:54:01.557846+00:00
+git_sha_before_commit: 597bf6de80aa12d4a8ad71fb201f82040fd172fc
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 21cd618a8ec5addbd1b83cc58c696c399c90e990bf996b171ab3bcf3514e6176
+SHA256_FULL_FILE: 83baf567a13e13ab5a641f8ceb99888a021543a3250a00ce1fe884b33a51623d
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1100,35 +1100,38 @@ def _topic2_volume_extract_requested_v1(text: str) -> bool:
 
 
 def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
-    facts = list((parsed or {}).get("project_bundle_facts") or [])
-    specs = list((parsed or {}).get("pdf_bundle_specs") or [])
-    if not specs:
-        specs = list((parsed or {}).get("pdf_spec_rows") or [])
-    ar_keys = {"building_dimensions", "building_area", "building_height", "wall_panel", "roof_panel", "floors"}
+    bundle = (parsed or {}).get("project_bundle") or {}
+    volumes = list(bundle.get("volumes") or (parsed or {}).get("project_bundle_volumes") or [])
+    missing_items = list(bundle.get("missing_items") or [])
     lines = ["Объёмы из АР/КР извлечены из текущего bundle.", "", "АР:"]
     ar_count = 0
-    for f in facts:
-        if not isinstance(f, dict) or f.get("key") not in ar_keys:
+    for row in volumes:
+        if not isinstance(row, dict) or _s(row.get("section")) != "АР":
             continue
         ar_count += 1
-        lines.append("- {} | стр. {} | {}".format(_s(f.get("value")), _s(f.get("page")), _s(f.get("source_file"))))
+        lines.append("- {}: {} {} | стр. {} | {}".format(
+            _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+        ))
     if not ar_count:
         lines.append("- явные объёмы АР не найдены")
     lines.extend(["", "КР:"])
     kr_count = 0
-    for row in specs:
-        if not isinstance(row, dict):
-            continue
-        name = _s(row.get("name"))
-        qty = row.get("qty", row.get("qty_raw", ""))
-        unit = _s(row.get("unit"))
-        if not name:
+    for row in volumes:
+        if not isinstance(row, dict) or _s(row.get("section")) != "КР":
             continue
         kr_count += 1
-        lines.append("- {}: {} {} | стр. {} | {}".format(name, _s(qty), unit, _s(row.get("page")), _s(row.get("source_file"))))
+        lines.append("- {}: {} {} | стр. {} | {}".format(
+            _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+        ))
     if not kr_count:
         lines.append("- явные табличные объёмы КР не найдены")
-    lines.extend(["", "Следующий шаг: после подтверждения соберу смету и найду цены."])
+    if missing_items:
+        lines.extend(["", "Не найдено в проекте / требуется уточнение:"])
+        for item in missing_items:
+            lines.append("- " + _s(item))
+        lines.extend(["", "VOLUMES_COMPLETE=False. Цены не ищу, смету не делаю до закрытия missing_items."])
+    else:
+        lines.extend(["", "VOLUMES_COMPLETE=True. Можно переходить к смете и ценам."])
     return "\n".join(lines)
 
 
@@ -2708,7 +2711,10 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
 
     parsed = _parse_request(raw_input)
     parsed = _topic2_hydrate_multifile_project_pdfs_v1(conn, task, parsed, raw_input)
-    if _topic2_volume_extract_requested_v1(raw_input) and parsed.get("project_bundle"):
+    if parsed.get("project_bundle") and (
+        _topic2_volume_extract_requested_v1(raw_input)
+        or not ((parsed.get("project_bundle") or {}).get("VOLUMES_COMPLETE"))
+    ):
         text = _topic2_bundle_volumes_message_v1(parsed)
         send_res = await _send_text(chat_id, text, reply_to, topic_id)
         kwargs = {"state": "AWAITING_CONFIRMATION", "result": text, "error_message": ""}
@@ -6264,13 +6270,6 @@ def _t2ar_project_rows_message_v1(parsed):
         for m in missing[:10]:
             lines.append(f"- {m}")
     lines.append("")
-    lines.append("Финальную смету из шаблона не создаю. Пришли недостающие объёмы/КЖ/ВОР либо напиши: считай по найденным позициям.")
-    return "\n".join(lines)
-
-
-try:
-    _T2AR_PREV_ORIENT_ALLOWED_V1 = _t2_no_template_orient_allowed_v1
-    def _t2_no_template_orient_allowed_v1(parsed):  # noqa: F811
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

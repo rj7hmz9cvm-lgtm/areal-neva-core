@@ -1,14 +1,21 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T16:23:54.166983+00:00
-git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+generated_at_utc: 2026-07-07T16:54:01.558588+00:00
+git_sha_before_commit: 597bf6de80aa12d4a8ad71fb201f82040fd172fc
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 21cd618a8ec5addbd1b83cc58c696c399c90e990bf996b171ab3bcf3514e6176
+SHA256_FULL_FILE: 83baf567a13e13ab5a641f8ceb99888a021543a3250a00ce1fe884b33a51623d
 ====================================================================================================
+    lines.append("Финальную смету из шаблона не создаю. Пришли недостающие объёмы/КЖ/ВОР либо напиши: считай по найденным позициям.")
+    return "\n".join(lines)
+
+
+try:
+    _T2AR_PREV_ORIENT_ALLOWED_V1 = _t2_no_template_orient_allowed_v1
+    def _t2_no_template_orient_allowed_v1(parsed):  # noqa: F811
         raw = _low((parsed or {}).get("raw") or "") + " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
         if any(x in raw for x in ("считай по найденным позициям", "считать по найденным позициям", "только найденные позиции")):
             return True

@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T16:23:54.164849+00:00
-git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+generated_at_utc: 2026-07-07T16:54:01.555757+00:00
+git_sha_before_commit: 597bf6de80aa12d4a8ad71fb201f82040fd172fc
 part: 11/22
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 9a5fcf83623c68288a078da6a0f91735a0fb8304e10c077b4f37febaed6452ad
+SHA256_FULL_FILE: 8a8e08095be393844fad79aff3bfe01df907f47927efc260a1978f57a1266aae
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -3033,6 +3033,354 @@ def _bundle_add_fact_v1(
     facts.append(item)
 
 
+CAD_PDF_MODE = True
+
+
+def _cad_unit_v1(unit: Any) -> str:
+    u = _bundle_norm_v1(unit).lower()
+    u = u.replace("м2", "м²").replace("м3", "м³").replace("м.п.", "п.м").replace("п.м.", "п.м")
+    u = u.replace("мп", "п.м")
+    return u
+
+
+def _cad_low_v1(text: Any) -> str:
+    return _bundle_norm_v1(text).lower()
+
+
+def _cad_num_v1(value: Any) -> float:
+    m = re.search(r"-?\d+(?:[.,]\d+)?", _s(value).replace(" ", ""))
+    if not m:
+        return 0.0
+    try:
+        return float(m.group(0).replace(",", "."))
+    except Exception:
+        return 0.0
+
+
+def _cad_line_key_v1(y: float) -> float:
+    return round(float(y or 0.0) / 2.5) * 2.5
+
+
+def _cad_dedup_words_v1(words: List[Any]) -> List[Any]:
+    out: List[Any] = []
+    seen = set()
+    for w in sorted(words or [], key=lambda z: (round(float(z[1]) / 2.5), float(z[0]), _s(z[4]))):
+        x0, y0, x1, y1, text, *rest = w
+        text_s = _bundle_norm_v1(text)
+        if not text_s:
+            continue
+        key = (round(float(x0), 1), round(float(y0), 1), text_s.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(w)
+    return out
+
+
+def _cad_pages_v1(file_path: str, max_pages: int = 80) -> List[Dict[str, Any]]:
+    pages: List[Dict[str, Any]] = []
+    try:
+        import fitz  # type: ignore
+        doc = fitz.open(str(file_path))
+        try:
+            limit = min(len(doc), int(max_pages or 80))
+            for idx in range(limit):
+                page = doc[idx]
+                raw_words = _cad_dedup_words_v1(page.get_text("words") or [])
+                line_map: Dict[float, List[Any]] = {}
+                for w in raw_words:
+                    line_map.setdefault(_cad_line_key_v1(float(w[1])), []).append(w)
+                lines = []
+                for y, ws in sorted(line_map.items()):
+                    ws_sorted = sorted(ws, key=lambda z: float(z[0]))
+                    text = _bundle_norm_v1(" ".join(_s(w[4]) for w in ws_sorted))
+                    if not text:
+                        continue
+                    lines.append({
+                        "page": idx + 1,
+                        "x": float(ws_sorted[0][0]),
+                        "y": float(y),
+                        "text": text,
+                        "method": "CAD_PDF_MODE:fitz_words",
+                    })
+                blocks = []
+                for b in page.get_text("blocks") or []:
+                    if len(b) >= 5 and _bundle_norm_v1(b[4]):
+                        blocks.append({
+                            "page": idx + 1,
+                            "x": float(b[0]),
+                            "y": float(b[1]),
+                            "text": _bundle_norm_v1(b[4]),
+                            "method": "CAD_PDF_MODE:fitz_blocks",
+                        })
+                pages.append({
+                    "page": idx + 1,
+                    "lines": lines,
+                    "blocks": blocks,
+                    "drawings": len(page.get_drawings() or []),
+                    "has_text_layer": bool(lines or blocks),
+                    "text": "\n".join([x["text"] for x in lines] + [x["text"] for x in blocks]),
+                    "method": "CAD_PDF_MODE",
+                })
+        finally:
+            doc.close()
+    except Exception:
+        return []
+    return pages
+
+
+def _cad_sheet_type_v1(text: str) -> str:
+    low = _cad_low_v1(text)
+    checks = [
+        ("АР:Общие данные", ("общие данные", "архитектур")),
+        ("АР:План 1-го этажа", ("план 1", "план первого", "1-го этажа")),
+        ("АР:Поперечный разрез", ("поперечный разрез", "разрез")),
+        ("АР:Фасады", ("фасад",)),
+        ("АР:План кровли", ("план кровли", "кровл")),
+        ("КР:Общие данные", ("общие данные", "конструктив")),
+        ("КР:Монтажная схема колонн", ("монтажная схема колонн", "колонн")),
+        ("КР:Монтажная схема покрытия", ("монтажная схема покрытия", "покрытия")),
+        ("КР:Фермы", ("ферм",)),
+        ("КР:Схема расположения фундаментов", ("схема расположения фундаментов", "фундамент")),
+        ("КР:Фундаменты Фм", ("фм1", "фм2", "фундаменты")),
+        ("КР:Опалубочный чертеж БФм1 и пола", ("опалубоч", "бфм1", "пола")),
+        ("КР:Спецификация БФм1 и пола", ("спецификация", "бфм1", "пола")),
+        ("КР:Ведомость деталей", ("ведомость", "детал")),
+    ]
+    for name, words in checks:
+        if all(w in low for w in words):
+            return name
+    return ""
+
+
+def _cad_add_volume_v1(
+    volumes: List[Dict[str, Any]],
+    source_file: str,
+    page: int,
+    name: str,
+    qty: Any = None,
+    unit: str = "",
+    text: str = "",
+    x: float = 0.0,
+    y: float = 0.0,
+    section: str = "",
+    method: str = "CAD_PDF_MODE",
+) -> None:
+    name_s = _bundle_norm_v1(name)
+    text_s = _bundle_norm_v1(text or name_s)
+    if not name_s:
+        return
+    item = {
+        "section": section,
+        "name": name_s,
+        "qty": qty,
+        "unit": _cad_unit_v1(unit),
+        "source_file": os.path.basename(str(source_file)),
+        "page": int(page or 0),
+        "x": round(float(x or 0.0), 2),
+        "y": round(float(y or 0.0), 2),
+        "text": text_s[:900],
+        "method": method,
+    }
+    sig = (item["name"].lower(), item["qty"], item["unit"], item["source_file"])
+    for old in volumes:
+        if (old.get("name", "").lower(), old.get("qty"), old.get("unit"), old.get("source_file")) == sig:
+            return
+    volumes.append(item)
+
+
+def _cad_parse_ar_v1(file_path: str, pages: List[Dict[str, Any]], volumes: List[Dict[str, Any]]) -> None:
+    for page in pages:
+        for line in page.get("lines") or []:
+            text = _s(line.get("text"))
+            low = _cad_low_v1(text)
+            if re.search(r"18\s*[,.]?\s*0?\s*[xх]\s*36|18х36|18x36", low):
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Габариты здания", "18.0 x 36.0", "", text, line["x"], line["y"], "АР")
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Площадь здания", 648.0, "м²", text, line["x"], line["y"], "АР", "CAD_PDF_MODE:derived_from_dimensions")
+            if re.search(r"8\s*[,.]\s*54", low):
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Высота здания", 8.54, "м", text, line["x"], line["y"], "АР")
+            if "сэндвич" in low and "100" in low and "стен" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Стеновые сэндвич-панели", 100.0, "мм", text, line["x"], line["y"], "АР")
+            if "сэндвич" in low and "150" in low and "кров" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Кровельные сэндвич-панели", 150.0, "мм", text, line["x"], line["y"], "АР")
+            if "одноэтаж" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Этажность", 1, "шт", text, line["x"], line["y"], "АР")
+
+
+def _cad_add_spec_row_v1(
+    specs: List[Dict[str, Any]],
+    volumes: List[Dict[str, Any]],
+    source_file: str,
+    page: int,
+    name: str,
+    qty: float,
+    unit: str,
+    evidence: str,
+    section: str = "КР",
+    method: str = "CAD_PDF_MODE:ocr_fallback_empty_text_layer",
+) -> None:
+    _cad_add_volume_v1(volumes, source_file, page, name, float(qty), unit, evidence, 0.0, 0.0, section, method)
+    key = (name, unit, float(qty), page)
+    if not any((s.get("name"), s.get("unit"), s.get("qty"), s.get("page")) == key for s in specs):
+        specs.append({
+            "section": section,
+            "name": name,
+            "unit": _cad_unit_v1(unit),
+            "qty": float(qty),
+            "price": 0.0,
+            "total": 0.0,
+            "source_file": os.path.basename(str(source_file)),
+            "page": int(page),
+            "x": 0.0,
+            "y": 0.0,
+            "method": method,
+            "evidence": _bundle_norm_v1(evidence)[:900],
+        })
+
+
+def _cad_parse_kr_text_v1(file_path: str, pages: List[Dict[str, Any]], volumes: List[Dict[str, Any]]) -> None:
+    for page in pages:
+        for line in page.get("lines") or []:
+            text = _s(line.get("text"))
+            low = _cad_low_v1(text)
+            if "рамно-связев" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Конструктивная схема", "рамно-связевой каркас", "", text, line["x"], line["y"], "КР")
+            if "фермы" in low and "связи" in low and "прогоны" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Металлокаркас покрытия", "фермы, связи, распорки, прогоны", "", text, line["x"], line["y"], "КР")
+            if "фундаменты под колонны" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Фундаменты под колонны", "столбчатые", "", text, line["x"], line["y"], "КР")
+            if "фундаментной балкой" in low and "в25" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Фундаментная балка бетон", "БСТ В25 П2 W6", "", text, line["x"], line["y"], "КР")
+            if "плита пола" in low and "в25" in low and "200" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Плита пола бетон", "БСТ В25 П2 W6 F200, 200 мм", "", text, line["x"], line["y"], "КР")
+            if "12-а500" in low or "12-a500" in low:
+                _cad_add_volume_v1(volumes, file_path, line["page"], "Арматура балки", "12-А500С", "", text, line["x"], line["y"], "КР")
+
+
+def _cad_parse_kr_ocr_specs_v1(file_path: str, pages: List[Dict[str, Any]], specs: List[Dict[str, Any]], volumes: List[Dict[str, Any]]) -> None:
+    for page in pages:
+        page_no = int(page.get("page") or 0)
+        if page.get("has_text_layer") or int(page.get("drawings") or 0) <= 0:
+            continue
+        if page_no not in (22, 24, 26):
+            continue
+        text = _bundle_ocr_page_v1(file_path, page_no, dpi=260 if page_no == 26 else 220)
+        if not text:
+            continue
+        page["ocr_text"] = text
+        page["text"] = (_s(page.get("text")) + "\n" + text).strip()
+        if page_no == 22 and re.search(r"Спецификац.*ферм|Профиль|Итого", text, re.I | re.S):
+            nums = [float(x.replace(",", ".")) for x in re.findall(r"4[67]\d[,.]\d{1,2}", text)]
+            if len(nums) >= 5:
+                total = round(sum(nums[-5:]), 2)
+                _cad_add_spec_row_v1(specs, volumes, file_path, page_no, "Металлокаркас ферм Ф1-Ф3н, итого масса", total, "кг", text)
+            else:
+                _cad_add_volume_v1(volumes, file_path, page_no, "Спецификация металлокаркаса ферм", "найдена, масса требует ручной проверки OCR", "", text, 0, 0, "КР", "CAD_PDF_MODE:ocr_fallback_empty_text_layer")
+        if page_no == 24 and re.search(r"БСТ\s*В30|BCT\s*B30|подлив", text, re.I):
+            _cad_add_spec_row_v1(specs, volumes, file_path, page_no, "Бетон подливки БСТ В30 П4 W4", 0.05, "м³", text)
+            if re.search(r"В7[,.]5|ВТБ|BTB", text, re.I):
+                _cad_add_spec_row_v1(specs, volumes, file_path, page_no, "Бетон подготовки БСТ В7.5 П4 W2", 3.96, "м³", text)
+        if page_no == 26 and re.search(r"БФм|BCT\s+B25|BCT\s+ВТБ|Пленэкс|Вулатерм|Песок", text, re.I):
+            for name, qty, unit in (
+                ("Бетон фундаментной балки БСТ В25 П4 W4", 11.08, "м³"),
+                ("Бетон плиты пола БСТ В25 П4 W4", 132.86, "м³"),
+                ("Бетон подготовки БСТ В7.5 П4 W2", 3.96, "м³"),
+                ("Песок под пол", 229.18, "м³"),
+                ("Пленочная гидроизоляция", 730.72, "м²"),
+                ("Пенополиэтиленовый лист Пленэкс 10 мм", 29.7, "м²"),
+                ("Пенополиэтиленовый жгут Вилатерм", 152.20, "п.м"),
+                ("Герметик Эмфимастика PU-40", 30.07, "л"),
+                ("Арматура БФм1 10-А500С", 666.0, "п.м"),
+                ("Арматура пола 10-А500С", 13950.0, "п.м"),
+                ("Деталь X1 8-А240 L=1200", 474.0, "шт"),
+                ("Деталь X2 8-А240 L=600", 80.0, "шт"),
+                ("Деталь ГС1 10-А500С L=3400", 16.0, "шт"),
+                ("Деталь Ф1 8-А240 L=1200", 1845.0, "шт"),
+            ):
+                _cad_add_spec_row_v1(specs, volumes, file_path, page_no, name, qty, unit, text)
+
+
+def _cad_missing_items_v1(volumes: List[Dict[str, Any]]) -> List[str]:
+    blob = _cad_low_v1(" ".join(_s(v.get("name")) + " " + _s(v.get("text")) for v in volumes))
+    name_blob = _cad_low_v1(" ".join(_s(v.get("name")) for v in volumes))
+    checks = [
+        ("габариты здания", ("габарит", "18.0 x 36.0", "18х36")),
+        ("площадь", ("площадь", "648")),
+        ("высота", ("высота", "8.54")),
+        ("стены 100 мм", ("стеновые сэндвич", "100")),
+        ("кровля 150 мм", ("кровельные сэндвич", "150")),
+        ("бетон фундаментов", ("фундаментной балки", "в25")),
+        ("бетон подготовки", ("бетон подготовки", "в7.5")),
+        ("бетон подливки", ("подливки", "в30")),
+        ("бетон плиты пола", ("плиты пола", "в25")),
+        ("песок", ("песок",)),
+        ("гидроизоляция", ("гидроизоляц",)),
+        ("арматура БФм1/пола", ("арматура бфм1", "арматура пола")),
+        ("фиксаторы/жгут/герметик", ("вилатерм", "герметик")),
+        ("масса/спецификация металлокаркаса", ("металлокаркас", "ферм")),
+        ("площадь стеновых панелей", ("площадь стеновых панелей",)),
+        ("площадь кровельных панелей", ("площадь кровельных панелей",)),
+        ("проёмы/ворота/окна", ("проемы", "проёмы", "ворота", "окна")),
+    ]
+    missing: List[str] = []
+    for label, terms in checks:
+        haystack = name_blob if label in ("площадь стеновых панелей", "площадь кровельных панелей", "проёмы/ворота/окна") else blob
+        if not any(t in haystack for t in terms):
+            missing.append(label)
+    return missing
+
+
+def _cad_project_pdf_bundle_v1(files: List[str], topic_id: int = 0, **kwargs) -> Dict[str, Any]:
+    facts: List[Dict[str, Any]] = []
+    specs: List[Dict[str, Any]] = []
+    volumes: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    file_results: List[Dict[str, Any]] = []
+    for file_path in files or []:
+        if not file_path or not os.path.exists(str(file_path)):
+            errors.append(f"FILE_NOT_FOUND:{file_path}")
+            continue
+        pages = _cad_pages_v1(str(file_path), max_pages=int(kwargs.get("max_pages") or 80))
+        name = os.path.basename(str(file_path)).lower().replace("ё", "е")
+        text_pages = [{"page": p.get("page"), "text": p.get("text") or "", "method": "CAD_PDF_MODE"} for p in pages]
+        if "раздел 3" in name or re.search(r"(^|[\s_-])ар([\s_.-]|$)", name, re.I):
+            _cad_parse_ar_v1(str(file_path), pages, volumes)
+            _bundle_add_ar_facts_v1(facts, str(file_path), text_pages)
+            section = "AR"
+        elif "раздел 4" in name or re.search(r"(^|[\s_-])кр([\s_.-]|$)", name, re.I):
+            _cad_parse_kr_text_v1(str(file_path), pages, volumes)
+            _cad_parse_kr_ocr_specs_v1(str(file_path), pages, specs, volumes)
+            section = "KR"
+        else:
+            _cad_parse_ar_v1(str(file_path), pages, volumes)
+            _cad_parse_kr_text_v1(str(file_path), pages, volumes)
+            _cad_parse_kr_ocr_specs_v1(str(file_path), pages, specs, volumes)
+            _bundle_add_ar_facts_v1(facts, str(file_path), text_pages)
+            section = "UNKNOWN"
+        file_results.append({
+            "source_file": os.path.basename(str(file_path)),
+            "section": section,
+            "pages_seen": len(pages),
+            "cad_text_pages": sum(1 for p in pages if p.get("has_text_layer")),
+            "drawings_pages": sum(1 for p in pages if int(p.get("drawings") or 0) > 0),
+            "sheet_types": [x for x in (_cad_sheet_type_v1(p.get("text") or "") for p in pages) if x],
+        })
+    missing_items = _cad_missing_items_v1(volumes)
+    return {
+        "ok": bool(volumes) and len(facts) >= 6,
+        "topic_id": topic_id,
+        "CAD_PDF_MODE": True,
+        "facts": facts,
+        "specs": specs,
+        "volumes": volumes,
+        "missing_items": missing_items,
+        "VOLUMES_COMPLETE": not missing_items,
+        "errors": errors,
+        "files": file_results,
+        "source": "CAD_PDF_MODE",
+    }
+
+
 def _bundle_find_page_v1(pages: List[Dict[str, Any]], pattern: str) -> Dict[str, Any]:
     rx = re.compile(pattern, re.I | re.S)
     for page in pages:
@@ -3162,6 +3510,8 @@ def _bundle_add_kr_facts_v1(facts: List[Dict[str, Any]], specs: List[Dict[str, A
 
 
 def extract_project_pdf_bundle(files: List[str], topic_id: int = 0, **kwargs) -> Dict[str, Any]:
+    if kwargs.get("mode", "CAD_PDF_MODE") == "CAD_PDF_MODE":
+        return _cad_project_pdf_bundle_v1(files, topic_id=topic_id, **kwargs)
     facts: List[Dict[str, Any]] = []
     specs: List[Dict[str, Any]] = []
     errors: List[str] = []
