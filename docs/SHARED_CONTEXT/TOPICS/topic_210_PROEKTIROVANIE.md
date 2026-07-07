@@ -1,7 +1,7 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-07T17:24:03.451861+00:00
-GIT_SHA: e4b5fdc5234ada55a4a9968b15bd631bc175a65f
+GENERATED_AT: 2026-07-07T17:54:04.196178+00:00
+GIT_SHA: 3eedfd5efd3819a56162baac8786f5b6dfc434a5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -29,7 +29,6 @@ FAILED_LAST_24H: 0
 
 ## MARKERS_LAST_24H
 - created:NEW
-- state:IN_PROGRESS
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

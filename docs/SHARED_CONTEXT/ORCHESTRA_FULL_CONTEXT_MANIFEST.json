@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-07T17:24:03.212230+00:00",
-  "git_sha_before_commit": "e4b5fdc5234ada55a4a9968b15bd631bc175a65f",
+  "generated_at_utc": "2026-07-07T17:54:03.981438+00:00",
+  "git_sha_before_commit": "3eedfd5efd3819a56162baac8786f5b6dfc434a5",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 431,
@@ -3355,7 +3355,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 240741,
+      "size_bytes": 248627,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3382,7 +3382,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_014.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 340683,
+      "size_bytes": 340734,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3391,7 +3391,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_015.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 393362,
+      "size_bytes": 396074,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3463,7 +3463,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 35314,
+      "size_bytes": 35285,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3481,7 +3481,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 389583,
+      "size_bytes": 389597,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3526,7 +3526,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 7039,
+      "size_bytes": 7066,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3553,7 +3553,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 3294,
+      "size_bytes": 3276,
       "sha256": "",
       "chars": 0,
       "chunks": 0
