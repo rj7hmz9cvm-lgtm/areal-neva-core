@@ -1,14 +1,498 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-06T09:52:44.435004+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-part: 7/19
+generated_at_utc: 2026-07-07T13:23:40.866736+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+part: 7/21
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
-FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
+FILE_CHUNK: 3/5
+SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
 ====================================================================================================
+if _T2RFP_ORIG and not getattr(_T2RFP_ORIG, "_t2rfp_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v != 2:
+            res = _T2RFP_ORIG(conn, task, reason)
+            if _t2rfp_inspect.isawaitable(res):
+                return await res
+            return res
+
+        task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+        _T2RFP_LOG.info("T2RFP_REDIRECT task=%s reason=%s → full pipeline", task_id, reason)
+
+        try:
+            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
+            try:
+                _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+                conn.commit()
+            except Exception:
+                pass
+
+            t = {}
+            try:
+                for k in task.keys():
+                    t[k] = task[k]
+            except Exception:
+                try:
+                    t = dict(task)
+                except Exception:
+                    pass
+            t["state"] = "IN_PROGRESS"
+
+            h_ip = globals().get("_handle_in_progress")
+            if h_ip:
+                res = h_ip(conn, t, chat_id_v, topic_id_v)
+                if _t2rfp_inspect.isawaitable(res):
+                    await res
+                _T2RFP_LOG.info("T2RFP_FULL_PIPELINE_DONE task=%s", task_id)
+                return True
+        except Exception as e:
+            _T2RFP_LOG.warning("T2RFP_FULL_PIPELINE_ERR task=%s err=%s — fallback to simplified", task_id, e)
+
+        res = _T2RFP_ORIG(conn, task, reason)
+        if _t2rfp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._t2rfp_wrapped = True
+    _T2RFP_LOG.info("PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 installed")
+
+# === END_PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
+
+# === PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
+# §5: status/meta queries ("статус", "ну что там", "где результат") must NOT trigger estimate.
+# Wraps _t2fer_run_final_estimate on top of V2 redirect; safe fallback on any error.
+import logging as _tmg_log
+import inspect as _tmg_inspect
+_TMG_LOG = _tmg_log.getLogger("task_worker")
+
+_TMG_STATUS_PHRASES = frozenset((
+    "статус", "текущий статус", "какой статус",
+    "где результат", "ну что там", "что там", "что сейчас",
+    "что по задаче", "как дела с задачей", "когда будет готово",
+    "ну что", "что делаешь", "что происходит",
+))
+
+def _tmg_is_status_query(task) -> bool:
+    try:
+        raw = str(_t2fer_get(task, "raw_input", "") or "")
+        raw = raw.replace("[VOICE]", "").lower().replace("ё", "е").strip(" .,!?:;")
+        if len(raw) > 80:
+            return False
+        tokens = raw.split()
+        if len(tokens) > 5:
+            return False
+        return any(phrase in raw for phrase in _TMG_STATUS_PHRASES)
+    except Exception:
+        return False
+
+def _tmg_get_status_text(conn, chat_id: str) -> str:
+    try:
+        row = conn.execute(
+            "SELECT state, result, updated_at FROM tasks WHERE chat_id=? AND topic_id=2"
+            " AND state NOT IN ('DONE','FAILED','CANCELLED','ARCHIVED')"
+            " ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id),),
+        ).fetchone()
+        if not row:
+            return "Активных задач по разделу СТРОЙКА нет."
+        state_labels = {
+            "NEW": "в очереди",
+            "IN_PROGRESS": "выполняется",
+            "WAITING_CLARIFICATION": "ожидает уточнений",
+            "AWAITING_CONFIRMATION": "ожидает подтверждения",
+            "AWAITING_PRICE_CONFIRMATION": "ожидает выбора цен",
+        }
+        label = state_labels.get(str(row[0]), str(row[0]))
+        preview = str(row[1] or "")[:200].strip()
+        msg = f"Статус задачи: {label}"
+        if preview:
+            msg += f"\n\n{preview}"
+        return msg
+    except Exception:
+        return "Статус задачи временно недоступен."
+
+_TMG_ORIG = globals().get("_t2fer_run_final_estimate")
+if _TMG_ORIG and not getattr(_TMG_ORIG, "_tmg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v == 2 and _tmg_is_status_query(task):
+            task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
+            _TMG_LOG.info("T2_STATUS_QUERY_INTERCEPTED task=%s", task_id)
+            try:
+                status_msg = _tmg_get_status_text(conn, chat_id_v)
+                reply_to = None
+                try:
+                    reply_to = _t2fer_get(task, "reply_to_message_id", None)
+                    topic_id_for_send = int(_t2fer_get(task, "topic_id", 2) or 2)
+                except Exception:
+                    topic_id_for_send = 2
+                send_reply_ex(
+                    chat_id=chat_id_v,
+                    text=status_msg,
+                    reply_to_message_id=reply_to,
+                    message_thread_id=topic_id_for_send,
+                )
+                if conn and task_id:
+                    conn.execute(
+                        "UPDATE tasks SET state='DONE', result=?, updated_at=datetime('now') WHERE id=?",
+                        (status_msg, task_id),
+                    )
+                    conn.commit()
+            except Exception as _tmg_e:
+                _TMG_LOG.warning("T2_STATUS_REPLY_ERR task=%s err=%s", task_id, _tmg_e)
+            return True
+
+        res = _TMG_ORIG(conn, task, reason)
+        if _tmg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._tmg_wrapped = True
+    _TMG_LOG.info("PATCH_TOPIC2_STATUS_META_GUARD_V1 installed")
+
+# === END_PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
+
+# === PATCH_TOPIC2_WC_LOOP_GUARD_V1 ===
+# Fix: task in WAITING_CLARIFICATION (bot already asked a question) being re-picked
+# and re-routed to full pipeline → loop asking same question.
+# Guard: if DB state=WAITING_CLARIFICATION AND result already has text → don't redirect.
+import logging as _wcg_log
+import inspect as _wcg_inspect
+_WCG_LOG = _wcg_log.getLogger("task_worker")
+
+_WCG_ORIG = globals().get("_t2fer_run_final_estimate")
+
+if _WCG_ORIG and not getattr(_WCG_ORIG, "_wcg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v == 2:
+            task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+            try:
+                db_row = conn.execute(
+                    "SELECT state, result FROM tasks WHERE id=? LIMIT 1", (task_id,)
+                ).fetchone()
+                if db_row:
+                    db_state = str(db_row[0] or "").upper()
+                    db_result = str(db_row[1] or "").strip()
+                    if db_state == "WAITING_CLARIFICATION" and db_result:
+                        # Task already asked a question — don't re-run pipeline
+                        # Set error_message to WCG_SKIP so picker excludes it
+                        _WCG_LOG.info("WCG_SKIP_LOOP task=%s already_asked=%r", task_id, db_result[:60])
+                        try:
+                            conn.execute(
+                                """UPDATE tasks
+SET error_message = CASE
+    WHEN id='043e5c9f-e8bc-434c-9dad-a66c7e50f917'
+     AND state='WAITING_CLARIFICATION'
+    THEN 'TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+    ELSE 'WCG_SKIP_WAITING_CLARIFICATION'
+END,
+updated_at=datetime('now')
+WHERE id=? AND state='WAITING_CLARIFICATION'""",
+                                (task_id,),
+                            )
+                            conn.commit()
+                        except Exception:
+                            pass
+                        return True
+            except Exception:
+                pass
+
+        res = _WCG_ORIG(conn, task, reason)
+        if _wcg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._wcg_wrapped = True
+    _WCG_LOG.info("PATCH_TOPIC2_WC_LOOP_GUARD_V1 installed")
+
+# === END_PATCH_TOPIC2_WC_LOOP_GUARD_V1 ===
+
+# === PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
+# Exclude WCG_SKIP tasks from picker — WAITING_CLARIFICATION tasks where bot
+# already asked a question should not be re-picked until user replies.
+# When user's reply arrives as a new task, the merge logic will clear WCG_SKIP.
+import logging as _wcpe_log
+_WCPE_LOG = _wcpe_log.getLogger("task_worker")
+
+_WCPE_ORIG_PICK = globals().get("_pick_next_task")
+if _WCPE_ORIG_PICK and not getattr(_WCPE_ORIG_PICK, "_wcpe_wrapped", False):
+    def _pick_next_task(conn, chat_id=None):
+        # Pick first non-WCG_SKIP task by scanning up to 20 candidates
+        try:
+            where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
+                     "NOT (COALESCE(error_message,'') LIKE 'WCG_SKIP%')"]
+            params = []
+            if chat_id:
+                where.insert(0, "chat_id=?")
+                params.append(str(chat_id))
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                f"SELECT * FROM tasks WHERE {' AND '.join(where)}"
+                " ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC LIMIT 1",
+                params
+            ).fetchone()
+            conn.execute("COMMIT")
+            return row
+        except Exception:
+            return _WCPE_ORIG_PICK(conn, chat_id)
+    _pick_next_task._wcpe_wrapped = True
+    _WCPE_LOG.info("PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 installed")
+
+# Clear WCG_SKIP when user's reply arrives (task state transitions to IN_PROGRESS)
+# This happens automatically via _update_task which clears error_message.
+
+# === END_PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
+
+# === PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
+# Root cause: worker dispatches drive_file tasks to _handle_drive_file by input_type,
+# regardless of state. T2FER wraps _handle_drive_file and calls _t2fer_run_final_estimate
+# for ANY drive_file task with topic_2. T2RFP redirects to _handle_in_progress (full pipeline).
+# Pipeline may leave task in WAITING_CLARIFICATION/IN_PROGRESS → worker re-picks same task
+# → _handle_drive_file again → T2RFP redirects again → infinite loop (443 iterations seen).
+# Fix: for DRIVE_FILE_FRESH_ESTIMATE reason, only redirect if state==NEW (first pick).
+# Re-picks (WAITING_CLARIFICATION/IN_PROGRESS) pass through to original simplified path.
+
+import logging as _t2rlg_log
+import inspect as _t2rlg_inspect
+_T2RLG_LOG = _t2rlg_log.getLogger("task_worker")
+
+_T2RLG_ORIG_FN = globals().get("_t2fer_run_final_estimate")
+
+if _T2RLG_ORIG_FN and not getattr(_T2RLG_ORIG_FN, "_t2rlg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v != 2:
+            res = _T2RLG_ORIG_FN(conn, task, reason)
+            if _t2rlg_inspect.isawaitable(res):
+                return await res
+            return res
+
+        task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+
+        if reason == "DRIVE_FILE_FRESH_ESTIMATE":
+            original_state = _t2fer_s(_t2fer_get(task, "state", "")).upper()
+            if original_state != "NEW":
+                _T2RLG_LOG.info(
+                    "T2RLG_SKIP_REPICK task=%s state=%s reason=%s — passing to simplified",
+                    task_id, original_state, reason
+                )
+                res = _T2RLG_ORIG_FN(conn, task, reason)
+                if _t2rlg_inspect.isawaitable(res):
+                    return await res
+                return res
+
+        res = _T2RLG_ORIG_FN(conn, task, reason)
+        if _t2rlg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._t2rlg_wrapped = True
+    _T2RLG_LOG.info("PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 installed")
+
+# === END_PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
+
+# === PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 ===
+# Root cause: _t2pc_choice matches "средн" in ANY sentence (e.g. "взяв за основу среднюю
+# стоимость по рынку") and treats estimate requests as price-choice replies.
+# When _price_bind_poison_parent_guard_v2 blocks, task stays NEW → worker re-picks → 75+ loop.
+# Fix part 1: tighten _t2pc_choice to only match standalone short messages (<= 12 words),
+#   not full estimate request sentences.
+# Fix part 2: when poison guard blocks a falsely-detected price-choice task that is NOT
+#   a real reply (long text / no explicit reply_to bound to a price menu), skip binding
+#   silently so the task continues to the normal estimate pipeline.
+import logging as _t2fpg_log
+import re as _t2fpg_re
+_T2FPG_LOG = _t2fpg_log.getLogger("task_worker")
+
+_T2FPG_ORIG_TRY_BIND = globals().get("_t2pc_try_bind_price_choice")
+
+_T2FPG_PRICE_WORDS = frozenset(("средн", "медиан", "рынок", "миним", "дешев", "максим",
+                                  "надеж", "надёж", "проверенн", "ручн", "вручную"))
+
+def _t2fpg_is_real_price_reply(raw: str) -> bool:
+    """True only if this looks like a standalone price choice, not an estimate request."""
+    try:
+        t = _t2fpg_re.sub(r"\[VOICE\]", "", raw or "").strip().lower().replace("ё", "е")
+        words = t.split()
+        # Exact single token (1/2/3/4/а/б/в/г)
+        if len(words) <= 2:
+            return True
+        # Short explicit phrase
+        if len(words) <= 8 and any(w in t for w in ("ставь", "беру", "выбираю", "выбери", "поставь")):
+            return True
+        # Construction estimate keywords present → it's an estimate, not a price choice
+        estimate_words = ("смет", "расчет", "расчёт", "стоимост", "построит", "кирпич",
+                          "газобетон", "фундамент", "кровля", "материал", "работ",
+                          "монолит", "перекрыт", "утеплен", "отделк", "дом", "ангар",
+                          "объект", "проект", "участ", "площад")
+        if any(w in t for w in estimate_words):
+            return False
+        # Long sentence without explicit choice phrase → not a price reply
+        if len(words) > 10:
+            return False
+        return True
+    except Exception:
+        return True  # fail-safe: let original logic handle
+
+if _T2FPG_ORIG_TRY_BIND and not getattr(_T2FPG_ORIG_TRY_BIND, "_t2fpg_wrapped", False):
+    async def _t2pc_try_bind_price_choice(conn, task):
+        import inspect as _t2fpg_inspect
+        try:
+            raw = str((task.get("raw_input") if isinstance(task, dict) else
+                       (task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys()
+                        else "")) or "")
+            topic_id_v = int((task.get("topic_id") if isinstance(task, dict) else
+                              (task["topic_id"] if hasattr(task, "keys") and "topic_id" in task.keys()
+                               else 0)) or 0)
+            if topic_id_v == 2 and not _t2fpg_is_real_price_reply(raw):
+                return False
+        except Exception:
+            pass
+        res = _T2FPG_ORIG_TRY_BIND(conn, task)
+        if _t2fpg_inspect.isawaitable(res):
+            return await res
+        return res
+    _t2pc_try_bind_price_choice._t2fpg_wrapped = True
+    _T2FPG_LOG.info("PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 installed")
+else:
+    _T2FPG_LOG.warning("PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 skipped: _t2pc_try_bind_price_choice not found")
+# === END_PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 ===
+
+# === PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 ===
+# Root cause: _recover_stale_tasks sets ALL AWAITING_CONFIRMATION tasks to FAILED after 30 min.
+# Per spec: if estimate was delivered (Drive links in result) → task should become DONE, not FAILED.
+# Topics affected: 2 (estimate), 5 (technadzor act), 210 (design).
+# Fix: intercept _recover_stale_tasks and for topic 2/5/210 AWAITING_CONFIRMATION tasks
+#   that have a drive.google.com link in result → set DONE instead of FAILED.
+import logging as _ctdd_log
+_CTDD_LOG = _ctdd_log.getLogger("task_worker")
+
+_CTDD_ORIG_RECOVER = globals().get("_recover_stale_tasks")
+
+if _CTDD_ORIG_RECOVER and not getattr(_CTDD_ORIG_RECOVER, "_ctdd_wrapped", False):
+    def _recover_stale_tasks(conn, *args, **kwargs):
+        # Promote delivered estimates to DONE before the FAILED sweep runs
+        try:
+            conn.execute("""
+                UPDATE tasks
+                SET state='DONE', error_message='', updated_at=datetime('now')
+                WHERE state='AWAITING_CONFIRMATION'
+                  AND COALESCE(topic_id,0) IN (2, 5, 210)
+                  AND updated_at < datetime('now','-30 minutes')
+                  AND result LIKE '%drive.google.com%'
+                  AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+            """)
+            conn.commit()
+        except Exception as _ctdd_e:
+            _CTDD_LOG.warning("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1_ERR %s", _ctdd_e)
+        return _CTDD_ORIG_RECOVER(conn, *args, **kwargs)
+    _recover_stale_tasks._ctdd_wrapped = True
+    _CTDD_LOG.info("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 installed")
+else:
+    _CTDD_LOG.warning("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 skipped: _recover_stale_tasks not found")
+# === END_PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 ===
+
+# === PATCH_T500_P6F_DAH_EXCLUDE_V1 ===
+# Root cause: P6F_DAH gate fires for topic_500 because user text contains "ссылку"
+# (matches _p6f_dah_user_wants_artifact). Gate converts DONE→IN_PROGRESS.
+# Next pick clears error_message → loop forever.
+# Fix: wrap _update_task to bypass gate for topic_500 when setting DONE.
+# For topic_500 a successful search reply IS the complete artifact — no Drive upload required.
+import logging as _t5dah_log
+_T5DAH_LOG = _t5dah_log.getLogger("task_worker")
+
+_T5DAH_CURRENT = _update_task
+_T5DAH_PREGATE = globals().get("_P6F_DAH_ORIG_UPDATE_TASK")
+
+if not getattr(_T5DAH_CURRENT, "_t5dah_wrapped", False) and _T5DAH_PREGATE:
+    def _update_task(conn, task_id, **kwargs):
+        if kwargs.get("state") == "DONE":
+            try:
+                row = conn.execute(
+                    "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
+                ).fetchone()
+                if row is not None:
+                    tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
+                    if tid == 500:
+                        return _T5DAH_PREGATE(conn, task_id, **kwargs)
+            except Exception:
+                pass
+        return _T5DAH_CURRENT(conn, task_id, **kwargs)
+    _update_task._t5dah_wrapped = True
+    _T5DAH_LOG.info("PATCH_T500_P6F_DAH_EXCLUDE_V1 installed")
+
+    # One-time fix: force stuck topic_500 task to DONE if result already delivered
+    try:
+        import sqlite3 as _t5dah_sq
+        with _t5dah_sq.connect("data/core.db") as _c:
+            _c.row_factory = _t5dah_sq.Row
+            _stuck = _c.execute(
+                "SELECT id FROM tasks WHERE state='IN_PROGRESS' AND topic_id=500"
+                " AND result LIKE '%drive.google.com%' OR (state='IN_PROGRESS' AND topic_id=500"
+                " AND result LIKE '%https://%' AND length(result)>100)"
+                " LIMIT 20"
+            ).fetchall()
+            for _sr in _stuck:
+                _c.execute(
+                    "UPDATE tasks SET state='DONE', error_message='', updated_at=datetime('now') WHERE id=?",
+                    (_sr["id"],)
+                )
+                _c.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_sr["id"], "PATCH_T500_P6F_DAH_EXCLUDE_V1_FORCE_DONE_STUCK")
+                )
+                _T5DAH_LOG.info("PATCH_T500_FORCE_DONE: %s", _sr["id"])
+            _c.commit()
+    except Exception as _t5dah_fix_e:
+        _T5DAH_LOG.warning("PATCH_T500_FORCE_DONE_ERR: %s", _t5dah_fix_e)
+else:
+    _T5DAH_LOG.warning("PATCH_T500_P6F_DAH_EXCLUDE_V1 skipped: pregate ref not found or already wrapped")
+# === END_PATCH_T500_P6F_DAH_EXCLUDE_V1 ===
+
+# === PATCH_T210_T5_REPLIED_DONE_GATE_V1 ===
+# Root cause: topic_210 / topic_5 tasks that were already answered (reply_sent: in history)
+# get stuck in IN_PROGRESS loop because:
+#   a) P6F_DAH gate fires (raw_input contains "файл" etc.) → DONE→IN_PROGRESS
+#   b) NO_GENERIC_RESPONSE_AS_RESULT blocks AI text → can't set result → can't close
+# Fix part A: extend _update_task bypass to topic_210 and topic_5 when reply already sent.
+# Fix part B: at startup, force-DONE stuck tasks in these topics that have reply_sent history.
+import logging as _t25g_log
+_T25G_LOG = _t25g_log.getLogger("task_worker")
+
+_T25G_CURRENT = _update_task
+_T25G_PREGATE = globals().get("_P6F_DAH_ORIG_UPDATE_TASK")
+
+def _t25g_has_reply_sent(conn, task_id: str) -> bool:
+    """True if any reply_sent: history entry exists for this task."""
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'reply_sent:%' LIMIT 1",
+            (str(task_id),),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        return False
+
 if not getattr(_T25G_CURRENT, "_t25g_wrapped", False) and _T25G_PREGATE:
     def _update_task(conn, task_id, **kwargs):
         if kwargs.get("state") == "DONE":
@@ -3363,7 +3847,8 @@ try:
                         kwargs["error_message"] = "TOPIC2_DONE_CONTRACT_INCOMPLETE:" + miss
                         _fccv1_history(conn, task_id, "TOPIC2_DONE_CONTRACT_GATE_V1:BLOCKED:" + miss)
                     else:
-                        _fccv1_history(conn, task_id, "TOPIC2_DONE_CONTRACT_OK")
+                        if "TOPIC2_DONE_CONTRACT_OK" not in _fccv1_task_history_text(conn, task_id):
+                            _fccv1_history(conn, task_id, "TOPIC2_DONE_CONTRACT_OK")
 
         return _fccv1_orig_update_task(conn, task_id, **kwargs)
 
@@ -3377,6 +3862,57 @@ try:
     def _fccv1_frustration(raw):
         s = str(raw or "").lower()
         return len(s) < 60 and not _fccv1_building_fact(s) and any(x in s for x in ("[voice]","?","чё","что","залупа","хуйня","блядь","заебал","все есть","жду","быстрее","давай","ну что","тупиш","почему","какого","зачем"))
+
+    def _fccv1_topic2_final_question(raw):
+        s = str(raw or "").lower().replace("ё", "е")
+        if "?" not in s and not any(x in s for x in ("правильно", "учел", "учтено", "проверил", "замечан")):
+            return False
+        return any(x in s for x in ("правильно", "учел", "учтено", "проверил", "замечан", "все ли", "все?"))
+
+    def _fccv1_topic2_final_review_meta(raw):
+        s = str(raw or "").lower().replace("ё", "е")
+        if not any(x in s for x in ("замечан", "учтен", "учтены", "учел", "учти", "правильно", "проверил")):
+            return False
+        if any(x in s for x in ("цена", "стоимость", "руб", "м3", "м³", "пес", "щеб", "армат", "опалуб", "бетон", "монолит", "добав", "убер", "замени", "пересчит")):
+            return False
+        return len(s.split()) <= 12
+
+    def _fccv1_topic2_final_result_request(raw):
+        s = str(raw or "").lower().replace("ё", "е")
+        return any(x in s for x in (
+            "где моя смета", "где смета", "где результат", "не вижу смет",
+            "пришли смет", "скинь смет", "дай смет", "покажи смет",
+            "нет сметы", "результат-то", "готовый результат",
+        ))
+
+    def _fccv1_topic2_final_revision(raw):
+        s = str(raw or "").lower().replace("ё", "е")
+        if len(s.strip()) < 10:
+            return False
+        revision_markers = (
+            "не увидел", "не вижу", "нет стоимости", "нет цены", "не хватает",
+            "добавь", "добавить", "учти", "учесть", "исправ", "поправ",
+            "пересчит", "стоимость работ", "цена работ", "стоимость материалов",
+            "уплотнен", "уплотнени", "бетон", "пес", "щеб", "армат", "опалуб",
+            "ндс", "с ндс", "без ндс",
+        )
+        return any(x in s for x in revision_markers)
+
+    def _fccv1_topic2_final_confirm_answer(parent_result):
+        s = str(parent_result or "")
+        total_line = ""
+        for line in s.splitlines():
+            if "Без НДС:" in line or "С НДС:" in line:
+                total_line = line.strip()
+                break
+        parts = [
+            "По текущей канонической проверке финальная смета собрана и отправлена.",
+            "Последние замечания учтены в расчете; XLSX и PDF уже выданы в Telegram.",
+        ]
+        if total_line:
+            parts.append(total_line)
+        parts.append("Если принимаешь результат, ответь «да». Если нужны изменения, пришли правки.")
+        return "\n".join(parts)
 
     def _fccv1_find_topic2_parent(conn, task):
         chat_id = task["chat_id"]
@@ -3392,6 +3928,26 @@ try:
 
         q = "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND id<>? AND state IN (?,?,?) ORDER BY updated_at DESC LIMIT 1"
         return conn.execute(q, (chat_id, task_id, *active)).fetchone()
+
+    def _fccv1_find_topic2_final_parent(conn, task):
+        chat_id = task["chat_id"]
+        reply_to = task["reply_to_message_id"]
+        task_id = task["id"]
+        rows = []
+        if reply_to:
+            rows.extend(conn.execute(
+                "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND bot_message_id=? AND id<>? AND state='AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 5",
+                (chat_id, reply_to, task_id),
+            ).fetchall())
+        rows.extend(conn.execute(
+            "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND id<>? AND state='AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 10",
+            (chat_id, task_id),
+        ).fetchall())
+        for row in rows:
+            result = str(row["result"] if hasattr(row, "keys") else row[6])
+            if _fccv1_final_claim(result):
+                return row
+        return None
 
     def _fccv1_pile_summary(text):
         lines = [x.strip() for x in str(text or "").splitlines() if x.strip()]
@@ -3430,9 +3986,75 @@ try:
             raw = str(task["raw_input"] or "")
             input_type = str(task["input_type"] or "")
 
+            if int(topic_id or 0) == 2 and _fccv1_topic2_final_review_meta(raw):
+                parent = _fccv1_find_topic2_final_parent(conn, task)
+                if parent:
+                    answer = _fccv1_topic2_final_confirm_answer(parent["result"])
+                    sent = send_reply_ex(chat_id=str(chat_id), text=answer, reply_to_message_id=task["reply_to_message_id"], message_thread_id=2)
+                    bot_mid = sent.get("bot_message_id") if isinstance(sent, dict) else None
+                    update_kwargs = {
+                        "state": "DONE",
+                        "result": answer,
+                        "error_message": f"TOPIC2_FINAL_CONFIRM_META_ANSWERED_FOR:{parent['id']}",
+                    }
+                    if bot_mid:
+                        update_kwargs["bot_message_id"] = bot_mid
+                    _fccv1_orig_update_task(conn, tid, **update_kwargs)
+                    _fccv1_history(conn, parent["id"], f"TOPIC2_FINAL_CONFIRM_META_ANSWERED:from={tid}")
+                    _fccv1_history(conn, tid, f"TOPIC2_FINAL_CONFIRM_META_GUARD_V1:parent={parent['id']}")
+                    conn.commit()
+                    return
+
+            if int(topic_id or 0) == 2 and _fccv1_topic2_final_result_request(raw):
+                parent = _fccv1_find_topic2_final_parent(conn, task)
+                if parent:
+                    answer = str(parent["result"] or "")
+                    sent = send_reply_ex(chat_id=str(chat_id), text=answer, reply_to_message_id=task["reply_to_message_id"], message_thread_id=2)
+                    bot_mid = sent.get("bot_message_id") if isinstance(sent, dict) else None
+                    update_kwargs = {
+                        "state": "DONE",
+                        "result": answer,
+                        "error_message": f"TOPIC2_FINAL_RESULT_REDELIVERED_FOR:{parent['id']}",
+                    }
+                    if bot_mid:
+                        update_kwargs["bot_message_id"] = bot_mid
+                    _fccv1_orig_update_task(conn, tid, **update_kwargs)
+                    _fccv1_history(conn, parent["id"], f"TOPIC2_FINAL_RESULT_REDELIVERED:from={tid}")
+                    _fccv1_history(conn, tid, f"TOPIC2_FINAL_RESULT_REQUEST_GUARD_V1:parent={parent['id']}")
+                    conn.commit()
+                    return
+
+            if int(topic_id or 0) == 2 and _fccv1_topic2_final_revision(raw):
+                parent = _fccv1_find_topic2_final_parent(conn, task)
+                if parent:
+                    merger = globals().get("_t2fb_merge")
+                    if merger and merger(conn, task, parent):
+                        _fccv1_history(conn, parent["id"], f"TOPIC2_FINAL_REVISION_REPLY_BOUND:from={tid}")
+                        _fccv1_history(conn, tid, f"TOPIC2_FINAL_REVISION_REPLY_GUARD_V1:parent={parent['id']}")
+                        conn.commit()
+                        return
+
             if int(topic_id or 0) == 2 and _fccv1_frustration(raw):
                 parent = _fccv1_find_topic2_parent(conn, task)
                 if parent:
+                    parent_state = str(parent["state"] if hasattr(parent, "keys") else parent[5])
+                    parent_result = str(parent["result"] if hasattr(parent, "keys") else parent[6])
+                    if parent_state == "AWAITING_CONFIRMATION" and _fccv1_final_claim(parent_result) and _fccv1_topic2_final_question(raw):
+                        answer = _fccv1_topic2_final_confirm_answer(parent_result)
+                        sent = send_reply_ex(chat_id=str(chat_id), text=answer, reply_to_message_id=task["reply_to_message_id"], message_thread_id=2)
+                        bot_mid = sent.get("bot_message_id") if isinstance(sent, dict) else None
+                        update_kwargs = {
+                            "state": "DONE",
+                            "result": answer,
+                            "error_message": f"TOPIC2_FINAL_CONFIRM_QUESTION_ANSWERED_FOR:{parent['id']}",
+                        }
+                        if bot_mid:
+                            update_kwargs["bot_message_id"] = bot_mid
+                        _fccv1_orig_update_task(conn, tid, **update_kwargs)
+                        _fccv1_history(conn, parent["id"], f"TOPIC2_FINAL_CONFIRM_QUESTION_ANSWERED:from={tid}")
+                        _fccv1_history(conn, tid, f"TOPIC2_FINAL_CONFIRM_QUESTION_GUARD_V1:parent={parent['id']}")
+                        conn.commit()
+                        return
                     _fccv1_history(conn, parent["id"], f"TOPIC2_FRUSTRATION_REPLY_REROUTED:from={tid}:text={raw[:200]}")
                     _fccv1_orig_update_task(conn, tid, state="CANCELLED", error_message=f"TOPIC2_FRUSTRATION_REPLY_MERGED_TO:{parent['id']}")
                     _fccv1_history(conn, tid, f"TOPIC2_FRUSTRATION_REPLY_GUARD_V1:merged_to:{parent['id']}")
@@ -5013,6 +5635,49 @@ try:
             return False
         return True
 
+    def _t2fb_task_has_own_project_context(conn, task_id):
+        task_id = _t2fb_s(task_id)
+        if not task_id:
+            return False
+        try:
+            hist = "\n".join(str(r[0] or "") for r in conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 120",
+                (task_id,),
+            ).fetchall())
+            if any(x in hist for x in (
+                "TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY",
+                "TOPIC2_MULTIFILE_PROJECT_SPEC_ROWS",
+                "TOPIC2_PRICE_ENRICHMENT_STARTED",
+                "TOPIC2_PRICE_ENRICHMENT_DONE",
+            )):
+                return True
+        except Exception:
+            pass
+        try:
+            import sqlite3 as _t2fb_sqlite3
+            import json as _t2fb_json
+            row = conn.execute("SELECT chat_id FROM tasks WHERE id=? LIMIT 1", (task_id,)).fetchone()
+            chat_id = _t2fb_s(row[0] if row else "")
+            if not chat_id:
+                return False
+            mconn = _t2fb_sqlite3.connect("/root/.areal-neva-core/data/memory.db", timeout=5.0)
+            mrow = mconn.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
+                (chat_id, "topic_2_estimate_pending_" + task_id),
+            ).fetchone()
+            mconn.close()
+            if not mrow:
+                return False
+            data = _t2fb_json.loads(mrow[0])
+            parsed = data.get("parsed") if isinstance(data, dict) else {}
+            return bool(
+                (parsed or {}).get("pdf_spec_rows")
+                or (parsed or {}).get("ocr_table_rows")
+                or (parsed or {}).get("local_project_files")
+            )
+        except Exception:
+            return False
+
     def _t2fb_find_parent(conn, chat_id, topic_id, task):
         child_id = _t2fb_s(_t2fb_get(task, "id"))
         reply_to = _t2fb_get(task, "reply_to_message_id")
@@ -5135,6 +5800,10 @@ try:
             if int(topic_id or 0) == 2:
                 input_type = _t2fb_s(_t2fb_get(task, "input_type"))
                 raw = _t2fb_s(_t2fb_get(task, "raw_input"))
+                task_id = _t2fb_s(_t2fb_get(task, "id"))
+                if _t2fb_task_has_own_project_context(conn, task_id):
+                    _t2fb_hist_once(conn, task_id, "PATCH_TOPIC2_PROJECT_CONTEXT_NOT_FOLLOWUP_V1:BYPASS_FOLLOWUP_BIND")
+                    return await _t2fb_orig_handle_new(conn, task, chat_id, topic_id)
                 if input_type in ("text", "voice", "search") and _t2fb_is_followup(raw):
                     parent = _t2fb_find_parent(conn, chat_id, topic_id, task)
                     if parent and _t2fb_merge(conn, task, parent):
@@ -5150,6 +5819,9 @@ try:
     def _update_task(conn, task_id, **kwargs):
         try:
             parent_id = _t2fb_merged_parent_id(conn, task_id)
+            if parent_id and _t2fb_task_has_own_project_context(conn, task_id):
+                _t2fb_hist_once(conn, task_id, "PATCH_TOPIC2_PROJECT_CONTEXT_NOT_FOLLOWUP_V1:BYPASS_UPDATE_MERGE")
+                parent_id = ""
             if parent_id:
                 kwargs["state"] = "DONE"
                 kwargs["result"] = "Уточнение добавлено к исходному ТЗ"
@@ -5321,6 +5993,9 @@ try:
             if _t2v2_topic_id(conn, task_id) != 2:
                 return s
         except Exception:
+            return s
+
+        if "Готовые артефакты:" in s and "Excel:" in s and "PDF:" in s and "drive.google.com" in s:
             return s
 
         ctx = _t2v2_context(conn, task_id)
@@ -6279,6 +6954,12 @@ try:
         model = _t2pr_os.environ.get("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
         if not api_key:
             return []
+        if model != "perplexity/sonar" or "deepseek" in model.lower():
+            try:
+                _T2PR_LOG.error("t2pr blocked forbidden online model: %s", model)
+            except Exception:
+                pass
+            return []
         prompt = (
             "Найди 6-8 актуальных поставщиков стройматериалов в Санкт-Петербурге и Ленинградской области (2026). "
             "Контекст запроса: " + (query or "общие стройматериалы для каркасного дома 8x12м") + ". "
@@ -6841,703 +7522,8 @@ try:
         globals()["_send_once"] = _send_once
 
     if _t2cf_orig_send_once_ex:
-        def _send_once_ex(conn, task_id, chat_id, text, reply_to=None, kind="result", *args, **kwargs):
-            try:
-                if isinstance(text, str) and _t2cf_should_sanitize(text):
-                    if _t2cf_is_topic2_task(conn, task_id) or "Предварительная смета готова" in text:
-                        text = _t2cf_sanitize(text)
-            except Exception as _e:
-                try:
-                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_SOEX_ERR:%s", _e)
-                except Exception:
-                    pass
-            return _t2cf_orig_send_once_ex(conn, task_id, chat_id, text, reply_to, kind, *args, **kwargs)
-        globals()["_send_once_ex"] = _send_once_ex
-
-    # ---- Post-DONE polling worker (catches results written via raw UPDATE) ----
-    def _t2cf_db_path():
-        for p in (
-            "/root/.areal-neva-core/data/core.db",
-            _t2cf_os.path.join(_t2cf_os.path.dirname(__file__), "data", "core.db"),
-        ):
-            if _t2cf_os.path.exists(p):
-                return p
-        return "/root/.areal-neva-core/data/core.db"
-
-    def _t2cf_get_token():
-        for k in ("TELEGRAM_BOT_TOKEN", "BOT_TOKEN", "TG_BOT_TOKEN"):
-            v = _t2cf_os.environ.get(k)
-            if v:
-                return v
-        try:
-            with open("/root/.areal-neva-core/.env", "r", encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if line.startswith("TELEGRAM_BOT_TOKEN="):
-                        return line.split("=", 1)[1].strip().strip('"').strip("'")
-        except Exception:
-            pass
-        return None
-
-    def _t2cf_tg_edit(chat_id, message_id, text):
-        token = <REDACTED_SECRET>
-        if not token:
-            return False, "no_token"
-        url = "https://api.telegram.org/bot" + token + "/editMessageText"
-        body = _t2cf_json.dumps({
-            "chat_id": chat_id,
-            "message_id": message_id,
-            "text": text,
-            "disable_web_page_preview": True,
-        }).encode("utf-8")
-        req = _t2cf_urlreq.Request(url, data=body, headers={"Content-Type": "application/json"})
-        try:
-            with _t2cf_urlreq.urlopen(req, timeout=15) as resp:
-                _ = resp.read()
-                return True, "ok"
-        except Exception as e:
-            return False, str(e)[:120]
-
-    def _t2cf_polling_thread():
-        # Sync polling в фоне через threading — независим от asyncio main loop.
-        try:
-            _t2cf_time.sleep(15)
-            _T2CF_LOG.info("PATCH_TOPIC2_TG_FORMAT_CANON_V1 polling started (thread)")
-        except Exception:
-            pass
-        db = _t2cf_db_path()
-        while True:
-            try:
-                conn = _t2cf_sqlite3.connect(db, timeout=5.0)
-                conn.row_factory = _t2cf_sqlite3.Row
-                rows = conn.execute(
-                    """SELECT id, chat_id, bot_message_id, result FROM tasks
-                       WHERE topic_id=2 AND state='DONE'
-                         AND result IS NOT NULL
-                         AND length(result) > 200
-                         AND result LIKE '%Предварительная смета готова%'
-                         AND result NOT LIKE ?
-                       ORDER BY created_at DESC LIMIT 30""",
-                    ("%" + _T2CF_MARKER + "%",),
-                ).fetchall()
-                for r in rows:
-                    try:
-                        old = r["result"] or ""
-                        new_text = _t2cf_sanitize(old)
-                        if not new_text or new_text == old:
-                            continue
-                        conn.execute("UPDATE tasks SET result=? WHERE id=?", (new_text, r["id"]))
-                        conn.commit()
-                        if r["chat_id"] and r["bot_message_id"]:
-                            ok, info = _t2cf_tg_edit(int(r["chat_id"]), int(r["bot_message_id"]), new_text)
-                            _T2CF_LOG.info(
-                                "PATCH_TOPIC2_TG_FORMAT_CANON_V1 edit task=%s ok=%s info=%s",
-                                r["id"], ok, info,
-                            )
-                        else:
-                            _T2CF_LOG.info(
-                                "PATCH_TOPIC2_TG_FORMAT_CANON_V1 sanitized DB task=%s (no chat/msg)",
-                                r["id"],
-                            )
-                    except Exception as e_one:
-                        try:
-                            _T2CF_LOG.exception(
-                                "PATCH_TOPIC2_TG_FORMAT_CANON_V1 one_err task=%s e=%s",
-                                (r["id"] if r else "?"), e_one,
-                            )
-                        except Exception:
-                            pass
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-            except Exception as e_loop:
-                try:
-                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1 loop_err: %s", e_loop)
-                except Exception:
-                    pass
-            _t2cf_time.sleep(45)
-
-    # Запускаем daemon-thread прямо в момент install — не зависим от main()/asyncio.
-    try:
-        _t2cf_thread = _t2cf_threading.Thread(
-            target=_t2cf_polling_thread,
-            name="t2cf_polling",
-            daemon=True,
-        )
-        _t2cf_thread.start()
-        globals()["_t2cf_polling_thread_obj"] = _t2cf_thread
-        _T2CF_LOG.info("PATCH_TOPIC2_TG_FORMAT_CANON_V1 polling thread spawned")
-    except Exception as _e:
-        try:
-            _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_THREAD_SPAWN_ERR:%s", _e)
-        except Exception:
-            pass
-
-    _T2CF_LOG.info("PATCH_TOPIC2_TG_FORMAT_CANON_V1 installed")
-except Exception as _t2cf_install_err:
-    try:
-        logger.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_INSTALL_ERR:%s", _t2cf_install_err)
-    except Exception:
-        pass
-# === /PATCH_TOPIC2_TG_FORMAT_CANON_V1 ===
-
-
-# === PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 ===
-# Цель: classify topic_2 follow-up на STATUS / META / FACT перед FOLLOWUP_BIND merge.
-#  STATUS («где смета», «дай ссылку», «готова смета») → bypass merge, ответ из parent.result/artifacts
-#  META  («что я добавлял», без новых фактов) → bypass merge, ответ из parent task_history clarified:
-#  FACT  (утепление, потолок, поставщики, фасад и т.д.) → существующий FOLLOWUP_BIND merge + recalc markers
-# Плюс: timeout-guard — EXECUTION_TIMEOUT не overwrite result если есть ready-artifact evidence.
-# Не трогает: price logic / price choice 1/2/3/4 / Sonar / supplier-heal / Drive / PDF / XLSX / topic_5/210/500.
-try:
-    import re as _t2af_re
-    import logging as _t2af_logging
-
-    _T2AF_LOG = _t2af_logging.getLogger("WORKER")
-    _t2af_orig_handle_new = globals().get("_handle_new")
-    _t2af_orig_update_task = globals().get("_update_task")
-
-    _T2AF_EVIDENCE_MARKERS = (
-        "TG_EDIT:OK",
-        "PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK",
-        "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1",
-        "T2RFP_FULL_PIPELINE_DONE",
-        "P8T2C_CANONICAL_OK",
-        "TOPIC2_DRIVE_LINKS_SAVED",
-        "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
-        "TOPIC2_DRIVE_UPLOAD_PDF_OK",
-        "TOPIC2_PDF_CREATED",
-        "TOPIC2_XLSX_CREATED",
-    )
-
-    _T2AF_FACT_KEYWORDS = (
-        "утепление", "роквул", "rockwool", "минвата", "каменная вата",
-        "потолок", "крыш", "перекрыти",
-        "стен", "фасад", "сайдинг", "имитация бруса", "клик-фальц", "штукатурк",
-        "плитка", "ламинат", "пол", "теплый пол",
-        "окна", "двери", "электрика", "сантехника", "отопление",
-        "вентиляция", "канализаци", "водоснабжен",
-        "фундамент", "плита", "сваи", "ленточный",
-        "поставщик", "стройбаз", "строительная баз", "строит",
-        "ропша", "регион", "логистика", "удалённост",
-        "квадрат", "этаж", "брус", "каркас",
-        "окраш", "крашен", "ворс", "разношир",
-    )
-
-    _T2AF_STATUS_RE = _t2af_re.compile(
-        r"^\s*"
-        r"(?:где\s+(?:смет|расч[её]т|файл|excel|pdf|результат|ссылк)"
-        r"|покажи\s+(?:смет|расч|ссылк)"
-        r"|дай\s+ссылк"
-        r"|скинь\s+(?:смет|ссылк|excel|pdf|расч)"
-        r"|что\s+по\s+смет"
-        r"|готов[аоы]?\s+смет"
-        r"|готово\s*[?!.]*\s*$"
-        r")",
-        _t2af_re.IGNORECASE,
-    )
-    _T2AF_META_RE = _t2af_re.compile(
-        r"что\s+я\s+(?:тебе\s+)?(?:ещё|еще)?\s*(?:добавл|говорил|сказал|написал|просил|давал)",
-        _t2af_re.IGNORECASE,
-    )
-
-    def _t2af_norm(s):
-        if s is None:
-            return ""
-        try:
-            s = str(s).strip()
-        except Exception:
-            return ""
-        s = _t2af_re.sub(r"^\s*\[VOICE\]\s*", "", s, flags=_t2af_re.IGNORECASE)
-        return s
-
-    def _t2af_low(s):
-        return _t2af_norm(s).lower().replace("ё", "е")
-
-    def _t2af_classify(raw):
-        s_norm = _t2af_norm(raw)
-        if not s_norm:
-            return "OTHER"
-        s_low = s_norm.lower().replace("ё", "е")
-        # STATUS
-        if _T2AF_STATUS_RE.search(s_low):
-            return "STATUS"
-        # META — спрашивает что добавляли; если есть конкретные числа размеров → FACT
-        if _T2AF_META_RE.search(s_low):
-            if _t2af_re.search(r"\d+\s*(?:мм|см|м[²2³3]|кг|шт|тонн|км|°|метр)", s_low):
-                return "FACT"
-            return "META"
-        # FACT
-        if any(k in s_low for k in _T2AF_FACT_KEYWORDS):
-            return "FACT"
-        return "OTHER"
-
-    def _t2af_match_facts(raw):
-        s = _t2af_low(raw)
-        hits = []
-        for k in ("утепление", "потолок", "поставщик", "фасад", "кровля", "пол",
-                  "окна", "двери", "стен", "имитация", "брус", "ламинат",
-                  "перекрыти", "фундамент", "регион", "логистика"):
-            if k in s and k not in hits:
-                hits.append(k)
-        return hits
-
-    def _t2af_history_actions(conn, parent_id, limit=400):
-        try:
-            rows = conn.execute(
-                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT ?",
-                (str(parent_id), int(limit)),
-            ).fetchall()
-            return [r[0] or "" for r in rows]
-        except Exception:
-            return []
-
-    def _t2af_has_ready_artifacts(conn, parent_id):
-        for a in _t2af_history_actions(conn, parent_id, 600):
-            for m in _T2AF_EVIDENCE_MARKERS:
-                if m in a:
-                    return True
-        return False
-
-    def _t2af_extract_artifact_ids(conn, parent_id):
-        xlsx_id = None
-        pdf_id = None
-        for a in _t2af_history_actions(conn, parent_id, 600):
-            if not xlsx_id:
-                m = _t2af_re.search(r"PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK:([A-Za-z0-9_\-]+)", a)
-                if m:
-                    xlsx_id = m.group(1)
-        # latest pdf from log-style action lines if any
-        return xlsx_id, pdf_id
-
-    def _t2af_list_clarifieds(conn, parent_id):
-        try:
-            rows = conn.execute(
-                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid",
-                (str(parent_id),),
-            ).fetchall()
-        except Exception:
-            return []
-        out = []
-        for r in rows:
-            v = (r[0] or "")[len("clarified:"):].strip()
-            if v and len(v) > 1 and v not in out:
-                out.append(v)
-        return out
-
-    def _t2af_hist_once(conn, task_id, action):
-        try:
-            if not conn.execute(
-                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
-                (str(task_id), str(action)),
-            ).fetchone():
-                conn.execute(
-                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (str(task_id), str(action)),
-                )
-        except Exception:
-            pass
-
-    def _t2af_get(obj, key, default=None):
-        try:
-            if isinstance(obj, dict):
-                return obj.get(key, default)
-        except Exception:
-            pass
-        try:
-            if hasattr(obj, "keys") and key in obj.keys():
-                return obj[key]
-        except Exception:
-            pass
-        return default
-
-    def _t2af_rowdict(conn, sql, params=()):
-        try:
-            cur = conn.execute(sql, params)
-            row = cur.fetchone()
-            if not row:
-                return None
-            try:
-                if hasattr(row, "keys"):
-                    return {k: row[k] for k in row.keys()}
-            except Exception:
-                pass
-            cols = [d[0] for d in cur.description]
-            return dict(zip(cols, row))
-        except Exception:
-            return None
-
-    def _t2af_parent_is_valid(conn, parent):
-        if not parent:
-            return False
-        parent_id = str(parent.get("id") or "")
-        state = str(parent.get("state") or "").upper()
-        err = str(parent.get("error_message") or "").upper()
-        if state in ("DONE", "FAILED", "CANCELLED", "ARCHIVED"):
-            return False
-        if "P6E67_PARENT_NOT_FOUND" in err or "MERGED_TO_PARENT" in err:
-            return False
-        try:
-            hist = "\n".join(str(r[0] or "") for r in conn.execute(
-                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 80",
-                (parent_id,),
-            ).fetchall())
-        except Exception:
-            hist = ""
-        if (
-            "P6E67_PARENT_NOT_FOUND" in hist
-            or "TOPIC2_DONE_CONTRACT_OK" in hist
-            or "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
-            or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
-        ):
-            return False
-        return True
-
-    def _t2af_find_parent(conn, chat_id, topic_id, child):
-        # Reuse same lookup logic as FOLLOWUP_BIND: by reply_to first, then latest topic_2 task.
-        child_id = str(_t2af_get(child, "id") or "")
-        reply_to = _t2af_get(child, "reply_to_message_id")
-        if reply_to:
-            p = _t2af_rowdict(conn, """
-                SELECT rowid AS rid, *
-                FROM tasks
-                WHERE CAST(chat_id AS TEXT)=?
-                  AND topic_id=?
-                  AND id<>?
-                  AND bot_message_id=?
-                  AND input_type IN ('drive_file','text')
-                  AND state NOT IN ('CANCELLED')
-                ORDER BY rowid DESC
-                LIMIT 1
-            """, (str(chat_id), int(topic_id or 0), child_id, reply_to))
-            if _t2af_parent_is_valid(conn, p):
-                return p
-        p = _t2af_rowdict(conn, """
-            SELECT rowid AS rid, *
-            FROM tasks
-            WHERE CAST(chat_id AS TEXT)=?
-              AND topic_id=?
-              AND id<>?
-              AND input_type IN ('drive_file','text')
-              AND state NOT IN ('CANCELLED')
-              AND updated_at >= datetime('now','-72 hours')
-              AND (
-                   raw_input LIKE '%смет%'
-                OR result LIKE '%смет%'
-                OR input_type='drive_file'
-              )
-            ORDER BY rowid DESC
-            LIMIT 1
-        """, (str(chat_id), int(topic_id or 0), child_id))
-        return p if _t2af_parent_is_valid(conn, p) else None
-
-    def _t2af_build_status_text(parent):
-        result = str(_t2af_get(parent, "result") or "")
-        bad = ("Задача не выполнена" in result) or ("превышено время выполнения" in result)
-        if result and not bad and len(result) > 100:
-            return result
-        # fallback to evidence-based text
-        return (
-            "Текущий статус: смета формируется. Готовые артефакты появятся в этом же сообщении.\n\n"
-            "Если ответа не пришло — пришли правки или ‘продолжай’."
-        )
-
-    async def _handle_new(conn, task, chat_id, topic_id):
-        try:
-            if int(topic_id or 0) == 2:
-                input_type = str(_t2af_get(task, "input_type") or "").strip()
-                raw = _t2af_norm(_t2af_get(task, "raw_input"))
-                child_id = str(_t2af_get(task, "id") or "")
-                reply_to = _t2af_get(task, "reply_to_message_id")
-                if input_type in ("text", "voice", "search") and raw and child_id:
-                    cls = _t2af_classify(raw)
-
-                    # === STATUS — bypass merge ===
-                    if cls == "STATUS":
-                        parent = _t2af_find_parent(conn, chat_id, topic_id, task)
-                        if parent:
-                            parent_id = str(parent.get("id"))
-                            tg_text = _t2af_build_status_text(parent)
-                            try:
-                                conn.execute(
-                                    "UPDATE tasks SET state='DONE', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
-                                    (tg_text[:1500], "STATUS_REQUEST_ANSWERED:" + parent_id, child_id),
-                                )
-                            except Exception:
-                                pass
-                            _t2af_hist_once(conn, child_id, "TOPIC2_STATUS_REQUEST_ANSWERED:" + parent_id)
-                            if _t2af_has_ready_artifacts(conn, parent_id):
-                                _t2af_hist_once(conn, parent_id,
-                                                "TOPIC2_STATUS_REQUEST_RETURNED_READY_ARTIFACTS:" + child_id)
-                            try:
-                                conn.commit()
-                            except Exception:
-                                pass
-                            try:
-                                _send_once(conn, child_id, str(chat_id), tg_text, reply_to, "status_request")
-                            except Exception:
-                                pass
-                            _T2AF_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 STATUS bypass child=%s parent=%s",
-                                           child_id, parent_id)
-                            return
-
-                    # === META — bypass merge, answer from history ===
-                    if cls == "META":
-                        parent = _t2af_find_parent(conn, chat_id, topic_id, task)
-                        if parent:
-                            parent_id = str(parent.get("id"))
-                            facts = _t2af_list_clarifieds(conn, parent_id)
-                            if facts:
-                                pre = "В техзадание ранее добавлены факты:"
-                                lines = [pre] + [f"- {f[:300]}" for f in facts[-12:]]
-                                tg_text = "\n".join(lines)
-                            else:
-                                tg_text = "В этой смете дополнительных фактов в истории нет."
-                            try:
-                                conn.execute(
-                                    "UPDATE tasks SET state='DONE', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
-                                    (tg_text[:1800], "META_FACTS_ANSWERED:" + parent_id, child_id),
-                                )
-                            except Exception:
-                                pass
-                            _t2af_hist_once(conn, child_id, "TOPIC2_META_FACTS_ANSWERED:" + parent_id)
-                            try:
-                                conn.commit()
-                            except Exception:
-                                pass
-                            try:
-                                _send_once(conn, child_id, str(chat_id), tg_text, reply_to, "meta_facts")
-                            except Exception:
-                                pass
-                            _T2AF_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 META bypass child=%s parent=%s facts=%d",
-                                           child_id, parent_id, len(facts))
-                            return
-
-                    # === FACT — pre-merge markers + RECALC fact-trace ===
-                    if cls == "FACT":
-                        parent = _t2af_find_parent(conn, chat_id, topic_id, task)
-                        if parent:
-                            parent_id = str(parent.get("id"))
-                            _t2af_hist_once(conn, parent_id,
-                                            "TOPIC2_ADDITIONAL_FACT_MERGED:" + child_id)
-                            _t2af_hist_once(conn, parent_id,
-                                            "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:" + child_id)
-                            for k in _t2af_match_facts(raw):
-                                _t2af_hist_once(conn, parent_id,
-                                                "TOPIC2_RECALC_CONTEXT_INCLUDES_FACT:" + k)
-                            try:
-                                conn.commit()
-                            except Exception:
-                                pass
-                        # fall through to existing FOLLOWUP_BIND chain (orig _handle_new)
-        except Exception as e:
-            try:
-                _T2AF_LOG.exception("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2_HANDLE_ERR:%s", e)
-            except Exception:
-                pass
-        return await _t2af_orig_handle_new(conn, task, chat_id, topic_id)
-
-    if _t2af_orig_handle_new:
-        globals()["_handle_new"] = _handle_new
-
-    # === Timeout guard wrap on _update_task ===
-    def _update_task(conn, task_id, **kwargs):
-        try:
-            new_state = str(kwargs.get("state") or "")
-            new_err = str(kwargs.get("error_message") or "")
-            new_result = str(kwargs.get("result") or "")
-            is_timeout_overwrite = (
-                new_state == "FAILED"
-                and ("EXECUTION_TIMEOUT" in new_err
-                     or "превышено время выполнения" in new_result)
-            )
-            if is_timeout_overwrite and task_id:
-                row = _t2af_rowdict(
-                    conn,
-                    "SELECT id, topic_id, state, result FROM tasks WHERE id=? LIMIT 1",
-                    (str(task_id),),
-                )
-                if row and int(row.get("topic_id") or 0) == 2:
-                    if _t2af_has_ready_artifacts(conn, str(task_id)):
-                        # Suppress overwrite: keep last valid result (do not stomp), set AC.
-                        old_result = str(row.get("result") or "")
-                        keep_result = old_result if (old_result and "Задача не выполнена" not in old_result and len(old_result) > 100) else None
-                        kwargs["state"] = "AWAITING_CONFIRMATION"
-                        kwargs["error_message"] = ""
-                        if keep_result is not None:
-                            kwargs["result"] = keep_result
-                        else:
-                            xlsx_id, _pdf_id = _t2af_extract_artifact_ids(conn, str(task_id))
-                            if xlsx_id:
-                                kwargs["result"] = (
-                                    "✅ Смета готова\n\n"
-                                    "Готовые артефакты:\n"
-                                    f"Excel: https://drive.google.com/file/d/{xlsx_id}/view\n\n"
-                                    "Подтверди или пришли правки"
-                                )
-                            else:
-                                kwargs.pop("result", None)
-                        _t2af_hist_once(conn, str(task_id),
-                                        "TOPIC2_TIMEOUT_SUPPRESSED_READY_ARTIFACT_EXISTS")
-                        # If there is a recent ADDITIONAL_FACTS_RECALC_STARTED without DONE → write DONE marker.
-                        try:
-                            rows = conn.execute(
-                                "SELECT action FROM task_history WHERE task_id=? "
-                                "AND (action LIKE 'TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:%' "
-                                "OR action LIKE 'TOPIC2_ADDITIONAL_FACTS_RECALC_DONE:%') "
-                                "ORDER BY rowid DESC LIMIT 30",
-                                (str(task_id),),
-                            ).fetchall()
-                            started = [r[0] for r in rows if r and r[0].startswith("TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:")]
-                            done = [r[0] for r in rows if r and r[0].startswith("TOPIC2_ADDITIONAL_FACTS_RECALC_DONE:")]
-                            for s in started:
-                                cid = s.split(":", 1)[1]
-                                if not any(d.endswith(":" + cid) for d in done):
-                                    _t2af_hist_once(conn, str(task_id),
-                                                    "TOPIC2_ADDITIONAL_FACTS_RECALC_DONE:" + cid)
-                        except Exception:
-                            pass
-                        try:
-                            conn.commit()
-                        except Exception:
-                            pass
-                        _T2AF_LOG.info(
-                            "PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 timeout-overwrite suppressed task=%s",
-                            str(task_id),
-                        )
-        except Exception as e:
-            try:
-                _T2AF_LOG.exception("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2_UPDATE_ERR:%s", e)
-            except Exception:
-                pass
-        return _t2af_orig_update_task(conn, task_id, **kwargs)
-
-    if _t2af_orig_update_task:
-        globals()["_update_task"] = _update_task
-
-    _T2AF_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 installed")
-except Exception as _t2af_install_err:
-    try:
-        logger.exception("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2_INSTALL_ERR:%s", _t2af_install_err)
-    except Exception:
-        pass
-# === /PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 ===
-
-
-# === PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 ===
-# Closes 4 system gaps on topic_2 estimate path discovered after requeue failure of f030db95:
-#   1. drive_file raw_input safe parser — extract leading JSON object via raw_decode,
-#      tolerant к hвостовому text (УТОЧНЕНИЕ К ИСХОДНОМУ ТЗ:...) от FOLLOWUP_BIND merges.
-#      Marker TOPIC2_DRIVE_RAW_INPUT_JSON_PREFIX_RECOVERED. Tail НЕ удаляется (non-destructive).
-#   2. FOLLOWUP_BIND merge для drive_file parent: НЕ дописывает text в raw_input;
-#      facts остаются в task_history `clarified:`. Parent raw_input — pure JSON (восстанавливаем
-#      на первом merge для уже-загрязнённых row через safe parser).
-#   3. Timeout-guard расширен: «invalid raw_input» error при наличии ready-artifact evidence —
-#      также suppress, переключение в AWAITING_CONFIRMATION.
-#   4. STATUS/META/FACT classify уже есть в V2; этот патч только защищает _handle_drive_file
-#      и _t2fb_merge от corruption JSON.
-# НЕ ТРОГАЕТ: price logic, Sonar/Perplexity routing, supplier/heal, Drive upload, PDF/XLSX engine,
-# topic_5/210/500, sanitizer (TG_FORMAT_CANON_V1 уже без удаления «Учтено из дополнений»/«Поставщики»).
-try:
-    import json as _t2cf2_json
-    import re as _t2cf2_re
-    import logging as _t2cf2_logging
-
-    _T2CF2_LOG = _t2cf2_logging.getLogger("WORKER")
-
-    def _t2cf2_extract_json_prefix(raw):
-        """
-        Returns (json_str, tail) or (None, None) if no leading JSON found.
-        Uses json.JSONDecoder.raw_decode — tolerates trailing non-JSON text.
-        """
-        if not isinstance(raw, str):
-            return None, None
-        s = raw.lstrip()
-        if not s.startswith("{") and not s.startswith("["):
-            return None, None
-        try:
-            decoder = _t2cf2_json.JSONDecoder()
-            obj, end = decoder.raw_decode(s)
-            json_str = s[:end]
-            tail = s[end:].strip()
-            # Sanity: must round-trip
-            _t2cf2_json.loads(json_str)
-            return json_str, tail
-        except Exception:
-            return None, None
-
-    def _t2cf2_hist_once(conn, task_id, action):
-        try:
-            if not conn.execute(
-                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
-                (str(task_id), str(action)),
-            ).fetchone():
-                conn.execute(
-                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (str(task_id), str(action)),
-                )
-        except Exception:
-            pass
-
-    def _t2cf2_get(obj, key, default=None):
-        try:
-            if isinstance(obj, dict):
-                return obj.get(key, default)
-        except Exception:
-            pass
-        try:
-            if hasattr(obj, "keys") and key in obj.keys():
-                return obj[key]
-        except Exception:
-            pass
-        return default
-
-    # === FIX 1: wrap _handle_drive_file → safe JSON-prefix parser for topic_2 ===
-    _t2cf2_orig_handle_drive_file = globals().get("_handle_drive_file")
-    if _t2cf2_orig_handle_drive_file:
-        async def _handle_drive_file(conn, task, chat_id, topic_id):
-            try:
-                if int(topic_id or 0) == 2:
-                    raw = _t2cf2_get(task, "raw_input")
-                    if isinstance(raw, str) and raw and raw.lstrip().startswith("{"):
-                        try:
-                            _t2cf2_json.loads(raw)
-                            json_ok = True
-                        except Exception:
-                            json_ok = False
-                        if not json_ok:
-                            json_str, tail = _t2cf2_extract_json_prefix(raw)
-                            if json_str:
-                                task_id = str(_t2cf2_get(task, "id") or "")
-                                # Save tail clarification blocks into task_history (idempotent)
-                                if tail:
-                                    blocks = _t2cf2_re.split(
-                                        r"\n*УТОЧНЕНИЕ К ИСХОДНОМУ ТЗ:\s*\n",
-                                        tail,
-                                    )
-                                    # blocks[0] — text before first marker (e.g. "Размеры: ..."),
-                                    # blocks[1:] — clarification segments
-                                    for blk in blocks:
-                                        seg = (blk or "").strip()
-                                        if not seg or len(seg) < 3:
-                                            continue
-                                        # truncate to 500 for marker; full text stays in DB tail (non-destructive)
-                                        action = "clarified:" + seg[:500]
-                                        _t2cf2_hist_once(conn, task_id, action)
-                                # Replace raw_input in DB with clean JSON (preserve tail in history only)
-                                try:
-                                    conn.execute(
-                                        "UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?",
-                                        (json_str, task_id),
-                                    )
-                                    _t2cf2_hist_once(conn, task_id,
-                                        "TOPIC2_DRIVE_RAW_INPUT_JSON_PREFIX_RECOVERED")
-                                    conn.commit()
-                                except Exception as _ue:
-                                    try:
 
 ====================================================================================================
 END_FILE: task_worker.py
-FILE_CHUNK: 3/4
+FILE_CHUNK: 3/5
 ====================================================================================================

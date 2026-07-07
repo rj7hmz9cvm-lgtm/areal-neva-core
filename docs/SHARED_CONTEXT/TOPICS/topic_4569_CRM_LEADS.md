@@ -1,7 +1,7 @@
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-06T09:52:44.800282+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.295749+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -46,8 +46,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env

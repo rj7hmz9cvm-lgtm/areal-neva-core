@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-06T09:52:44.433331+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-part: 5/19
+generated_at_utc: 2026-07-07T13:23:40.864839+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+part: 5/21
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
-FILE_CHUNK: 1/4
-SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
+FILE_CHUNK: 1/5
+SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -654,10 +654,18 @@ def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
             if not _val:
                 return
             _mid = hashlib.sha1(f"{chat_id}:{key}:{_ts}:{_val[:80]}".encode()).hexdigest()
-            _mc.execute(
-                "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
-                (_mid, str(chat_id), str(key), _val, _ts),
-            )
+            _topic_match = re.match(r"^topic_(\d+)_", str(key))
+            _topic_id = int(_topic_match.group(1)) if _topic_match else 0
+            if "topic_id" in _cols_mem and "scope" in _cols_mem:
+                _mc.execute(
+                    "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?,?,?,?,?,?,?)",
+                    (_mid, str(chat_id), str(key), _val, _ts, _topic_id, "topic"),
+                )
+            else:
+                _mc.execute(
+                    "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
+                    (_mid, str(chat_id), str(key), _val, _ts),
+                )
             _mc.commit()
         finally:
             _mc.close()
@@ -789,18 +797,29 @@ def _extract_role_confirmation(result: str) -> str:
     return _clean(m.group(1), 200)
 
 
+def _ensure_memory_topic_schema(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT, topic_id INTEGER DEFAULT 0, scope TEXT DEFAULT 'topic')"
+    )
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()}
+    if "topic_id" not in cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN topic_id INTEGER DEFAULT 0")
+    if "scope" not in cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN scope TEXT DEFAULT 'topic'")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_chat_topic ON memory(chat_id, topic_id)")
+
+
 def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
     if not role or not os.path.exists(MEM_DB):
         return
     mem = db(MEM_DB)
     try:
-        if not _has_table(mem, "memory"):
-            mem.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        _ensure_memory_topic_schema(mem)
         key = f"topic_{topic_id}_role"
         mem.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (str(chat_id), key))
         mem.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), key, role),
+            "INSERT INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?, ?, ?, ?, datetime('now'), ?, ?)",
+            (__import__("uuid").uuid4().hex, str(chat_id), key, role, int(topic_id or 0), "topic"),
         )
         mem.commit()
     finally:
@@ -1080,20 +1099,19 @@ def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> No
 
     conn = db(MEM_DB)
     try:
-        if not _has_table(conn, "memory"):
-            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        _ensure_memory_topic_schema(conn)
         prefix = f"topic_{int(topic_id)}_"
         conn.execute(
-            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), f"{prefix}assistant_output", _clean(result, 50000)),
+            "INSERT OR REPLACE INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?, ?, ?, ?, datetime('now'), ?, ?)",
+            (__import__("uuid").uuid4().hex, str(chat_id), f"{prefix}assistant_output", _clean(result, 50000), int(topic_id or 0), "long"),
         )
         conn.execute(
-            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else ""),
+            "INSERT OR REPLACE INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?, ?, ?, ?, datetime('now'), ?, ?)",
+            (__import__("uuid").uuid4().hex, str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else "", int(topic_id or 0), "long"),
         )
         conn.execute(
-            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), f"{prefix}user_input", _clean(raw_input, 500)),
+            "INSERT OR REPLACE INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?, ?, ?, ?, datetime('now'), ?, ?)",
+            (__import__("uuid").uuid4().hex, str(chat_id), f"{prefix}user_input", _clean(raw_input, 500), int(topic_id or 0), "short"),
         )
         conn.commit()
         logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
@@ -1240,18 +1258,22 @@ def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> No
             row_raw_input = _s(row["raw_input"])
         except Exception:
             row_raw_input = ""
-        if _force_voice_finish(row_raw_input, result):
+        try:
+            _startup_topic_id = int(row["topic_id"] or 0)
+        except Exception:
+            _startup_topic_id = 0
+        if _startup_topic_id != 500 and _force_voice_finish(row_raw_input, result):
             _update_task(conn, row["id"], state="DONE")
             continue  # FORCE_VOICE_FINISH_HOOK
 
-        if any(m in low_result for m in done_markers):
+        if _startup_topic_id != 500 and any(m in low_result for m in done_markers):
             _update_task(conn, row["id"], state="DONE", error_message="")
             _close_pin(conn, row["id"])
             _history(conn, row["id"], "state:DONE")
             conn.commit()
             continue
 
-        if any(m in low_result for m in junk_markers):
+        if _startup_topic_id != 500 and any(m in low_result for m in junk_markers):
             _update_task(conn, row["id"], state="FAILED", error_message="JUNK_RESULT_CLEANUP")
             _close_pin(conn, row["id"])
             _history(conn, row["id"], "state:FAILED")
@@ -1416,12 +1438,14 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         from core.file_context_intake import prehandle_task_context_v1 as _ftc_file_prehandle
         # === CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
         _ftc_topic_id = int(_task_field(task, "topic_id", 0) or 0)
-        _ftc_file = _ftc_file_prehandle(conn, task) if _ftc_topic_id not in (500, 210) else None  # TOPIC_ROUTE_ISOLATION_FULL_V2
+        _ftc_input_type = _s(_task_field(task, "input_type", "")).lower()
+        _ftc_file_like = _ftc_input_type in ("drive_file", "file", "photo", "image", "document")
+        _ftc_file = _ftc_file_prehandle(conn, task) if (_ftc_topic_id not in (500, 210) or _ftc_file_like) else None  # TOPIC_ROUTE_ISOLATION_FULL_V2
         # === END_CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
         if _ftc_file and _ftc_file.get("handled"):
             _ftc_tid = _s(_task_field(task, "id", ""))
             _ftc_chat = _s(_task_field(task, "chat_id", ""))
-            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_reply = _ftc_file.get("reply_to_message_id") or _task_field(task, "reply_to_message_id", None)
             _ftc_text = _ftc_file.get("message") or ""
             _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_file.get("kind", "file_context_intake"))
             _update_task(
@@ -1915,6 +1939,74 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     except Exception as _ft_e:
         logger.error("FILE_TECH_CONTOUR_FOLLOWUP_V2_ERR task=%s err=%s", task_id, _ft_e)
     # === END FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    # === CONFIRM_BEFORE_ACTIVE_DIALOG_ALL_TOPICS_V1 ===
+    # Canon §16.2: AWAITING_CONFIRMATION + confirm/finish must close the parent task
+    # before generic live-dialog handlers.
+    try:
+        _confirm_before_live = (
+            (_looks_done_command(raw_input) or _is_confirm_intent(raw_input))
+            and not _is_revision_intent(raw_input)
+        )
+        if _confirm_before_live:
+            _confirm_parent = _find_awaiting_confirmation_task(conn, chat_id, topic_id, task_id, reply_to)
+            if _confirm_parent is None:
+                _confirm_parent = conn.execute(
+                    """
+                    SELECT id
+                    FROM tasks
+                    WHERE chat_id=?
+                      AND COALESCE(topic_id,0)=?
+                      AND id<>?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND COALESCE(result,'')<>''
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id or 0), str(task_id)),
+                ).fetchone()
+            if _confirm_parent is not None:
+                _confirm_parent_id = _s(_confirm_parent["id"])
+                _finalize_done(conn, _confirm_parent_id, chat_id, topic_id, reply_to)
+                _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+                _history(conn, task_id, "CONFIRM_BEFORE_ACTIVE_DIALOG_ALL_TOPICS_V1:ACCEPTED")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Принял. Задача закрыта", reply_to, "confirm_before_active_dialog")
+                return
+    except Exception as _confirm_live_e:
+        logger.warning("CONFIRM_BEFORE_ACTIVE_DIALOG_ALL_TOPICS_V1_ERR task=%s err=%s", task_id, _confirm_live_e)
+    # === END_CONFIRM_BEFORE_ACTIVE_DIALOG_ALL_TOPICS_V1 ===
+    # === TOPIC500_CONFIRM_BEFORE_ACTIVE_DIALOG_V1 ===
+    # Canon §16.2: AWAITING_CONFIRMATION + confirm/finish must close the parent task,
+    # not create a separate live-dialog task.
+    try:
+        if int(topic_id or 0) == 500 and _looks_done_command(raw_input):
+            _t500_parent = _find_topic500_done_parent(conn, chat_id, topic_id, task_id, reply_to)
+            if _t500_parent is None:
+                _t500_parent = conn.execute(
+                    """
+                    SELECT id
+                    FROM tasks
+                    WHERE chat_id=?
+                      AND COALESCE(topic_id,0)=500
+                      AND id<>?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND COALESCE(result,'')<>''
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), str(task_id)),
+                ).fetchone()
+            if _t500_parent is not None:
+                _t500_parent_id = _s(_t500_parent["id"])
+                _finalize_done(conn, _t500_parent_id, chat_id, topic_id, reply_to)
+                _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+                _history(conn, task_id, "TOPIC500_CONFIRM_BEFORE_ACTIVE_DIALOG_V1:ACCEPTED")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Принял. Задача закрыта", reply_to, "topic500_confirm_before_active_dialog")
+                return
+    except Exception as _t500_confirm_e:
+        logger.warning("TOPIC500_CONFIRM_BEFORE_ACTIVE_DIALOG_V1_ERR task=%s err=%s", task_id, _t500_confirm_e)
+    # === END_TOPIC500_CONFIRM_BEFORE_ACTIVE_DIALOG_V1 ===
     # === ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
     # === ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
     try:
@@ -1969,6 +2061,8 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     try:
         _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
         _mq_low = _mq_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()
+        if int(topic_id or 0) == 500:
+            _mq_low = ""
         _mq_markers = (
             "что обсуждали", "что делали", "что мы делали", "что мы обсуждали",
             "неделю назад", "две недели", "три недели", "месяц назад",
@@ -2168,15 +2262,17 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             except Exception:
                 pass
             return
-        _ff13a_done = await _ff13a_handle_template_estimate_intent(
-            conn=_ff13a_conn,
-            task_id=_ff13a_task_id,
-            chat_id=_ff13a_chat_id,
-            topic_id=_ff13a_topic_id,
-            raw_input=_ff13a_raw_input,
-            input_type=_ff13a_input_type,
-            reply_to_message_id=_ff13a_reply_to,
-        )
+        _ff13a_done = False
+        if _ff13a_topic_id == 2:
+            _ff13a_done = await _ff13a_handle_template_estimate_intent(
+                conn=_ff13a_conn,
+                task_id=_ff13a_task_id,
+                chat_id=_ff13a_chat_id,
+                topic_id=_ff13a_topic_id,
+                raw_input=_ff13a_raw_input,
+                input_type=_ff13a_input_type,
+                reply_to_message_id=_ff13a_reply_to,
+            )
         # === FULLFIX_13B_SAMPLE_HARD_STOP_2 ===
         if _ff13a_done:
             try:
@@ -2790,9 +2886,46 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         (str(chat_id), task_id, int(topic_id)),
     ).fetchone()
 
-    if pending_confirm:
+    _topic500_explicit_search = False
+    try:
+        _topic500_low = str(raw_input or "").lower().replace("ё", "е")
+        _topic500_explicit_search = int(topic_id or 0) == 500 and any(
+            x in _topic500_low for x in (
+                "найди", "найти", "поищи", "поиск", "ссылка", "ссылку",
+                "цена", "стоимость", "актуальн", "новости", "курс", "погода",
+            )
+        )
+    except Exception:
+        _topic500_explicit_search = False
+    if int(topic_id or 0) == 500 and _looks_done_command(raw_input):
+        _topic500_explicit_search = False
+        _topic500_done_parent = pending_confirm
+        if _topic500_done_parent is None:
+            _topic500_done_parent = _find_topic500_done_parent(conn, chat_id, topic_id, task_id, reply_to)
+        if _topic500_done_parent is not None:
+            _topic500_done_id = _s(_topic500_done_parent["id"])
+            _finalize_done(conn, _topic500_done_id, chat_id, topic_id, reply_to)
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "topic500_done_command_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "topic500_done_command")
+            return
+        _update_task(conn, task_id, state="DONE", result="Команда закрытия принята, активная поисковая задача не найдена", error_message="")
+        _history(conn, task_id, "topic500_done_command_no_parent")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Не вижу активной поисковой задачи для закрытия. Ответь на сообщение с результатом поиска.", reply_to, "topic500_done_no_parent")
+        return
+
+    if pending_confirm and not _topic500_explicit_search:
         pending_id = _s(pending_confirm["id"])
         pending_role = _extract_role_confirmation(_s(pending_confirm["result"]))
+        if int(topic_id or 0) == 500 and _looks_done_command(raw_input):
+            _finalize_done(conn, pending_id, chat_id, topic_id, reply_to)
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
+            return
         if pending_role and _is_confirm_intent(raw_input):
             _save_topic_role(chat_id, topic_id, pending_role)
             _update_task(conn, pending_id, state="DONE", result=f"Чат закреплён за: {pending_role}", error_message="")
@@ -2952,7 +3085,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         (str(chat_id), task_id, int(topic_id)),
     ).fetchone()
 
-    if pending_clarify:
+    if pending_clarify and not _topic500_explicit_search:
         pending_id = _s(pending_clarify["id"])
         merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
         _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
@@ -3074,16 +3207,30 @@ def _looks_done_command(text: str) -> bool:
         return False
     done_markers = [
         "да доволен",
+        "да доволеен",
+        "доволеен",
         "доволен результатом",
         "можно завершать",
         "можно закрывать",
         "завершай задачу",
         "завершай запрос",
         "завершай поиск",
+        "закрывай задачу",
+        "закрой задачу",
+        "закрыть задачу",
+        "закрывай поиск",
+        "закрой поиск",
+        "закрыть поиск",
         "задача завершена",
         "задача закрыта",
         "запрос завершен",
         "поиск завершен",
+        "поиском доволен",
+        "поиском доволен закрывай",
+        "результат подходит",
+        "результатом доволен",
+        "все подходит",
+        "всё подходит",
         "все верно завершай",
         "всё верно завершай",
         "все верно задача завершена",
@@ -3095,6 +3242,53 @@ def _looks_done_command(text: str) -> bool:
         "да можно",
     ]
     return any(m in low for m in done_markers)
+
+def _find_topic500_done_parent(conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str, reply_to: Optional[int]):
+    if int(topic_id or 0) != 500:
+        return None
+    reply_to_s = "" if reply_to is None else str(reply_to)
+    if reply_to_s:
+        row = conn.execute(
+            """
+            SELECT id
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(bot_message_id,'')=?
+              AND COALESCE(result,'')<>''
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), str(current_task_id), reply_to_s),
+        ).fetchone()
+        if row is not None:
+            return row
+    row = conn.execute(
+        """
+        SELECT t.id
+        FROM tasks t
+        WHERE t.chat_id=?
+          AND COALESCE(t.topic_id,0)=500
+          AND t.id<>?
+          AND COALESCE(t.result,'')<>''
+          AND (
+                t.state='AWAITING_CONFIRMATION'
+                OR COALESCE(t.error_message,'')='CONFIRMATION_TIMEOUT'
+              )
+          AND EXISTS (
+                SELECT 1
+                FROM task_history h
+                WHERE h.task_id=t.id
+                  AND h.action='reply_sent:p6_topic500_search_result'
+          )
+        ORDER BY CASE WHEN t.state='AWAITING_CONFIRMATION' THEN 0 ELSE 1 END,
+                 t.updated_at DESC, t.created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), str(current_task_id)),
+    ).fetchone()
+    return row
 
 def _extract_topic_role(text: str) -> str:
     raw = _clean(_s(text), 1000)
@@ -3155,12 +3349,11 @@ def _save_topic_role_memory(chat_id: str, topic_id: int, text: str) -> str:
         return ""
     conn_mem = db(MEM_DB)
     try:
-        if not _has_table(conn_mem, "memory"):
-            return ""
+        _ensure_memory_topic_schema(conn_mem)
         key = f"topic_{int(topic_id)}_role"
         conn_mem.execute(
-            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), key, role),
+            "INSERT OR REPLACE INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?, ?, ?, ?, datetime('now'), ?, ?)",
+            (__import__("uuid").uuid4().hex, str(chat_id), key, role, int(topic_id or 0), "topic"),
         )
         conn_mem.commit()
         return role
@@ -3933,6 +4126,23 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             ).fetchall()
             _df_hist = "\\n".join(str(r[0] or "") for r in _df_hist_rows)
             if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist:
+                _df_can_fast_final = True
+                try:
+                    _df_pending_loader = globals().get("_t2fdsg_load_pending")
+                    _df_pending = _df_pending_loader(str(chat_id), str(task_id)) if callable(_df_pending_loader) else {}
+                    _df_parsed = _df_pending.get("parsed") if isinstance(_df_pending, dict) else {}
+                    _df_parsed = _df_parsed if isinstance(_df_parsed, dict) else {}
+                    _df_rows = _df_parsed.get("pdf_spec_rows") or _df_parsed.get("ocr_table_rows") or []
+                    _df_raw_meta = json.loads(str(raw_input or "{}")) if str(raw_input or "").lstrip().startswith("{") else {}
+                    _df_is_pdf_file = str(_df_raw_meta.get("mime_type") or "").lower().endswith("pdf") or str(_df_raw_meta.get("file_name") or "").lower().endswith(".pdf")
+                    if _df_is_pdf_file and not _df_rows:
+                        _df_can_fast_final = False
+                        _history(conn, task_id, "PATCH_TOPIC2_DRIVE_FILE_FINAL_GATE_V2:SKIP_NO_CURRENT_PDF_ROWS")
+                        conn.commit()
+                except Exception:
+                    pass
+                if not _df_can_fast_final:
+                    raise RuntimeError("TOPIC2_DRIVE_FAST_FINAL_SKIPPED_NO_CURRENT_ROWS")
                 _df_done_current = globals().get("_t2fdsg_done_current")
                 if not callable(_df_done_current) or not _df_done_current(conn, task_id):
                     import re as _df_re
@@ -4161,7 +4371,16 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             from core.file_intake_router import route_file, detect_intent, detect_intent_from_filename, should_ask_clarification, get_clarification_message
             _fir_caption = data.get("caption", "") or raw_input or ""
             _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
-            if int(topic_id or 0) == 2 and any(x in str(_fir_caption or "").lower().replace("ё", "е") for x in ("смет", "расчет", "стоимость", "расцен")):
+            _fir_choice_intent = str(data.get("file_duplicate_choice_intent") or "").strip().lower()
+            if _fir_choice_intent:
+                _fir_intent = {
+                    "estimate": "estimate",
+                    "description": "description",
+                    "table": "ocr",
+                    "template": "template",
+                    "project": "dwg",
+                }.get(_fir_choice_intent, _fir_choice_intent)
+            if not _fir_choice_intent and int(topic_id or 0) == 2 and any(x in str(_fir_caption or "").lower().replace("ё", "е") for x in ("смет", "расчет", "стоимость", "расцен")):
                 _fir_intent = "estimate"
             _fir_topic_role = ""
             # === TOPIC2_CANONICAL_PDF_GATE_V1 ===
@@ -5016,7 +5235,14 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
                 _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_vague_blocked")
                 return
 
-            if _top2_ob_estimate_like(full_context):
+            _top2_ob_file_menu_choice = ""
+            try:
+                _top2_ob_raw_obj = json.loads(str(raw_input or "{}"))
+                _top2_ob_file_menu_choice = str(_top2_ob_raw_obj.get("file_duplicate_choice_intent") or "").strip().lower()
+            except Exception:
+                _top2_ob_file_menu_choice = ""
+
+            if _top2_ob_estimate_like(full_context) and not (_top2_ob_file_menu_choice and _top2_ob_file_menu_choice != "estimate"):
                 # PATCH_TOPIC2_CANONICAL_REROUTE_V2: try canonical engine first
                 _t2rt_handled = False
                 try:
@@ -5328,6 +5554,20 @@ def _t500_psv_update_done(conn, task_id: str, result_text: str = "") -> None:
     except Exception:
         pass
 
+def _t500_psv_update_awaiting_confirmation(conn, task_id: str, result_text: str = "") -> None:
+    try:
+        _update_task(conn, str(task_id), state="AWAITING_CONFIRMATION", result=str(result_text or ""), error_message="")
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+            (str(result_text or ""), str(task_id)),
+        )
+    except Exception:
+        pass
+
 def _t500_psv_update_failed(conn, task_id: str, result_text: str, error_message: str) -> None:
     try:
         _update_task(conn, str(task_id), state="FAILED", result=str(result_text or ""), error_message=str(error_message))
@@ -5368,6 +5608,10 @@ def _t500_psv_has_reply_sent(conn, task_id: str) -> bool:
 
 def _t500_psv_validate_procurement_result(text: str):
     s = str(text or "").strip()
+    slow = s.lower().replace("ё", "е")
+    no_new_live_contacts = slow.startswith("новых подтвержденных живых контактов по текущему запросу не найдено")
+    if no_new_live_contacts:
+        return True, "OK_NO_NEW_LIVE_CONTACTS"
     urls = _t500_psv_re.findall(r"https?://[^\s\]\)>,]+", s)
     unique_urls = []
     for u in urls:
@@ -5380,16 +5624,30 @@ def _t500_psv_validate_procurement_result(text: str):
     has_phone = bool(_t500_psv_re.search(r"(\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}|телефон\s+не\s+найден", s, _t500_psv_re.I))
     has_supplier = bool(_t500_psv_re.search(r"(поставщик|магазин|дилер|база|склад|авито|avito|2гис|яндекс|леруа|петрович|термодом|rockwool|роквул)", s, _t500_psv_re.I))
     only_unconfirmed = s.upper().strip() in {"НЕ ПОДТВЕРЖДЕНО", "НЕ ПОДТВЕРЖДЕНО."}
+    false_verified = bool(_t500_psv_re.search(r"\|\s*да\s*(?:\||$)", slow)) and "source_status: confirmed" not in slow
+    generic_avito = any(("avito.ru/all/" in u and not _t500_psv_re.search(r"_\\d{6,}", u)) for u in unique_urls)
+    social_marked_by_canon = any(x in slow for x in (
+        "source_status", "unverified", "partial", "risk",
+        "статус проверки", "не подтверж", "частично провер", "риск",
+    ))
+    unverified_tg_vk = any(("t.me/" in u or "vk.com/" in u) for u in unique_urls) and not social_marked_by_canon
+    no_contact = "телефон не найден" in slow and not _t500_psv_re.search(r"(\\+7|8)\\s*[\\(\\- ]?\\d{3}", s)
 
     if not has_min_urls:
         return False, "SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS"
     if has_bare_refs:
         return False, "SEARCH_OUTPUT_INVALID_BARE_REFS"
+    if false_verified:
+        return False, "SEARCH_OUTPUT_INVALID_FALSE_VERIFIED"
+    if generic_avito:
+        return False, "SEARCH_OUTPUT_INVALID_GENERIC_AVITO_LINK"
+    if unverified_tg_vk:
+        return False, "SEARCH_OUTPUT_INVALID_UNVERIFIED_SOCIAL_LINK"
     if not has_supplier:
         return False, "SEARCH_OUTPUT_INVALID_NO_SUPPLIER"
     if not has_price:
         return False, "SEARCH_OUTPUT_INVALID_NO_PRICE"
-    if not has_phone:
+    if not has_phone or no_contact:
         return False, "SEARCH_OUTPUT_INVALID_NO_PHONE"
     if only_unconfirmed:
         return False, "SEARCH_OUTPUT_INVALID_UNCONFIRMED_ONLY"
@@ -5404,19 +5662,31 @@ def _send_once_ex(conn, task_id, chat_id, text, reply_to, kind):  # TOPIC500_PRE
     try:
         row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
         topic_id = int(_t500_psv_row_get(row, "topic_id", row[0] if row else 0) or 0)
-        if topic_id == 500 and str(kind or "") == "result":
+        if topic_id == 500 and str(kind or "") in ("result", "p6_topic500_search_result"):
             ok, reason = _t500_psv_validate_procurement_result(str(text or ""))
             if not ok:
-                _t500_psv_update_failed(conn, str(task_id), str(text or ""), reason)
-                _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:{reason}")
-                try:
-                    conn.commit()
-                except Exception:
-                    pass
-                warning = "Поиск не дал прямых ссылок и телефонов. Повтори запрос или уточни площадки"
-                if _T500_PSV_ORIG_SEND_ONCE_EX:
-                    return _T500_PSV_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, warning, reply_to, "error")
-                return None
+                if reason in ("SEARCH_OUTPUT_INVALID_NO_PRICE",):
+                    text = str(text or "").rstrip()
+                    if reason == "SEARCH_OUTPUT_INVALID_NO_PRICE" and "цена не указана" not in text.lower():
+                        text += "\n\nЦена/условия: цена не указана в открытых источниках; контактная подборка не блокируется."
+                    if "source_status" not in text.lower() and "статус проверки" not in text.lower():
+                        text += "\n\nsource_status: UNVERIFIED — прямые источники/контакты не подтверждены"
+                    _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:ALLOW_UNVERIFIED:{reason}")
+                    try:
+                        conn.commit()
+                    except Exception:
+                        pass
+                else:
+                    _t500_psv_update_failed(conn, str(task_id), str(text or ""), reason)
+                    _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:{reason}")
+                    try:
+                        conn.commit()
+                    except Exception:
+                        pass
+                    warning = "Поиск не дал прямых ссылок и телефонов. Повтори запрос или уточни площадки"
+                    if _T500_PSV_ORIG_SEND_ONCE_EX:
+                        return _T500_PSV_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, warning, reply_to, "error")
+                    return None
     except Exception as e:
         try:
             _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:ERROR:{type(e).__name__}")
@@ -5447,10 +5717,13 @@ def _t500_psv_repair_sent_in_progress(conn) -> None:
             continue
         if not _t500_psv_has_reply_sent(conn, task_id):
             continue
+        current_state = str(_t500_psv_row_get(row, "state", "") or "")
+        if current_state == "AWAITING_CONFIRMATION":
+            continue
         current_result = str(_t500_psv_row_get(row, "result", "") or "")
         latest_result = _t500_psv_latest_history_result(conn, task_id) or current_result
-        _t500_psv_update_done(conn, task_id, latest_result)
-        _t500_psv_history(conn, task_id, "STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY")
+        _t500_psv_update_awaiting_confirmation(conn, task_id, latest_result)
+        _t500_psv_history(conn, task_id, "STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:TOPIC500_KEEP_AWAITING_CONFIRMATION")
     try:
         conn.commit()
     except Exception:
@@ -5608,7 +5881,10 @@ def _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
         "найди", "поиск", "цена", "стоимость", "дешевле", "купить", "ссылка", "ссылки",
         "магазин", "поставщик", "маркет", "маркетплейс", "авито", "avito", "ozon",
         "wildberries", "яндекс", "google pixel", "iphone", "телефон", "кабель",
-        "вата", "утеплитель", "товар", "варианты"
+        "вата", "утеплитель", "товар", "варианты", "контакт", "номер",
+        "исполнитель", "исполнител", "подрядчик", "компания", "частное лицо",
+        "частник", "услуга", "услуги", "резка", "алмазн", "проем", "проемы",
+        "проём", "проёмы"
     )
     return any(m in low for m in markers)
 
@@ -5855,7 +6131,10 @@ def _p2_tw_is_search_intent(raw, input_type):
         "маркетплейс", "авито", "avito", "ozon", "wildberries", "яндекс",
         "google pixel", "iphone", "samsung", "телефон", "смартфон",
         "вата", "rockwool", "роквул", "утеплитель", "товар", "варианты",
-        "предыдущ", "то что я тебе писал", "то, что я тебе писал"
+        "предыдущ", "то что я тебе писал", "то, что я тебе писал",
+        "контакт", "номер", "исполнитель", "исполнител", "подрядчик",
+        "компания", "частное лицо", "частник", "услуга", "услуги",
+        "резка", "алмазн", "проем", "проемы", "проём", "проёмы"
     ))
 
 def _p2_tw_is_followup_search(raw):
@@ -6175,7 +6454,21 @@ def _p3_topic500_search_needed_20260504(raw_input, input_type):
     low = _p3_low_20260504(raw_input)
     if not low:
         return False
-    return True
+    itype = _p3_low_20260504(input_type)
+    if itype == "search":
+        return True
+    if _p3_topic500_vague_20260504(raw_input):
+        return True
+    markers = (
+        "найди", "найти", "поищи", "поиск", "выполни поиск", "сделай поиск",
+        "цена", "стоимость", "дешевле", "купить", "ссылка", "ссылки",
+        "магазин", "поставщик", "подрядчик", "исполнитель", "исполнител",
+        "маркет", "маркетплейс", "авито", "avito", "ozon", "wildberries",
+        "яндекс", "google", "iphone", "pixel", "samsung", "телефон",
+        "смартфон", "кабель", "вата", "rockwool", "роквул", "утеплитель",
+        "товар", "варианты", "предложения", "нормы", "гост", "сп ",
+    )
+    return any(m in low for m in markers)
 
 def _p3_topic500_vague_20260504(raw_input):
     low = _p3_low_20260504(raw_input)
@@ -6608,12 +6901,35 @@ def _p6_topic500_needs_search_20260504(raw_input, input_type):
     low = _p6_low_20260504(raw_input)
     if not low:
         return False
-    return True
+    itype = _p6_low_20260504(input_type)
+    if itype == "search":
+        return True
+    if _p6_is_vague_search_followup_20260504(raw_input):
+        return True
+    markers = (
+        "найди", "найти", "поищи", "поиск", "выполни поиск", "сделай поиск",
+        "цена", "стоимость", "дешевле", "купить", "ссылка", "ссылки",
+        "магазин", "поставщик", "подрядчик", "исполнитель", "исполнител",
+        "маркет", "маркетплейс", "авито", "avito", "ozon", "wildberries",
+        "яндекс", "google", "iphone", "pixel", "samsung", "телефон",
+        "смартфон", "кабель", "вата", "rockwool", "роквул", "утеплитель",
+        "товар", "варианты", "предложения", "нормы", "гост", "сп ",
+    )
+    return any(m in low for m in markers)
 
 def _p6_bad_search_result_20260504(result, raw_input):
     low = _p6_low_20260504(result)
     q = _p6_low_20260504(raw_input)
     if not low or len(low.strip()) < 80:
+        return True
+    if any(x in low for x in (
+        "не удалось найти текущие предложения",
+        "в предоставленных данных отсутствуют",
+        "нет актуальных списков",
+        "не найдено актуальных",
+        "не могу выполнить поиск",
+        "я не могу выполнить поиск",
+    )):
         return True
     # Block estimate artifacts leaking into search
     if any(x in low for x in ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx", "позиций: 1. итого: 0.00")):
@@ -6625,10 +6941,30 @@ def _p6_bad_search_result_20260504(result, raw_input):
     # normative/factual/technical modes return substantive text without prices — allow if >80 chars
     _procurement_signals = ("поставщик", "avito", "авито", "ozon", "озон", "wildberries", "найдено:", "купить", "цена материала")
     _is_procurement_result = any(x in _procurement_signals for x in low.split()) or any(x in low for x in _procurement_signals)
-    if _is_procurement_result:
-        if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
+    _service_query = any(x in q for x in ("исполнитель", "исполнител", "подрядчик", "услуг", "предложен", "поставщик", "цена", "стоимость", "купить"))
+    if _is_procurement_result or _service_query:
+        if ("http://" not in low and "https://" not in low and "t.me/" not in low):
             return True
     return False
+
+def _p6_topic500_canonical_result_20260706(result):
+    text = _clean(_s(result), 12000)
+    low = text.lower().replace("ё", "е")
+    footer = []
+    if "checked_at" not in low:
+        try:
+            import datetime as _p6t500_dt
+            checked_at = _p6t500_dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        except Exception:
+            checked_at = "UTC"
+        footer.append("checked_at: " + checked_at)
+    if "source_status" not in low and "статус" not in low:
+        footer.append("source_status: PARTIAL если источник/дата не подтверждены в строке; CONFIRMED только при явной проверке источника")
+    if "доволен результатом" not in low:
+        footer.append("Доволен результатом? Ответь: Да / Уточни / Правки")
+    if footer:
+        text = text.rstrip() + "\n\n" + "\n".join(footer)
+    return text
 
 def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
     try:
@@ -6649,16 +6985,34 @@ def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
         for r in rows:
             raw = _p6_s_20260504(_p6_row_get_20260504(r, "raw_input", r[0] if r else ""), 4000)
             low = _p6_low_20260504(raw)
+            if _p6_is_offer_followup_without_target_20260706(raw):
+                continue
             if any(x in low for x in ("найди", "поиск", "поищи", "дешевле", "купить", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
                 return raw
     except Exception:
         pass
     return ""
 
+def _p6_is_offer_followup_without_target_20260706(raw):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    has_offer_followup = any(x in low for x in ("самое выгод", "выгодное предлож", "не меньше трех", "не меньше трёх", "минимум три предлож", "три предложени"))
+    if not has_offer_followup:
+        return False
+    target_words = (
+        "исполнитель", "исполнител", "монолит", "проем", "проём", "алмазн",
+        "сальник", "iphone", "pixel", "rockwool", "утеплитель", "арматур",
+        "бетон", "кирпич", "поставщик", "подрядчик",
+    )
+    return not any(x in low for x in target_words)
+
 def _p6_is_vague_search_followup_20260504(raw):
     low = _p6_low_20260504(raw)
     if not low:
         return False
+    if _p6_is_offer_followup_without_target_20260706(raw):
+        return True
     if any(x in low for x in ("найди", "поищи", "поиск", "купить", "дешевле", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
         return False
     return len(low) <= 120 and any(x in low for x in ("то что", "то, что", "предыдущ", "прошл", "я тебя про что", "дальше", "ну что", "выполни"))
@@ -6679,8 +7033,14 @@ async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
     conn.commit()
 
     try:
-        from core.search_session import run_search_monolith_v2
+        from core.search_session import run_search_monolith_v2, close_session
         from core.ai_router import _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT
+        try:
+            close_session(str(chat_id), 500)
+            _p6_history_20260504(conn, task_id, "P6_TOPIC500_CLOSED_STALE_SEARCH_SESSION_BEFORE_RUN")
+            conn.commit()
+        except Exception:
+            pass
         payload = {
             "id": task_id,
             "task_id": task_id,
@@ -6705,7 +7065,7 @@ async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
             run_search_monolith_v2(payload, search_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT),
             timeout=AI_TIMEOUT,
         )
-        result = _clean(_s(result), 12000)
+        result = _p6_topic500_canonical_result_20260706(result)
     except Exception as e:
         err = "P6_TOPIC500_SEARCH_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
         _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
@@ -6719,11 +7079,11 @@ async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
         _p6_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
         _p6_history_20260504(conn, task_id, err)
         conn.commit()
-        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: результат нерелевантен текущему запросу или ушёл в старую сессию. Повтори товар и регион одной строкой", reply_to, "p6_topic500_bad_result")
+        _send_once_ex(conn, task_id, str(chat_id), "SEARCH_FAILED: verified sources not found. Поиск не выдал проверяемые прямые источники по текущему запросу; фейковые ссылки и неподтверждённые цены заблокированы.", reply_to, "p6_topic500_bad_result")
         return True
 
-    _p6_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
-    _p6_history_20260504(conn, task_id, "P6_TOPIC500_SEARCH_DONE")
+    _p6_update_20260504(conn, task_id, state="AWAITING_CONFIRMATION", result=result, error_message="")
+    _p6_history_20260504(conn, task_id, "P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION")
     try:
         _save_memory(str(chat_id), 500, raw_input, result)
     except Exception:
@@ -6837,521 +7197,8 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     if chat_id is None:
         chat_id = _p6_row_get_20260504(task, "chat_id", None)
     if topic_id is None:
-        topic_id = _p6_row_get_20260504(task, "topic_id", 0)
-    try:
-        topic_id = int(topic_id or 0)
-    except Exception:
-        topic_id = 0
-
-    if topic_id == 500 and _p6_topic500_needs_search_20260504(raw_input, input_type):
-        return await _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id)
-
-    if topic_id == 2 and _p6_is_topic2_estimate_20260504(raw_input):
-        return await _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id)
-
-    if topic_id == 2 and _p6_is_topic2_vague_20260504(raw_input):
-        return _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id)
-
-    if _p6_is_technadzor_route_20260504(raw_input, input_type):
-        handled = _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id)
-        if handled:
-            return True
-
-    if _P6_ORIG_HANDLE_IN_PROGRESS_20260504:
-        return await _P6_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
-    return None
-
-# === END_P6_GLOBAL_SEARCH_MEMORY_TECHNADZOR_CLOSE_20260504_V1 ===
-
-# === P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
-try:
-    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
-except Exception:
-    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = None
-
-import json as _p6c_json
-import re as _p6c_re
-
-def _p6c_s_20260504(v, limit=50000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6c_low_20260504(v):
-    return _p6c_s_20260504(v).lower().replace("ё", "е")
-
-def _p6c_row_get_20260504(row, key, default=None):
-    try:
-        if hasattr(row, "keys") and key in row.keys():
-            return row[key]
-    except Exception:
-        pass
-    try:
-        return row[key]
-    except Exception:
-        try:
-            return getattr(row, key)
-        except Exception:
-            return default
-
-def _p6c_meta_20260504(raw_input):
-    s = _p6c_s_20260504(raw_input, 50000)
-    try:
-        v = _p6c_json.loads(s)
-        return v if isinstance(v, dict) else {}
-    except Exception:
-        return {}
-
-def _p6c_update_20260504(conn, task_id, **kwargs):
-    try:
-        _update_task(conn, str(task_id), **kwargs)
-        return
-    except Exception:
-        pass
-    try:
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
-        sets, vals = [], []
-        for k, v in kwargs.items():
-            if k in cols:
-                sets.append(f"{k}=?")
-                vals.append(v)
-        if "updated_at" in cols:
-            sets.append("updated_at=datetime('now')")
-        if sets:
-            vals.append(str(task_id))
-            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
-    except Exception:
-        pass
-
-def _p6c_history_20260504(conn, task_id, action):
-    try:
-        _history(conn, str(task_id), str(action))
-        return
-    except Exception:
-        pass
-    try:
-        conn.execute(
-            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
-            (str(task_id), _p6c_s_20260504(action, 1000)),
-        )
-    except Exception:
-        pass
-
-def _p6c_caption_20260504(raw_input):
-    meta = _p6c_meta_20260504(raw_input)
-    return _p6c_s_20260504(meta.get("caption") or meta.get("text") or "", 12000)
-
-def _p6c_file_name_20260504(raw_input):
-    meta = _p6c_meta_20260504(raw_input)
-    return _p6c_s_20260504(meta.get("file_name") or "", 500)
-
-def _p6c_file_path_20260504(task_id, raw_input):
-    fn = _p6c_file_name_20260504(raw_input)
-    if not fn:
-        return ""
-    p = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{fn}"
-    return p
-
-def _p6c_is_estimate_text_20260504(text):
-    low = _p6c_low_20260504(text)
-    return any(x in low for x in ("смет", "стоимость", "полная смета", "посчитать", "рассчитать")) and any(x in low for x in ("дом", "фундамент", "кров", "стен", "каркас", "фальц", "санузел"))
-
-def _p6c_is_image_20260504(raw_input):
-    meta = _p6c_meta_20260504(raw_input)
-    mime = _p6c_low_20260504(meta.get("mime_type"))
-    fn = _p6c_low_20260504(meta.get("file_name"))
-    return mime.startswith("image/") or fn.endswith((".jpg", ".jpeg", ".png", ".webp"))
-
-def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
-    meta = _p6c_meta_20260504(raw_input)
-    caption = _p6c_s_20260504(meta.get("caption") or "", 12000)
-    fn = _p6c_s_20260504(meta.get("file_name") or "", 500)
-    text = caption
-
-    if fn == "photo_-1003725299009_9507.jpg" and not _p6c_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", _p6c_low_20260504(text)):
-        text += "\nРазмеры по плану на изображении: 7.8 на 9.0 м"
-
-    if "этаж" not in _p6c_low_20260504(text):
-        text += "\nЭтажей: 1"
-    if "полная смета" not in _p6c_low_20260504(text) and "смет" not in _p6c_low_20260504(text):
-        text += "\nНужна полная смета"
-    return text.strip()
-
-async def _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id):
-    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
-    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
-    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
-    estimate_raw = _p6c_prepare_topic2_raw_20260504(task_id, raw_input)
-
-    _p6c_history_20260504(conn, task_id, "P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN")
-    try:
-        from core import sample_template_engine as _p6c_ste
-        fn = getattr(_p6c_ste, "handle_topic2_one_big_formula_pipeline_v1")
-        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=estimate_raw, full_context=estimate_raw)
-        if asyncio.iscoroutine(res):
-            return await res
-        return res
-    except Exception as e:
-        err = "P6C_TOPIC2_ESTIMATE_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
-        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
-        _p6c_history_20260504(conn, task_id, err)
-        conn.commit()
-        _send_once_ex(conn, task_id, str(chat_id), "Смета не выполнена. Ошибка расчётного маршрута", reply_to, "p6c_topic2_error")
-        return True
-
-def _p6c_technadzor_like_20260504(raw_input, topic_id):
-    meta = _p6c_meta_20260504(raw_input)
-    txt = " ".join([_p6c_s_20260504(meta.get("caption")), _p6c_s_20260504(meta.get("file_name")), _p6c_s_20260504(raw_input)])
-    low = _p6c_low_20260504(txt)
-    if int(topic_id or 0) == 5:
-        return True
-    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "образец написания"))
-
-async def _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id):
-    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
-    if int(topic_id or 0) != 5:
-        _p6c_history_20260504(conn, task_id, f"TOPIC_ISOLATION_BLOCKED_TECHNADZOR_ROUTE_TOPIC:{int(topic_id or 0)}")
-        conn.commit()
-        return False
-    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
-    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
-    meta = _p6c_meta_20260504(raw_input)
-    caption = _p6c_s_20260504(meta.get("caption") or raw_input, 12000)
-    file_name = _p6c_s_20260504(meta.get("file_name") or "", 500)
-    file_path = _p6c_file_path_20260504(task_id, raw_input)
-
-    try:
-        from core.technadzor_engine import process_technadzor
-        r = process_technadzor(
-            text=caption,
-            task_id=task_id,
-            chat_id=str(chat_id),
-            topic_id=int(topic_id or 0),
-            file_path=file_path,
-            file_name=file_name,
-            conn=conn,
-            task=task,
-        )
-    except Exception as e:
-        err = "P6C_TECHNADZOR_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
-        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
-        _p6c_history_20260504(conn, task_id, err)
-        conn.commit()
-        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6c_technadzor_error")
-        return True
-
-    text = _p6c_s_20260504((r or {}).get("result_text") or str(r), 12000)
-    artifact = _p6c_s_20260504((r or {}).get("artifact_path") or "", 2000)
-    if artifact and artifact not in text:
-        text += "\n" + artifact
-
-    _p6c_update_20260504(conn, task_id, state="DONE", result=text, error_message="")
-    _p6c_history_20260504(conn, task_id, _p6c_s_20260504((r or {}).get("history") or "P6C_TECHNADZOR_HANDLED", 1000))
-    conn.commit()
-    sent = _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p6c_technadzor_result")
-    try:
-        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
-        if bot_id:
-            _p6c_update_20260504(conn, task_id, bot_message_id=bot_id)
-            conn.commit()
-    except Exception:
-        pass
-    return True
-
-async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
-    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
-    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
-    input_type = _p6c_s_20260504(_p6c_row_get_20260504(task, "input_type", "text"), 50)
-
-    if chat_id is None:
-        chat_id = _p6c_row_get_20260504(task, "chat_id", None)
-    if topic_id is None:
-        topic_id = _p6c_row_get_20260504(task, "topic_id", 0)
-    try:
-        topic_id = int(topic_id or 0)
-    except Exception:
-        topic_id = 0
-
-    caption = _p6c_caption_20260504(raw_input)
-    if topic_id == 2 and input_type in ("drive_file", "file", "photo", "image") and _p6c_is_estimate_text_20260504(caption or raw_input):
-        return await _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id)
-
-    if input_type in ("drive_file", "file", "document") and _p6c_technadzor_like_20260504(raw_input, topic_id):
-        return await _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id)
-
-    if _P6C_ORIG_HANDLE_IN_PROGRESS_20260504:
-        return await _P6C_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
-    return None
-# === END_P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
-
-
-
-# === P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
-try:
-    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
-except Exception:
-    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = None
-
-def _p6d_s_20260504(v, limit=50000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6d_low_20260504(v):
-    return _p6d_s_20260504(v).lower().replace("ё", "е")
-
-def _p6d_row_20260504(row, key, default=None):
-    try:
-        if hasattr(row, "keys") and key in row.keys():
-            return row[key]
-    except Exception:
-        pass
-    try:
-        return row[key]
-    except Exception:
-        return default
-
-def _p6d_json_20260504(v):
-    if isinstance(v, dict):
-        return v
-    try:
-        return json.loads(_p6d_s_20260504(v, 200000))
-    except Exception:
-        return {}
-
-def _p6d_is_image_20260504(payload):
-    name = _p6d_low_20260504(payload.get("file_name") or "")
-    mime = _p6d_low_20260504(payload.get("mime_type") or "")
-    return mime.startswith("image/") or any(name.endswith(x) for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
-
-def _p6d_is_topic2_image_estimate_20260504(task, topic_id):
-    if int(topic_id or 0) != 2:
-        return False
-    if _p6d_low_20260504(_p6d_row_20260504(task, "input_type", "")) != "drive_file":
-        return False
-    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
-    payload = _p6d_json_20260504(raw)
-    if not _p6d_is_image_20260504(payload):
-        return False
-    text = _p6d_low_20260504(raw + " " + _p6d_s_20260504(payload.get("caption"), 12000))
-    return any(x in text for x in (
-        "смет", "полная смета", "стоимость", "расчет", "расчёт", "посчитать",
-        "дом", "барн", "house", "фундамент", "плита", "каркас", "кровля",
-        "стены", "отделка", "санузел", "террас"
-    ))
-
-def _p6d_local_file_20260504(task_id, payload):
-    fn = _p6d_s_20260504(payload.get("file_name"), 1000)
-    direct = f"{BASE}/runtime/drive_files/{task_id}_{fn}"
-    if fn and os.path.exists(direct):
-        return direct
-    try:
-        import glob
-        hits = glob.glob(f"{BASE}/runtime/drive_files/{task_id}_*")
-        if hits:
-            return hits[0]
-    except Exception:
-        pass
-    return direct
-
-async def _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id):
-    task_id = _p6d_s_20260504(_p6d_row_20260504(task, "id", ""), 200)
-    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
-    payload = _p6d_json_20260504(raw)
-    payload["task_id"] = task_id
-    local_path = _p6d_local_file_20260504(task_id, payload)
-
-    try:
-        from core import sample_template_engine as _p6d_ste
-        fn = getattr(_p6d_ste, "handle_topic2_image_estimate_pipeline_p6d")
-        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN")
-        _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
-        conn.commit()
-        res = fn(
-            conn=conn,
-            task=task,
-            chat_id=chat_id,
-            topic_id=int(topic_id or 0),
-            raw_input=raw,
-            local_path=local_path,
-            full_context=_p6d_s_20260504(payload.get("caption"), 12000),
-        )
-        if asyncio.iscoroutine(res):
-            res = await res
-        if res:
-            return True
-        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_NOT_HANDLED")
-        conn.commit()
-        return False
-    except Exception as e:
-        err = "P6D_TOPIC2_IMAGE_ESTIMATE_ERROR:" + _p6d_s_20260504(type(e).__name__ + ":" + str(e), 500)
-        _update_task(conn, task_id, state="FAILED", result="", error_message=err)
-        _history(conn, task_id, err)
-        conn.commit()
-        _send_once_ex(conn, task_id, str(chat_id), "Смета по фото не выполнена. Ошибка маршрута распознавания изображения", _p6d_row_20260504(task, "reply_to_message_id", None), "p6d_image_estimate_error")
-        return True
-
-async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
-    if chat_id is None:
-        chat_id = _p6d_row_20260504(task, "chat_id", None)
-    if topic_id is None:
-        topic_id = _p6d_row_20260504(task, "topic_id", 0)
-    try:
-        topic_id = int(topic_id or 0)
-    except Exception:
-        topic_id = 0
-
-    if _p6d_is_topic2_image_estimate_20260504(task, topic_id):
-        handled = await _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id)
-        if handled:
-            return True
-
-    if _P6D_ORIG_HANDLE_IN_PROGRESS_20260504:
-        return await _P6D_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
-    return None
-# === END_P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
-
-# === P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
-
-# === P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
-import os as _p6e4_os
-import json as _p6e4_json
-import glob as _p6e4_glob
-import inspect as _p6e4_inspect
-import logging as _p6e4_logging
-import asyncio as _p6e4_asyncio
-
-def _p6e4_val(obj, key, default=None):
-    try:
-        if isinstance(obj, dict):
-            return obj.get(key, default)
-        return obj[key]
-    except Exception:
-        try:
-            return getattr(obj, key, default)
-        except Exception:
-            return default
-
-def _p6e4_payload(task):
-    raw = _p6e4_val(task, "raw_input", "") or ""
-    if isinstance(raw, dict):
-        return raw
-    try:
-        data = _p6e4_json.loads(raw)
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
-
-def _p6e4_is_topic2_image_estimate_task(task):
-    payload = _p6e4_payload(task)
-    topic_id = int(_p6e4_val(task, "topic_id", payload.get("topic_id") or 0) or 0)
-    input_type = str(_p6e4_val(task, "input_type", "") or "").lower()
-    mime = str(payload.get("mime_type") or _p6e4_val(task, "mime_type", "") or "").lower()
-    file_name = str(payload.get("file_name") or _p6e4_val(task, "file_name", "") or "").lower()
-    raw = str(_p6e4_val(task, "raw_input", "") or "")
-    caption = str(payload.get("caption") or raw)
-    text = (caption + " " + file_name + " " + mime).lower()
-    if topic_id != 2:
-        return False
-    if input_type not in ("drive_file", "file", ""):
-        return False
-    is_image = mime.startswith("image/") or file_name.endswith((".jpg", ".jpeg", ".png", ".webp"))
-    wants_estimate = any(x in text for x in ("смет", "расчет", "расчёт", "стоимость", "посчитай", "estimate"))
-    return bool(is_image and wants_estimate)
-
-def _p6e4_find_or_download_file(task):
-    payload = _p6e4_payload(task)
-    task_id = str(_p6e4_val(task, "id", "") or "")
-    file_name = str(payload.get("file_name") or "image.jpg")
-    matches = _p6e4_glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
-    if matches:
-        return matches[0]
-    _p6e4_os.makedirs("/root/.areal-neva-core/runtime/drive_files", exist_ok=True)
-    file_id = str(payload.get("file_id") or "")
-    out = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
-    if not file_id:
-        return out if _p6e4_os.path.exists(out) else ""
-    try:
-        from google_io import download_drive_file as _p6e4_download_drive_file
-        got = _p6e4_download_drive_file(file_id, out)
-        if _p6e4_inspect.isawaitable(got):
-            loop = _p6e4_asyncio.get_event_loop()
-            loop.run_until_complete(got)
-        return out if _p6e4_os.path.exists(out) else ""
-    except Exception as exc:
-        _p6e4_logging.getLogger("WORKER").warning("P6E4_IMAGE_DOWNLOAD_FAILED task=%s err=%s", task_id, exc)
-        return out if _p6e4_os.path.exists(out) else ""
-
-async def _p6e4_run_topic2_image_estimate(conn, task):
-    task_id = str(_p6e4_val(task, "id", "") or "")
-    payload = _p6e4_payload(task)
-    raw = str(_p6e4_val(task, "raw_input", "") or "")
-    caption = str(payload.get("caption") or raw)
-    local_path = _p6e4_find_or_download_file(task)
-    if not local_path or not _p6e4_os.path.exists(local_path):
-        return False
-    try:
-        from core import sample_template_engine as _p6e4_ste
-        try:
-            conn.execute(
-                "UPDATE tasks SET state='IN_PROGRESS', error_message='', created_at=datetime('now'), updated_at=datetime('now') WHERE id=?",
-                (task_id,),
-            )
-            conn.execute(
-                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_STARTED"),
-            )
-            conn.commit()
-        except Exception:
-            pass
-        res = _p6e4_ste.handle_topic2_image_estimate_p6e2(
-            conn=conn,
-            task=task,
-            chat_id=str(_p6e4_val(task, "chat_id", "")),
-            topic_id=int(_p6e4_val(task, "topic_id", 2) or 2),
-            raw_input=raw,
-            full_context=caption,
-            local_path=local_path,
-            file_name=str(payload.get("file_name") or _p6e4_os.path.basename(local_path)),
-            mime_type=str(payload.get("mime_type") or "image/jpeg"),
-        )
-        if _p6e4_inspect.isawaitable(res):
-            res = await res
-        try:
-            conn.execute(
-                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_DONE"),
-            )
-            conn.commit()
-        except Exception:
-            pass
-        return bool(res)
-    except Exception as exc:
-        _p6e4_logging.getLogger("WORKER").exception("P6E4_TOPIC2_IMAGE_ESTIMATE_ERR task=%s err=%s", task_id, exc)
-        try:
-            conn.execute(
-                "UPDATE tasks SET state='FAILED', error_message=?, updated_at=datetime('now') WHERE id=?",
-                (f"P6E4_TOPIC2_IMAGE_ESTIMATE_ERR:{exc}", task_id),
-            )
-            conn.commit()
-        except Exception:
-            pass
-        return False
-
-def _p6e4_get_conn_task(args, kwargs):
-    conn = kwargs.get("conn")
-    task = kwargs.get("task")
-    for obj in args:
-        if conn is None and hasattr(obj, "execute") and hasattr(obj, "commit"):
-            conn = obj
 
 ====================================================================================================
 END_FILE: task_worker.py
-FILE_CHUNK: 1/4
+FILE_CHUNK: 1/5
 ====================================================================================================

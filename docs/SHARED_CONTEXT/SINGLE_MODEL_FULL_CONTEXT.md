@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-06T09:52:44.842454+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.338349+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,11 +22,11 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 6 |
-| 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 16 |
+| 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
-| 500 | VEB_POISK | UNKNOWN | 0 | 0 |
+| 500 | VEB_POISK | BROKEN | 0 | 21 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
 | 961 | AVTOZAPCHASTI | UNKNOWN | 0 | 0 |
 | 3008 | KODY_MOZGOV | UNKNOWN | 0 | 0 |
@@ -305,6 +305,211 @@ Verification at session close:
 - `python3 -m py_compile core/stroyka_estimate_canon.py core/price_enrichment.py core/topic2_input_gate.py task_worker.py` -> `PY_COMPILE_OK`.
 - `topic_2` task counts at close: `ARCHIVED=12`, `CANCELLED=143`, `DONE=205`, `FAILED=143`.
 - Cron GitHub sync was observed as enabled: `*/5 * * * * /root/.areal-neva-core/tools/full_context_aggregator_guard.sh ...`.
+
+---
+
+## Progress 2026-07-06 — two-day topic_2 rules and live repair record
+
+This is a factual handoff record for the work done on 2026-07-05 and 2026-07-06. It is not a new canon and does not rewrite existing canon text.
+
+Applied canon sources:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+Owner operating rules confirmed during the session:
+- Before any action, read and apply the relevant SSOT/canon.
+- Improvisation is forbidden: if a behavior is not written in SSOT/canon, do not do it by default.
+- Existing canons may only be appended to after explicit owner approval; do not rewrite or replace canon text.
+- Every task must be carried to completion unless the owner explicitly stops, cancels, or pauses it.
+- Before any server write: show canon/baseline/minimal target, make backup, and patch only the scoped file.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, branches, or Git push without explicit owner permission.
+
+Topic_2 functional rules clarified and treated as current working baseline:
+- `topic_2` / STROYKA estimates must be produced by the orchestra canonical engine, not manually by Codex.
+- Estimate input must come from the actual user task, uploaded project, photo, PDF, OCR text, or explicit clarification; old task data must not be mixed into a fresh task.
+- Unknown or missing data must be clarified with the user instead of invented.
+- Photo/PDF/OCR/voice/reply/pin/fixed-message context must participate in live dialogue according to canon; if a file was already provided, the bot must not ask for the same file again.
+- Price search must not run automatically when valid fresh cache/memory already contains the relevant prices.
+- When prices are missing or stale and internet prices are needed, search must be confirmed/authorized by the user and use Sonar/Perplexity only; DeepSeek is forbidden for search.
+- Topic_2 XLSX output must remain canonical `AREAL_CALC` with 15 columns; the old 8-column XLSX format is forbidden.
+- Work and material parts of one operation should stay in one estimate row when they are one smeta position, using work and material columns in the same 15-column row.
+- VAT baseline is 22%, not 20%; default estimate output is normally without VAT unless the user selects or confirms a VAT mode.
+- The supported VAT mode from the live correction is: materials with VAT, works without VAT.
+- Final topic_2 result must be delivered in Telegram with Google Drive links for XLSX and PDF. Local paths or manual file-only delivery are not canonical final output.
+- `DONE` is allowed only after explicit owner confirmation.
+
+Tasks and runtime work recorded from the two-day session:
+- VAT policy work: removed/avoided `НДС 20%` in checked topic_2 paths, switched visible VAT logic to 22%, and added user-facing clarification for VAT mode.
+- PDF/project flow work: waiting-project phrases bind to the subsequent PDF/file, and PDF without caption can bind to the waiting project task instead of asking for the same file again.
+- Confirm-close work: reply confirmation such as `да ок` closes the correct topic_2 parent only after explicit confirmation and updates topic_2 memory after `DONE`.
+- Search/memory baseline: recent valid Sonar/Perplexity price results should be reused from cache/memory when allowed; internet price search should not be repeated unnecessarily.
+- Foundation live task repair:
+  - parent task `ef67a6f0-c6e2-436e-904b-58d2c48ca3a0`;
+  - VAT correction child `b7b260d1-4d23-4819-ba3c-1970cad5a04b` merged back to the parent;
+  - latest Telegram final message: `bot_message_id=11843`;
+  - parent remains `AWAITING_CONFIRMATION`, not `DONE`, until explicit owner confirmation;
+  - final Drive Excel: `https://drive.google.com/file/d/1KZdfSEuuXoxMWh-93HoVIBI1i9lySfYP/view`;
+  - final Drive PDF: `https://drive.google.com/file/d/11sqwkORpp3AilkR2ys2C4qdyeyQ73rS6/view`.
+- Foundation XLSX/PDF repair:
+  - sand cushion and gravel base are now one mixed row each, with work and material prices in the same `AREAL_CALC` row;
+  - material VAT mode uses 22% on material totals only;
+  - checked final summary values: materials `1 141 542`, works `1 078 592`, logistics `241 875`, overhead `188 711`, total without VAT `2 650 721`, VAT 22% on materials `251 139`, total with material VAT `2 901 860`.
+
+Verification recorded:
+- `python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/ocr_engine.py` passed during the live repair.
+- PDF text was verified to contain the VAT/material totals.
+- No systemd change was made.
+- `.env`, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, and neighboring topics were not touched for this save record.
+
+Open blockers remain:
+- Topic_2 overall remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Still needs full live verification for photo with/without caption, OCR/PDF/XLSX/multifile intake, voice continuation, reply continuation, memory query, pin isolation, and file/project variants.
+- Still needs verification that every estimate row is sourced from the current project/user input or an explicit clarification/search source.
+- Canon append/addendum is not written here; if needed, it must be shown separately and appended only after explicit owner approval.
+
+---
+
+## Progress 2026-07-06 — topic_500 search delivery and output-format checkpoint
+
+This is a factual handoff record for the topic_500 / internet-search work done on 2026-07-06. The task is not fully closed.
+
+Applied canon sources:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+Canon addendum written:
+- `docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md` now has append-only `§11. Append-only addendum 2026-07-06 — long result delivery and contact-first search output`.
+- The addendum fixes the contract for long search results: full result goes to Google Drive, Telegram receives the Drive link.
+- The addendum fixes public procurement/service-local output: `Profile/поставщик`, `Сайт/ссылка`, `Телефон`, `Цена/условия`, `Город/регион`, `Доставка/выезд`, `Дата проверки`, `Статус проверки`.
+- It records that link/profile and phone are the main user-facing fields for contractor/supplier search.
+- It records that service comments, internal statuses, unnecessary explanation blocks, and unhelpful risk/comment blocks must not pollute the public result.
+
+Runtime work completed:
+- `core/reply_sender.py`: long Telegram replies are written to `data/telegram_artifacts`, uploaded to Google Drive through the existing topic Drive OAuth path, and delivered to Telegram as a Drive link.
+- `core/search_session.py`: topic_500 procurement/service-local prompt and postprocess now prefer compact contact-first public output.
+- `core/output_sanitizer.py`: internal English search markers are translated for public output, and the old false text "Полный результат смотри в файле" was removed unless a real file/link exists.
+- `task_worker.py`: topic_500 search tasks are protected from being swallowed by old confirmation/clarification state, and validator accepts Russian source-status markers.
+
+Live evidence:
+- Previous long search result was uploaded to Google Drive and delivered in Telegram:
+  - `bot_message_id=11912`
+  - Drive file: `https://drive.google.com/file/d/1OP6KUrXNnrYLkpitHUF7TMxhTUCti93m/view`
+- Earlier long-result delivery also succeeded:
+  - Drive file: `https://drive.google.com/file/d/1TkZ066-n56ElEuAWfN2h3PW2KnpaVk6X/view`
+- Worker was restarted by the existing direct `flock ... task_worker.py` method; systemd was not touched.
+
+Open blockers remain:
+- The user reports that answer logic is still not fully correct.
+- Task completion/finalization appears to be a broader lifecycle/dialogue blocker, not only topic_500.
+- Reply continuation, final confirmation, and lifecycle completion must be checked across the relevant canon before further patches.
+- This checkpoint is intentionally not marked DONE and should be continued after the owner explains the next failure case.
+
+Verification recorded:
+- `python3 -m py_compile core/search_session.py core/reply_sender.py core/output_sanitizer.py task_worker.py core/ai_router.py` passed after the runtime changes.
+- `.env` was not touched.
+- systemd was not touched.
+- No GitHub push was performed during this checkpoint.
+## Progress 2026-07-06 — memory/live dialogue topic isolation repair
+
+This is a factual handoff record for the memory, archive, ContextLoader, and live-dialogue context repair done on 2026-07-06. It is not a new canon and does not rewrite existing canon text.
+
+Applied canon / SSOT rules:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.3: Git/Drive/DB/patch actions require explicit owner approval.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.4: diagnostics first: logs -> db -> pin -> memory -> context -> patch.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.5: read current file -> patch only gap -> compile -> restart -> logs.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.8: do not expose `.env`, credentials, sessions, tokens, or forbidden files without explicit permission.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §12/§14: GitHub stores only clean safe context; full server export and private values must not be pushed.
+- `docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md`: GitHub = brain, server = runtime, Drive = reserve; memory context must be isolated by chat/topic.
+
+Server backup:
+- Backup directory: `/root/.areal-neva-core/backups/memory_lifecycle_20260706_181724`.
+- Contents: `runtime_files_with_secrets.tgz` and `memory.db`.
+- Backup intentionally excludes media, PDFs, XLSX artifacts, Telegram artifacts, Drive exports, templates, and heavy runtime output.
+- Secrets were backed up only on the server and were not printed or copied into this handoff.
+
+Runtime files patched:
+- `memory_api_server.py`: ensures `topic_id` and `scope` columns exist; `/archive` and `/memory` writes preserve `topic_id/scope`; `/memory` GET can filter by `chat_id + topic_id + key`.
+- `core/context_loader.py`: short memory now uses live Memory API on `127.0.0.1:8091` with Authorization instead of stale port `8765`.
+- `task_worker.py`: topic role and DONE memory writes now populate `topic_id/scope` for role, user input, task summary, and assistant output.
+- `core/archive_distributor.py`: archive distribution writes `topic_id/scope` into `memory.db`.
+
+DB maintenance:
+- `data/memory.db` was backed up before DB writes.
+- Existing concrete topic keys were backfilled from `topic_N_*` prefixes into `memory.topic_id`.
+- No memory rows were deleted.
+- `topic_0_*` remains topic 0 by design.
+
+Verification:
+- `.venv/bin/python3 -m py_compile memory_api_server.py core/context_loader.py task_worker.py core/archive_distributor.py` -> `PY_COMPILE_OK`.
+- `areal-memory-api.service` restarted and active.
+- `areal-task-worker.service` restarted and active.
+- Memory API health -> `{"status":"ok"}`.
+- ContextLoader smoke test for chat `-1003725299009`, topic `2` returned 5 rows with `TOPIC_IDS [2]`.
+- `concrete_topic_prefixed_topic0` -> `0`.
+
+Not touched:
+- No systemd unit files were edited.
+- No launch commands were changed.
+- `.env`, credentials, tokens, and sessions were not edited and not printed.
+- `core/ai_router.py`, `core/reply_sender.py`, and `core/google_io.py` were not edited in this repair.
+- Neighboring topic logic was not intentionally changed.
+- No media/artifact folders were backed up or pushed.
+- No branch was created.
+
+Open verification:
+- Live Telegram scenarios still need separate owner-driven tests: reply continuation, voice continuation, memory query, pin isolation, file/photo/PDF intake, and correct DONE closure per topic.
+
+
+---
+
+## Progress 2026-07-07 — global file memory / duplicate guard live repair
+
+This is a factual handoff record for the live-dialogue file memory and duplicate-file repair done on 2026-07-07. It is not a new canon and does not replace existing canons.
+
+Applied canon / SSOT rules:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` §16.4: file without caption must reply to the file message and enter menu/clarification flow.
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` §17.3: repeated file must trigger `FILE_DUPLICATE_MEMORY_GUARD_V1` / “Файл уже есть”.
+- `docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md`: `drive_file.raw_input` contains `file_id`, `file_name`, `mime_type`, `caption`, `telegram_message_id`, `telegram_chat_id`.
+- `docs/ARCHITECTURE/WORKITEM_V1.md`: supported input types include `text / voice / photo / file / drive_file / url / mixed`.
+
+Runtime files patched:
+- `core/file_context_intake.py`: duplicate guard now covers `drive_file`, `file`, `photo`, `image`, `document`; it preserves `telegram_chat_id`, builds Telegram source links, and returns `reply_to_message_id` for the current file message.
+- `task_worker.py`: `drive_file` now runs common file-context prehandle before topic engines through `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1`; file-like prehandle is allowed even for otherwise isolated topic routes without opening ordinary text routing.
+- `core/file_memory_bridge.py`: historical file-memory answers can include the source Telegram message link when metadata exists.
+- `core/active_dialog_state.py` and `core/reply_repeat_parent.py`: public helper answers were cleaned from internal task/status wording.
+
+Live evidence:
+- Worker restart used the existing direct `flock ... task_worker.py` method; systemd was not touched.
+- `python3 -m py_compile task_worker.py core/file_context_intake.py` -> `SERVER_PY_COMPILE_OK`.
+- `git diff --check -- task_worker.py core/file_context_intake.py` -> `DIFF_CHECK_OK`.
+- Smoke duplicate finder returned `DUP_FOUND True` for `photo` -> `document` and generated `https://t.me/c/3725299009/111`.
+- First live-control task `b7f12c67-dup-live-20260707-001` found the real bypass: `drive_file` skipped common duplicate guard and entered topic_2 PDF pipeline.
+- After `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1`, second live-control task `b7f12c67-dup-live-20260707-002` passed:
+  - state `WAITING_CLARIFICATION`;
+  - `reply_to_message_id=10504`;
+  - `bot_message_id=12057`;
+  - result starts with `Смотри, этот файл ты уже скидывал`;
+  - source line includes `https://t.me/c/3725299009/10504`;
+  - log line: `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1 handled task_id=b7f12c67-dup-live-20260707-002`.
+
+Not touched:
+- No systemd unit files were edited.
+- `.env`, credentials, tokens, sessions, databases, runtime media, and secrets were not printed or pushed.
+- `core/ai_router.py`, `core/reply_sender.py`, and `core/google_io.py` were not edited for this repair.
+- No branch was created.
+
+Open verification:
+- Need owner-driven live Telegram test with a freshly resent real photo/document/file in the target topics.
+- Topic_2 full canon remains partial and still needs separate verification for estimate/photo/OCR/PDF/XLSX/multifile, memory, reply, voice, pin isolation, and DONE closure.
+- General live-answer completion and memory behavior remain broader open contours.
+
+Clean export:
+- `chat_exports/CHAT_EXPORT__2026-07-07_FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD.json`
 
 
 ================================================================================
@@ -3882,6 +4087,49 @@ DONE — только после явного «да» от пользовате
 - «НДС 20%»
 - «Предварительная смета готова» если нет canonical markers
 
+## §12. Append-only addendum 2026-07-06 — live estimate behavior
+
+Этот раздел дописывает правила topic_2 и не заменяет предыдущие пункты канона.
+
+### Source of estimate facts
+- Смета должна строиться только из текущего задания пользователя, загруженного проекта, фото, PDF, OCR-текста, reply-контекста или явного уточнения пользователя.
+- Старые задачи, старые raw_input, старые pin/active context и старые шаблонные параметры нельзя подмешивать в новое задание.
+- Если данных не хватает, нужно задать точный уточняющий вопрос. Выдумывать позиции, объёмы, материалы или параметры запрещено.
+- Оркестр обязан считать как сметчик и технический специалист: объёмы должны быть технически обоснованы по геометрии, толщине, выпуску, этажности, составу работ и проектным данным.
+
+### Live dialogue and files
+- Фото, PDF, OCR, voice, reply, pin/fixed-message context и продолжение живого диалога являются частью canonical topic_2 flow.
+- Если файл уже был прислан в текущем контексте задачи, повторно запрашивать тот же файл запрещено.
+- Файл без caption должен привязываться к ожидающей его topic_2 задаче, если такая задача существует и topic/thread совпадает.
+- Голосовое сообщение должно быть распознано в текст и обработано как продолжение текущей задачи, если оно относится к активному parent task.
+
+### Prices and search usage
+- Интернет-цены не запускаются самовольно.
+- Перед новым поиском нужно проверить свежую память/cache по тем же материалам, региону и режиму цены.
+- Если свежие подтверждённые цены уже есть в memory/cache, повторный интернет-поиск не выполняется.
+- Если цены отсутствуют или устарели, оркестр должен получить явное подтверждение пользователя на поиск или использовать уже заданное пользователем указание искать цены.
+- Search для topic_2 используется только как инструмент для prices/materials/suppliers/logistics/norms и не смешивает topic_2 output с topic_500 final.
+- Search route для topic_2 — только Sonar/Perplexity. DeepSeek запрещён для интернет-поиска и fallback search.
+
+### XLSX row semantics
+- `AREAL_CALC` остаётся обязательным 15-колоночным форматом.
+- Работы и материалы одной сметной операции должны находиться в одной строке, если это одна сметная позиция: цена работ и цена материалов заполняются в соответствующих колонках этой строки.
+- Запрещено создавать лишние отдельные строки "материал" и "работа", если операция уже представлена одной строкой и канонические 15 колонок позволяют разнести work/material внутри строки.
+- Шаблоны и образцы являются образцами структуры, а не фиксированным эталоном состава работ. Секции могут расширяться по фактам проекта, но без выдуманных позиций.
+
+### VAT
+- Актуальная ставка НДС для topic_2: 22%.
+- Старые `НДС 20%`, `0.2`, `1.2` как финальная VAT-логика запрещены.
+- По умолчанию смета обычно считается без НДС, если пользователь не выбрал иной режим.
+- Если режим НДС неясен, оркестр должен уточнить: без НДС или с НДС 22%.
+- Поддерживаемый режим: материалы с НДС 22%, работы без НДС. В этом режиме НДС считается только от суммы материалов.
+
+### Final and DONE
+- Финальный результат topic_2 должен приходить в Telegram в каноническом формате с Google Drive ссылками на XLSX и PDF.
+- Локальные пути, `/tmp`, `/root`, raw JSON или ручная выдача файлов вместо Drive links не являются каноническим финалом.
+- `DONE` разрешён только после явного подтверждения пользователя именно по соответствующему parent task.
+- Фраза подтверждения должна закрывать только связанную задачу в topic_2 и не должна отменять или закрывать соседние задачи.
+
 
 ## CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md
 
@@ -3999,6 +4247,51 @@ buy / купить / найти где купить · price / цена / сто
 topic_500 = universal adaptive internet search.
 Supplier / price / TCO logic — один из режимов.
 
+## §10. Append-only addendum 2026-07-06 — search authorization, cache, and model isolation
+
+Этот раздел дописывает правила topic_500 и cross-topic search usage; он не заменяет предыдущие пункты канона.
+
+### Search authorization
+- Интернет-поиск не запускается самовольно для обычного разговора или продолжения старой темы.
+- Search intent должен быть явным в текущем пользовательском сообщении или явно подтверждён пользователем в ходе уточнения.
+- Если пользователь попросил уточнить актуальные цены, найти товары, проверить стоимость, найти поставщика или проверить свежие данные, это считается разрешением на соответствующий search route в рамках текущей задачи.
+
+### Cache and memory first
+- Перед новым интернет-поиском оркестр обязан проверить свежую память/cache по тому же предмету, региону, режиму цены и источнику.
+- Если свежий подтверждённый результат уже есть, повторный интернет-поиск запрещён.
+- Если cache/memory неполные, устарели или не покрывают конкретную позицию, поиск выполняется только для недостающих позиций.
+
+### Model isolation
+- Любой internet/search route выполняется только через Sonar/Perplexity.
+- DeepSeek запрещён для интернет-поиска, search fallback и подмены search model.
+- Если Sonar/Perplexity недоступен, нужно вернуть ошибку поиска или запросить ручные данные; fallback на DeepSeek запрещён.
+
+### Cross-topic usage
+- Для topic_2 STROYKA search используется как инструмент для prices/materials/suppliers/logistics/norms.
+- Search-инструмент не должен превращать topic_2 ответ в topic_500 final и не должен смешивать outputs разных topic.
+- Результат search должен содержать источник, checked_at/date и статус подтверждения; выдуманные цены, ссылки и поставщики запрещены.
+
+## §11. Append-only addendum 2026-07-06 — long result delivery and contact-first search output
+
+Этот раздел дописывает правила topic_500 и общего delivery-слоя для длинных search-ответов; он не заменяет предыдущие пункты канона и не меняет логику соседних топиков.
+
+### Long search result delivery
+- Если search-ответ превышает лимит удобной Telegram-выдачи, полный результат должен сохраняться файлом на Google Drive.
+- В Telegram должен приходить короткий публичный ответ со ссылкой на Google Drive файл.
+- Нельзя писать пользователю "смотри в файле", если файл реально не создан и ссылка не отправлена.
+- Локальный путь на сервере, `/tmp`, `/root` или внутренний artifact path не являются пользовательским финалом.
+
+### Procurement/service-local public output
+- Для procurement и service/local публичный результат должен быть компактным contact-first списком.
+- Ключевые поля: `Profile/поставщик`, `Сайт/ссылка`, `Телефон`, `Цена/условия`, `Город/регион`, `Доставка/выезд`, `Дата проверки`, `Статус проверки`.
+- Главные пользовательские поля для поиска исполнителей/поставщиков: ссылка на сайт/profile/card и номер телефона.
+- Если прямой телефон не найден, строка должна быть помечена как неподтверждённая и не должна выдавать отсутствие телефона как подтверждённый результат.
+- Служебные комментарии, внутренние статусы, лишние пояснения, блоки "что проверить" и неуместные risk-комментарии не должны засорять публичную выдачу.
+
+### Not closed / open blocker
+- Логика ответов, reply continuation и завершение задач должны проверяться отдельно как общий lifecycle/dialogue blocker.
+- Этот addendum фиксирует delivery и public search-output contract; он не означает, что lifecycle completion полностью закрыт.
+
 
 ================================================================================
 # 5. PER_TOPIC
@@ -4036,8 +4329,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-06T09:52:44.488599+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:40.943890+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4050,7 +4343,7 @@ FAILED_LAST_24H: 0
 ## DB_STATE_COUNTS
 - ARCHIVED: 289
 - CANCELLED: 643
-- DONE: 207
+- DONE: 208
 - FAILED: 2706
 
 ## LATEST_FAILED
@@ -4064,7 +4357,8 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- state:IN_PROGRESS
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -4082,8 +4376,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -4114,30 +4408,30 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 1  FAILED_24H: 6
+ACTIVE: 1  FAILED_24H: 16
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
-- fe2b6928 | 2026-07-06 12:17:08 | STALE_TIMEOUT
+- 104db1d2 | 2026-07-07 09:37:03 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
-    history: TOPIC2_REVISION_BOUND_TO_PARENT:11807
-- d63abf15 | 2026-07-06 11:28:30 | TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-    history: TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-    history: reply_sent:p6_technadzor_result
-    history: P6E2_TECHNADZOR_ACT_CREATED;P6F_TNZ_CLEANED_OUTPUT
-- ca9ca9eb | 2026-07-06 11:22:11 | STALE_TIMEOUT
+    history: FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
+- d42f1165 | 2026-07-07 09:25:35 | NO_VALID_ARTIFACT
+    history: MULTI_FILE_TEMPLATE_INTAKE_V1:TEMPLATE_SAVED
+    history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
+    history: reply_sent:multi_file_template_intake
+- 3ec46f70 | 2026-07-07 09:25:35 | NO_VALID_ARTIFACT
+    history: MULTI_FILE_TEMPLATE_INTAKE_V1:TEMPLATE_SAVED
+    history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
+    history: reply_sent:multi_file_template_intake
+- b7f12c67 | 2026-07-07 08:44:25 | INVALID_RESULT_GATE
+    history: reply_sent:invalid_result
+    history: state:FAILED
+    history: TOPIC2_INPUT_GATE_FILE_MENU_BYPASS:description
+- b7f12c67 | 2026-07-07 08:52:39 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
-    history: TOPIC2_REVISION_BOUND_TO_PARENT:11784
-- bd0d5ae1 | 2026-07-05 23:45:23 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: TOPIC2_FRUSTRATION_REPLY_REROUTED:from=dfccdbfe-92e3-4fbb-9e16-5450a3fa6479:text=[VOICE] Все есть в 
-- 9c5946d7 | 2026-07-05 20:14:13 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: CODEX_RESTORED_WAITING_AFTER_NO_VALID_PDF_ROWS_BLOCK_V2
+    history: STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:handled
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/sample_template_engine.py
@@ -4541,6 +4835,33 @@ def _history_safe(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     except Exception:
         pass
 
+
+def _topic2_history_has_v1(conn: sqlite3.Connection, task_id: str, marker: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+            (str(task_id), str(marker)),
+        ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+
+def _topic2_send_sync_status_v1(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Any, marker: str, text: str) -> None:
+    if _topic2_history_has_v1(conn, task_id, marker):
+        return
+    try:
+        from core.reply_sender import send_reply_ex
+        send_reply_ex(
+            chat_id=str(chat_id),
+            text=_clean(text, 1200),
+            reply_to_message_id=int(reply_to) if reply_to else None,
+            message_thread_id=int(topic_id or 0) if topic_id else None,
+        )
+        _history_safe(conn, task_id, marker)
+    except Exception as exc:
+        _history_safe(conn, task_id, marker + "_ERR:" + _s(exc)[:80])
+
 # === PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
 PRICE_CHOICE_PROMPT_V1 = "Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную"
 
@@ -4619,33 +4940,6 @@ def _t2pcl_old_public_output(text):
 async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
     action = "TOPIC2_PRICE_CHOICE_REQUIRED_REPEAT" if repeat else "TOPIC2_PRICE_CHOICE_REQUESTED"
     _history_safe(conn, str(task_id), action)
-    _update_task_safe(
-        conn, str(task_id),
-        state="WAITING_CLARIFICATION",
-        result=PRICE_CHOICE_PROMPT_V1,
-        error_message="TOPIC2_PRICE_CHOICE_REQUIRED",
-    )
-    try:
-        maybe = _send_text(str(chat_id), PRICE_CHOICE_PROMPT_V1, reply_to_message_id, int(TOPIC_ID_STROYKA))
-        if hasattr(maybe, "__await__"):
-            await maybe
-    except Exception as _e:
-        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_PROMPT_SEND_ERR:" + _s(_e)[:200])
-    return True
-
-async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_message_id=None):
-    task_id = str(task_id or "")
-    if not task_id:
-        return False
-    hist = _t2pcl_history_text(conn, task_id)
-    has_prices = ("TOPIC2_PRICE_ENRICHMENT_DONE" in hist or
-                  "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in hist)
-    has_choice = "TOPIC2_PRICE_CHOICE_CONFIRMED" in hist
-    if not has_prices or has_choice:
-        return False
-    choice = _t2pcl_parse_explicit_price_choice(raw_input)
-    if choice:
-        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
 ```
 
 #### core/topic2_estimate_final_close_v2.py
@@ -4906,8 +5200,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-06T09:52:44.525259+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:40.984406+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4915,59 +5209,60 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 1
-FAILED_LAST_24H: 6
+FAILED_LAST_24H: 16
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - AWAITING_CONFIRMATION: 1
-- CANCELLED: 143
-- DONE: 212
-- FAILED: 146
+- CANCELLED: 147
+- DONE: 244
+- FAILED: 161
 
 ## LATEST_FAILED
-- fe2b6928 | STALE_TIMEOUT
-- d63abf15 | TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-- ca9ca9eb | STALE_TIMEOUT
-- bd0d5ae1 | STALE_TIMEOUT
-- 9c5946d7 | STALE_TIMEOUT
+- 104db1d2 | STALE_TIMEOUT
+- d42f1165 | NO_VALID_ARTIFACT
+- 3ec46f70 | NO_VALID_ARTIFACT
+- b7f12c67 | INVALID_RESULT_GATE
+- b7f12c67 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
-- f5f758c|docs: refresh single model context after topic2 handoff
-- d690605|topic2: save canonical live repair handoff
-- 844fafb|topic2: close PDF estimate confirmation flow
-- c8a9f1c|Topic2 canonical estimate live repair
+- ed4c3c7b|topic2: append live rules and save repair state
+- f5f758c8|docs: refresh single model context after topic2 handoff
+- d690605f|topic2: save canonical live repair handoff
+- 844fafb2|topic2: close PDF estimate confirmation flow
+- c8a9f1c6|Topic2 canonical estimate live repair
 
 ## MARKERS_LAST_24H
 - created:NEW
-- continued:1
-- MANUAL_RESTART_AS_NEW_FROM_PDF:29331db4-0403-4a5b-8516-88e535202da6
-- continued:Необходимо посчитать проект. Проект находится в 100 километров от Санк
-- continued:дду
+- clarified:Всё хорошо спасибо за задачу выполнено
 - cancelled
-- clarified:вот проект
-- clarified:Всё есть в проекте
-- clarified:Металлоконструкция
-- clarified:Отмена задач
-- CODEX_RERUN_AS_NEW_FROM:489cfefe-3048-4056-8362-2dfc90a3196a
-- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:revived_old_estimate_raw_
-- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
-- TOPIC2_PRICE_ENRICHMENT_STARTED
-- TOPIC2_PRICE_ENRICHMENT_DONE:1593
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:каркас
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
-- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:PK-Beton:CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
-- TOPIC2_PRICE_SOURCE_FOUND:Арматура А500:Леруа Мерлен:CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:монолитная плита
-- TOPIC2_PRICE_SOURCE_FOUND:монолитная плита:Петрович:CONFIRMED
-- TOPIC2_PRICE_WORK_SEARCH_STARTED:Работы по монтажу и кладке
-- TOPIC2_PRICE_SOURCE_FOUND:Работы по монтажу и кладке:Петрович:CONFIRMED
+- continued:Отмена задач
+- continued:Отмени задачу задача завершена
+- clarified:Посмотри фото там есть все размеры
+- TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
+- TOPIC2_DIAGNOSTIC_CHILD_CLOSED_AFTER_TECHNADZOR_ROUTE_FIX
+- TOPIC2_PRICE_SOURCE_MISSING:арматура А500
+- TOPIC2_PRICE_SOURCE_MISSING:материал стен (монолит)
+- TOPIC2_PRICE_SOURCE_MISSING:доставка (бетон)
+- TOPIC2_PRICE_SOURCE_MISSING:манипулятор/кран
+- TOPIC2_PRICE_SOURCE_MISSING:разгрузка
+- TOPIC2_PRICE_SOURCE_MISSING:**Примечание:** Цены на бетон и работу взяты из откр
+- TOPIC2_REVISION_REQUEUED_FOR_WORKER:d1022463-25c8-4f75-9490-6be9a61865dd
+- TOPIC2_REVISION_FACTS_APPLIED:d1022463-25c8-4f75-9490-6be9a61865dd
+- TOPIC2_MANUAL_WORK_PRICE_REQUIRED:monolith:4500
+- TOPIC2_MISSING_MATERIAL_PRICE_SOURCE_REQUIRED:sand,gravel
+- clarified:Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интер
+- PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1:RESTORED_FROM_ARTIFACT_HISTORY
+- FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
+- TOPIC2_FILE_INTAKE_LOCAL_PATH_OK
+- TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
+- TOPIC2_PDF_SPEC_EXTRACTED:8_rows
+- TOPIC2_PDF_SPEC_ROWS_EXTRACTED:8
+- TOPIC2_MULTIFILE_PROJECT_CONTEXT_FROM_ATTACHMENT:1_file
 - TOPIC2_PRICE_CHOICE_REQUESTED
 - TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE
-- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown
-- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
-- clarified:3
-- TOPIC2_PRICE_CHOICE_CONFIRMED:maximum
+- TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUESTED
+- TOPIC2_PRICE_CHOICE_CONFIRMED:reliable
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -4980,7 +5275,7 @@ FAILED_LAST_24H: 6
 - - topic_2: "Доделай мне нормально эту задачу"
 
 ## RUNTIME_FILE_CATALOG_SUMMARY
-total_files: 29
+total_files: 62
 chats: 1
 
 ## DRIVE_UPLOAD_CONTRACT
@@ -4992,8 +5287,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -5040,7 +5335,16 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_DONE_CONTRACT_OK
 
 ## MARKERS_MISSING
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
+- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
+- TOPIC2_XLSX_CREATED
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
+- TOPIC2_DRIVE_UPLOAD_PDF_OK
+- TOPIC2_TELEGRAM_DELIVERED
+- TOPIC2_MESSAGE_THREAD_ID_OK
+- TOPIC2_DONE_CONTRACT_OK
 
 ## REGRESSION_GUARDS
 - не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ
@@ -5081,27 +5385,31 @@ items: 11
 
 ## TOPIC_5_TEKHNADZOR
 
-STATUS: UNKNOWN
-ACTIVE: 0  FAILED_24H: 0
+STATUS: BROKEN
+ACTIVE: 0  FAILED_24H: 6
 DIRECTIONS_BOUND: Технадзор
 
 ### LAST_FAILED (5)
-- 775a2251 | 2026-05-06 14:24:33 | STALE_NEW_30MIN
-    history: state:FAILED:stale_runtime_cleanup_NEW_30min
-    history: created:NEW
-- f3637754 | 2026-05-06 14:24:33 | STALE_NEW_30MIN
-    history: state:FAILED:stale_runtime_cleanup_NEW_30min
-    history: created:NEW
-- ddfc12b1 | 2026-05-06 15:45:21 | PATCH_TOPIC2_UNBLOCK_PICK_NEXT_V1_CLOSED_BLOCKER
-    history: PATCH_TOPIC2_UNBLOCK_PICK_NEXT_V1_CLOSED_BLOCKER
-    history: FULLFIX_TOPIC5_REPLY_TO_PHOTO_BOUND
-    history: P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
-- 24ffa14f | 2026-05-06 13:33:07 | INVALID_PUBLIC_RESULT
-    history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:INVALID_PUBLIC_RESULT
-    history: created:NEW
-- 8093deb3 | 2026-05-06 13:33:05 | INVALID_PUBLIC_RESULT
-    history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:INVALID_PUBLIC_RESULT
-    history: created:NEW
+- 7300d5f5 | 2026-07-07 15:46:28 | STALE_TIMEOUT
+    history: state:FAILED
+    history: PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+    history: reply_sent:topic5_direct_visit_material_buffered
+- 2d607bf6 | 2026-07-07 15:46:28 | STALE_TIMEOUT
+    history: state:FAILED
+    history: PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+    history: reply_sent:topic5_direct_visit_material_buffered
+- 68dceab3 | 2026-07-07 15:46:26 | STALE_TIMEOUT
+    history: state:FAILED
+    history: PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+    history: reply_sent:topic5_direct_visit_material_buffered
+- e9400bf5 | 2026-07-07 15:46:26 | STALE_TIMEOUT
+    history: state:FAILED
+    history: PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+    history: reply_sent:topic5_direct_visit_material_buffered
+- 3b365ab1 | 2026-07-07 15:46:24 | STALE_TIMEOUT
+    history: state:FAILED
+    history: PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+    history: reply_sent:topic5_direct_visit_material_buffered
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/technadzor_engine.py
@@ -5616,41 +5924,58 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-06T09:52:44.568606+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.028116+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
 ROLE: Технадзор
 DIRECTIONS_BOUND: technical_supervision
-CURRENT_STATUS: UNKNOWN
+CURRENT_STATUS: BROKEN
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 0
+FAILED_LAST_24H: 6
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 21
 - CANCELLED: 25
-- DONE: 68
-- FAILED: 53
+- DONE: 80
+- FAILED: 59
 
 ## LATEST_FAILED
-- 775a2251 | STALE_NEW_30MIN
-- f3637754 | STALE_NEW_30MIN
-- ddfc12b1 | PATCH_TOPIC2_UNBLOCK_PICK_NEXT_V1_CLOSED_BLOCKER
-- 24ffa14f | INVALID_PUBLIC_RESULT
-- 8093deb3 | INVALID_PUBLIC_RESULT
+- 7300d5f5 | STALE_TIMEOUT
+- 2d607bf6 | STALE_TIMEOUT
+- 68dceab3 | STALE_TIMEOUT
+- e9400bf5 | STALE_TIMEOUT
+- 3b365ab1 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- reply_sent:topic5_reply_photo_comment_bound
+- topic5_reply_photo_comment_bound
+- PATCH_GLOBAL_HISTORICAL_MEMORY_RECALL_V1:core_tasks=de9a446a,4b402275,8a72d7d1
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:NO_VALID_ARTIFACT
+- reply_sent:full_contour_guard_failed
+- reply_sent:P6H4TW_VOICE_ANNOTATED
+- P6H4TW_VOICE_ANNOTATED:DONE
+- MANUAL_RERUN_AFTER_TOPIC5_VISIT_MATERIAL_GUARD_FIX
+- reply_sent:topic5_direct_visit_material_buffered
+- PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+- reply_sent:topic5_violation_question_answer
+- PATCH_TOPIC5_VIOLATION_QUESTION_NOT_COMMENT_V1:HANDLED
+- reply_sent:topic5_full_canon_context_saved
+- topic5_full_canon_context_saved
+- state:FAILED
+- reply_sent:stale_failed
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды
 
 ## RUNTIME_FILE_CATALOG_SUMMARY
-total_files: 6
+total_files: 25
 chats: 1
 
 ## DRIVE_UPLOAD_CONTRACT
@@ -5662,8 +5987,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -5719,8 +6044,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-06T09:52:44.604376+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.063039+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -5762,8 +6087,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -6329,8 +6654,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-06T09:52:44.641402+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.106886+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6343,7 +6668,7 @@ FAILED_LAST_24H: 0
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
-- DONE: 87
+- DONE: 88
 - FAILED: 32
 
 ## LATEST_FAILED
@@ -6357,7 +6682,8 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- state:IN_PROGRESS
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -6378,8 +6704,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -6413,31 +6739,31 @@ items: 11
 
 ## TOPIC_500_VEB_POISK
 
-STATUS: UNKNOWN
-ACTIVE: 0  FAILED_24H: 0
+STATUS: BROKEN
+ACTIVE: 0  FAILED_24H: 21
 DIRECTIONS_BOUND: Интернет-поиск
 
 ### LAST_FAILED (5)
-- 6719452a | 2026-05-06 19:40:59 | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-    history: reply_sent:p6_topic500_bad_result
-    history: P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-    history: P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
-- 16129a0c | 2026-05-06 19:40:39 | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-    history: reply_sent:p6_topic500_bad_result
-    history: P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-    history: P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
-- 58591d8f | 2026-05-05 23:33:25 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
-    history: IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1:FAILED
-    history: STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY
-    history: P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
-- 7944bb2a | 2026-05-05 22:35:46 | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-    history: reply_sent:p6_topic500_bad_result
-    history: P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-    history: P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
-- a6e666e8 | 2026-05-05 22:35:40 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
-    history: IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1:FAILED
-    history: STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY
-    history: P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
+- 936241de | 2026-07-07 11:51:38 | SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
+    history: reply_sent:error
+    history: TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
+    history: P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION
+- c3d3b1db | 2026-07-07 12:09:45 | CONFIRMATION_TIMEOUT
+    history: reply_sent:p6_topic500_search_result
+    history: TOPIC500_PROCUREMENT_VALIDATOR_V1:ALLOW_UNVERIFIED:SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS
+    history: P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION
+- dd14c782 | 2026-07-07 12:09:40 | CONFIRMATION_TIMEOUT
+    history: reply_sent:p6_topic500_search_result
+    history: TOPIC500_PROCUREMENT_VALIDATOR_V1:ERROR:error
+    history: P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION
+- 631e3a5b | 2026-07-07 12:05:09 | CONFIRMATION_TIMEOUT
+    history: reply_sent:p6_topic500_search_result
+    history: TOPIC500_PROCUREMENT_VALIDATOR_V1:ALLOW_UNVERIFIED:SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS
+    history: P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION
+- e6eb903f | 2026-07-07 12:04:59 | CONFIRMATION_TIMEOUT
+    history: reply_sent:p6_topic500_search_result
+    history: TOPIC500_PROCUREMENT_VALIDATOR_V1:ALLOW_UNVERIFIED:SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS
+    history: P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/search_session.py
@@ -6445,6 +6771,7 @@ DIRECTIONS_BOUND: Интернет-поиск
 # === SEARCH_MONOLITH_V2_FULL ===
 from __future__ import annotations
 import json, logging, os, re, sqlite3, time
+import urllib.request, urllib.error
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
@@ -6452,6 +6779,7 @@ from typing import Any, Callable, Dict, List, Optional
 logger = logging.getLogger("search_session")
 BASE = "/root/.areal-neva-core"
 MEM_DB = f"{BASE}/data/memory.db"
+CORE_DB = f"{BASE}/data/core.db"
 SEARCH_SESSION_VERSION = "SEARCH_MONOLITH_V2_FULL"
 SESSION_TTL_SEC = 7200
 MAX_CLARIFICATIONS = 3
@@ -6690,8 +7018,6 @@ class SearchMonolithV2:
         return False
 
     async def run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
-        chat_id = str(payload.get("chat_id") or ""); topic_id = int(payload.get("topic_id") or 0)
-        user_text = _clean(user_text, 4000)
 ```
 
 #### core/search_engine.py
@@ -6896,35 +7222,64 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-06T09:52:44.675578+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.148912+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
 ROLE: Интернет-поиск
 DIRECTIONS_BOUND: internet_search
-CURRENT_STATUS: UNKNOWN
+CURRENT_STATUS: BROKEN
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 0
+FAILED_LAST_24H: 21
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 27
 - CANCELLED: 7
-- DONE: 55
-- FAILED: 34
+- DONE: 86
+- FAILED: 56
 
 ## LATEST_FAILED
-- 6719452a | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- 16129a0c | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- 58591d8f | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
-- 7944bb2a | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
+- 936241de | SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
+- c3d3b1db | CONFIRMATION_TIMEOUT
+- dd14c782 | CONFIRMATION_TIMEOUT
+- 631e3a5b | CONFIRMATION_TIMEOUT
+- e6eb903f | CONFIRMATION_TIMEOUT
 
 ## COMMITS_LAST_14D
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- created:NEW:TOPIC500_LIVE_RERUN_AFTER_CANON_PATCH
+- state:IN_PROGRESS
+- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
+- P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION
+- reply_sent:p6_topic500_search_result
+- STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY
+- created:NEW:TOPIC500_COMBINED_CONTEXT_LIVE_RERUN
+- MANUAL_STATE_REPAIR_TOPIC500_AWAITING_CONFIRMATION_AFTER_CANON_PATCH
+- STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:TOPIC500_KEEP_AWAITING_CONFIRMATION
+- state:DONE
+- confirm_accepted
+- reply_sent:confirm_done
+- continued:Выполни мне последний поиск снова но с реальными ссы
+- continued:Реальными ссылками
+- revision_accepted
+- reply_sent:revision_ok
+- reply_sent:reply_repeat_parent
+- REPLY_REPEAT_PARENT_TASK_V1:ACK:a0737581
+- MANUAL_CANON_MARK_FAILED_FALSE_VERIFIED_LINKS
+- created:NEW:TOPIC500_RERUN_AFTER_FALSE_LINK_GUARD
+- created:NEW:TOPIC500_RERUN_AFTER_ROUTE_VALIDATOR
+- P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
+- reply_sent:p6_topic500_bad_result
+- TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
+- reply_sent:error
+- MANUAL_REQUEUE_TOPIC500_CLEAR_BOT_MESSAGE_AFTER_UNIVERSAL_SEARCH_CANON_FIX
+- CREATED_AS_NEW_TOPIC500_LIVE_RERUN_AFTER_SEARCH_CANON_FIX
+- TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:SEARCH_OUTPUT_INVALID_UNVERIFIED_SOCIAL
+- CREATED_AS_NEW_TOPIC500_LIVE_RERUN_AFTER_SOCIAL_STATUS_VALIDATOR_FIX
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -6942,8 +7297,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -6999,8 +7354,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-06T09:52:44.702962+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.183814+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7042,8 +7397,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -7095,8 +7450,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-06T09:52:44.729193+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.223035+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7139,8 +7494,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -7188,8 +7543,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-06T09:52:44.762760+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.260902+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7231,8 +7586,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -7292,8 +7647,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-06T09:52:44.800282+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.295749+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7338,8 +7693,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -7401,8 +7756,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-06T09:52:44.830993+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.331039+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
@@ -7446,8 +7801,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env

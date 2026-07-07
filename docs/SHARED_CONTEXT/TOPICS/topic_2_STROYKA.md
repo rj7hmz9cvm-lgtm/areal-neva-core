@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-06T09:52:44.525259+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:40.984406+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -9,59 +9,60 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 1
-FAILED_LAST_24H: 6
+FAILED_LAST_24H: 16
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - AWAITING_CONFIRMATION: 1
-- CANCELLED: 143
-- DONE: 212
-- FAILED: 146
+- CANCELLED: 147
+- DONE: 244
+- FAILED: 161
 
 ## LATEST_FAILED
-- fe2b6928 | STALE_TIMEOUT
-- d63abf15 | TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-- ca9ca9eb | STALE_TIMEOUT
-- bd0d5ae1 | STALE_TIMEOUT
-- 9c5946d7 | STALE_TIMEOUT
+- 104db1d2 | STALE_TIMEOUT
+- d42f1165 | NO_VALID_ARTIFACT
+- 3ec46f70 | NO_VALID_ARTIFACT
+- b7f12c67 | INVALID_RESULT_GATE
+- b7f12c67 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
-- f5f758c|docs: refresh single model context after topic2 handoff
-- d690605|topic2: save canonical live repair handoff
-- 844fafb|topic2: close PDF estimate confirmation flow
-- c8a9f1c|Topic2 canonical estimate live repair
+- ed4c3c7b|topic2: append live rules and save repair state
+- f5f758c8|docs: refresh single model context after topic2 handoff
+- d690605f|topic2: save canonical live repair handoff
+- 844fafb2|topic2: close PDF estimate confirmation flow
+- c8a9f1c6|Topic2 canonical estimate live repair
 
 ## MARKERS_LAST_24H
 - created:NEW
-- continued:1
-- MANUAL_RESTART_AS_NEW_FROM_PDF:29331db4-0403-4a5b-8516-88e535202da6
-- continued:Необходимо посчитать проект. Проект находится в 100 километров от Санк
-- continued:дду
+- clarified:Всё хорошо спасибо за задачу выполнено
 - cancelled
-- clarified:вот проект
-- clarified:Всё есть в проекте
-- clarified:Металлоконструкция
-- clarified:Отмена задач
-- CODEX_RERUN_AS_NEW_FROM:489cfefe-3048-4056-8362-2dfc90a3196a
-- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:revived_old_estimate_raw_
-- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
-- TOPIC2_PRICE_ENRICHMENT_STARTED
-- TOPIC2_PRICE_ENRICHMENT_DONE:1593
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:каркас
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
-- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:PK-Beton:CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
-- TOPIC2_PRICE_SOURCE_FOUND:Арматура А500:Леруа Мерлен:CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:монолитная плита
-- TOPIC2_PRICE_SOURCE_FOUND:монолитная плита:Петрович:CONFIRMED
-- TOPIC2_PRICE_WORK_SEARCH_STARTED:Работы по монтажу и кладке
-- TOPIC2_PRICE_SOURCE_FOUND:Работы по монтажу и кладке:Петрович:CONFIRMED
+- continued:Отмена задач
+- continued:Отмени задачу задача завершена
+- clarified:Посмотри фото там есть все размеры
+- TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
+- TOPIC2_DIAGNOSTIC_CHILD_CLOSED_AFTER_TECHNADZOR_ROUTE_FIX
+- TOPIC2_PRICE_SOURCE_MISSING:арматура А500
+- TOPIC2_PRICE_SOURCE_MISSING:материал стен (монолит)
+- TOPIC2_PRICE_SOURCE_MISSING:доставка (бетон)
+- TOPIC2_PRICE_SOURCE_MISSING:манипулятор/кран
+- TOPIC2_PRICE_SOURCE_MISSING:разгрузка
+- TOPIC2_PRICE_SOURCE_MISSING:**Примечание:** Цены на бетон и работу взяты из откр
+- TOPIC2_REVISION_REQUEUED_FOR_WORKER:d1022463-25c8-4f75-9490-6be9a61865dd
+- TOPIC2_REVISION_FACTS_APPLIED:d1022463-25c8-4f75-9490-6be9a61865dd
+- TOPIC2_MANUAL_WORK_PRICE_REQUIRED:monolith:4500
+- TOPIC2_MISSING_MATERIAL_PRICE_SOURCE_REQUIRED:sand,gravel
+- clarified:Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интер
+- PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1:RESTORED_FROM_ARTIFACT_HISTORY
+- FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
+- TOPIC2_FILE_INTAKE_LOCAL_PATH_OK
+- TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
+- TOPIC2_PDF_SPEC_EXTRACTED:8_rows
+- TOPIC2_PDF_SPEC_ROWS_EXTRACTED:8
+- TOPIC2_MULTIFILE_PROJECT_CONTEXT_FROM_ATTACHMENT:1_file
 - TOPIC2_PRICE_CHOICE_REQUESTED
 - TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE
-- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown
-- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
-- clarified:3
-- TOPIC2_PRICE_CHOICE_CONFIRMED:maximum
+- TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUESTED
+- TOPIC2_PRICE_CHOICE_CONFIRMED:reliable
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -74,7 +75,7 @@ FAILED_LAST_24H: 6
 - - topic_2: "Доделай мне нормально эту задачу"
 
 ## RUNTIME_FILE_CATALOG_SUMMARY
-total_files: 29
+total_files: 62
 chats: 1
 
 ## DRIVE_UPLOAD_CONTRACT
@@ -86,8 +87,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env
@@ -134,7 +135,16 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_DONE_CONTRACT_OK
 
 ## MARKERS_MISSING
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
+- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
+- TOPIC2_XLSX_CREATED
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
+- TOPIC2_DRIVE_UPLOAD_PDF_OK
+- TOPIC2_TELEGRAM_DELIVERED
+- TOPIC2_MESSAGE_THREAD_ID_OK
+- TOPIC2_DONE_CONTRACT_OK
 
 ## REGRESSION_GUARDS
 - не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ

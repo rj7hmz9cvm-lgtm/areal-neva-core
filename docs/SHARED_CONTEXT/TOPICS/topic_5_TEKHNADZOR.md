@@ -1,40 +1,57 @@
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-06T09:52:44.568606+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.028116+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
 ROLE: Технадзор
 DIRECTIONS_BOUND: technical_supervision
-CURRENT_STATUS: UNKNOWN
+CURRENT_STATUS: BROKEN
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 0
+FAILED_LAST_24H: 6
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 21
 - CANCELLED: 25
-- DONE: 68
-- FAILED: 53
+- DONE: 80
+- FAILED: 59
 
 ## LATEST_FAILED
-- 775a2251 | STALE_NEW_30MIN
-- f3637754 | STALE_NEW_30MIN
-- ddfc12b1 | PATCH_TOPIC2_UNBLOCK_PICK_NEXT_V1_CLOSED_BLOCKER
-- 24ffa14f | INVALID_PUBLIC_RESULT
-- 8093deb3 | INVALID_PUBLIC_RESULT
+- 7300d5f5 | STALE_TIMEOUT
+- 2d607bf6 | STALE_TIMEOUT
+- 68dceab3 | STALE_TIMEOUT
+- e9400bf5 | STALE_TIMEOUT
+- 3b365ab1 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- reply_sent:topic5_reply_photo_comment_bound
+- topic5_reply_photo_comment_bound
+- PATCH_GLOBAL_HISTORICAL_MEMORY_RECALL_V1:core_tasks=de9a446a,4b402275,8a72d7d1
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:NO_VALID_ARTIFACT
+- reply_sent:full_contour_guard_failed
+- reply_sent:P6H4TW_VOICE_ANNOTATED
+- P6H4TW_VOICE_ANNOTATED:DONE
+- MANUAL_RERUN_AFTER_TOPIC5_VISIT_MATERIAL_GUARD_FIX
+- reply_sent:topic5_direct_visit_material_buffered
+- PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
+- reply_sent:topic5_violation_question_answer
+- PATCH_TOPIC5_VIOLATION_QUESTION_NOT_COMMENT_V1:HANDLED
+- reply_sent:topic5_full_canon_context_saved
+- topic5_full_canon_context_saved
+- state:FAILED
+- reply_sent:stale_failed
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды
 
 ## RUNTIME_FILE_CATALOG_SUMMARY
-total_files: 6
+total_files: 25
 chats: 1
 
 ## DRIVE_UPLOAD_CONTRACT
@@ -46,8 +63,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env

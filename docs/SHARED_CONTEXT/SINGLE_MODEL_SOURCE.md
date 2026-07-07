@@ -1,7 +1,7 @@
 # SINGLE_MODEL_SOURCE
 
-GENERATED_AT: 2026-07-06T09:52:44.839437+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.335617+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
 ## PRIORITY_OF_TRUTH
@@ -53,18 +53,18 @@ estimate_templates_top5:
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## GLOBAL_TOPIC_TABLE
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 6 |
-| 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 16 |
+| 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
-| 500 | VEB_POISK | UNKNOWN | 0 | 0 |
+| 500 | VEB_POISK | BROKEN | 0 | 21 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
 | 961 | AVTOZAPCHASTI | UNKNOWN | 0 | 0 |
 | 3008 | KODY_MOZGOV | UNKNOWN | 0 | 0 |

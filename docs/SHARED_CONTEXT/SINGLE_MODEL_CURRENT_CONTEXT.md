@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-06T09:52:45.106944+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.570615+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,10 +16,10 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 6 |
-| 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 16 |
+| 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
-| 500 | VEB_POISK | UNKNOWN | 0 | 0 |
+| 500 | VEB_POISK | BROKEN | 0 | 21 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
 ### ЧТО INSTALLED НО НЕ VERIFIED (факт из NOT_CLOSED)
@@ -71,36 +71,43 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 1
-failed_24h: 6
-commits_last_7d: 4
+failed_24h: 16
+commits_last_7d: 5
 recent_commits:
-- f5f758c|docs: refresh single model context after topic2 handoff
-- d690605|topic2: save canonical live repair handoff
-- 844fafb|topic2: close PDF estimate confirmation flow
-markers_missing: 1
+- ed4c3c7b|topic2: append live rules and save repair state
+- f5f758c8|docs: refresh single model context after topic2 handoff
+- d690605f|topic2: save canonical live repair handoff
+markers_missing: 10
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
+- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
+- TOPIC2_XLSX_CREATED
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
+- TOPIC2_DRIVE_UPLOAD_PDF_OK
+- TOPIC2_TELEGRAM_DELIVERED
 last_failed:
-- fe2b6928 | STALE_TIMEOUT
-- d63abf15 | TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-- ca9ca9eb | STALE_TIMEOUT
+- 104db1d2 | STALE_TIMEOUT
+- d42f1165 | NO_VALID_ARTIFACT
+- 3ec46f70 | NO_VALID_ARTIFACT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 1
+NEXT_ACTION: live-test / close missing markers: 10
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
 active: 0
-failed_24h: 0
+failed_24h: 6
 commits_last_7d: 0
 last_failed:
-- 775a2251 | STALE_NEW_30MIN
-- f3637754 | STALE_NEW_30MIN
-- ddfc12b1 | PATCH_TOPIC2_UNBLOCK_PICK_NEXT_V1_CLOSED_BLOCKER
+- 7300d5f5 | STALE_TIMEOUT
+- 2d607bf6 | STALE_TIMEOUT
+- 68dceab3 | STALE_TIMEOUT
 blockers:
 - - topic_5 не тянет КЖ/АР без прямой команды
-NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
+NEXT_ACTION: investigate latest failed: STALE_TIMEOUT
 
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
@@ -120,13 +127,13 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 ### topic_500 VEB_POISK
 role: Интернет-поиск
 active: 0
-failed_24h: 0
+failed_24h: 21
 commits_last_7d: 0
 last_failed:
-- 6719452a | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- 16129a0c | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- 58591d8f | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
-NEXT_ACTION: investigate latest failed: P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
+- 936241de | SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
+- c3d3b1db | CONFIRMATION_TIMEOUT
+- dd14c782 | CONFIRMATION_TIMEOUT
+NEXT_ACTION: investigate latest failed: SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
 
 ## STRICT_RULES
 - INSTALLED != VERIFIED

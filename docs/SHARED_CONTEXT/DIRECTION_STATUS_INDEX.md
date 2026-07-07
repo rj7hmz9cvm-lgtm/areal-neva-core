@@ -1,7 +1,7 @@
 # DIRECTION_STATUS_INDEX
 
-GENERATED_AT: 2026-07-06T09:52:44.839261+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:41.335395+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 
 | direction | enabled | engine | topic_ids | bound_status |
@@ -10,11 +10,11 @@ Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 | orchestration_core | True | ai_router | [3008] | 3008:UNKNOWN |
 | telegram_automation | True | telegram_pipeline | [] | - |
 | memory_archive | True | context_search_archive_engine | [] | - |
-| internet_search | True | search_supplier | [500] | 500:UNKNOWN |
+| internet_search | True | search_supplier | [500] | 500:BROKEN |
 | product_search | True | search_supplier | [] | - |
 | auto_parts_search | True | search_supplier | [961] | 961:UNKNOWN |
 | construction_search | True | search_supplier | [] | - |
-| technical_supervision | True | defect_act | [5] | 5:UNKNOWN |
+| technical_supervision | True | defect_act | [5] | 5:BROKEN |
 | estimates | True | estimate_unified | [2] | 2:INSTALLED_NOT_VERIFIED |
 | defect_acts | True | defect_act | [] | - |
 | documents | True | document_engine | [] | - |

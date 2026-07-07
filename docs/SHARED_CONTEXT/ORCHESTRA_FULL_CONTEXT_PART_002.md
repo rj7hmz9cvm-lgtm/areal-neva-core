@@ -1,8 +1,427 @@
 # ORCHESTRA_FULL_CONTEXT_PART_002
-generated_at_utc: 2026-07-06T09:52:44.430445+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-part: 2/19
+generated_at_utc: 2026-07-07T13:23:40.862054+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+part: 2/21
 
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a0b45f76910f3947da57374617e22726ee05cfa4e0914a178e50c4d04773bcef
+====================================================================================================
+# ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT
+
+STATUS: CODE_CLOSED_ALL_THREE_DIRECTIONS
+
+Patched or preserved:
+- core/project_route_guard.py
+- core/project_engine.py
+- docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md
+
+Code closures:
+- topic_2 / smeta: ESTIMATE_PRIORITY_FIX_V1
+- topic_210 / projects: SHEETS_NORMALIZE_V1
+- topic_210 / projects: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
+- topic_210 / projects: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1
+- topic_210 / projects: CANON_LIST_QUERY_GUARD_V1 preserved
+- topic_500 / search: FILE_TECH_CONTOUR_FOLLOWUP_V2 preserved
+- topic_500 / search: SEARCH_TOPIC500_FTCF_ISOLATION_V1 preserved
+
+Forbidden files not patched:
+- task_worker.py
+- telegram_daemon.py
+- core/reply_sender.py
+- google_io.py
+- core/ai_router.py
+- systemd units
+- Drive/OAuth
+- memory.db schema
+- core.db schema
+- .env
+- credentials
+- sessions
+
+Runtime artifacts:
+- /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__MEMORY_CATALOG_INDEX.json
+- /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__*_memory_catalog.json when missing sections exist
+
+Known untracked ignored by owner directive:
+- data/db_backups/
+- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md
+
+====================================================================================================
+END_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c7bbe40bc6d5bc2d938e81400151a0f2cdacf9d5be8538f0f1c25c7843f0aac0
+====================================================================================================
+# AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT
+
+status: OK
+version: AREAL_REFERENCE_FULL_MONOLITH_V1
+updated_at: 2026-05-02T20:20:56.522887+00:00
+estimate_files: 6
+design_files: 231
+technadzor_files: 1
+formula_total: 4733
+
+## Final verify
+
+- ESTIMATE_FILES: 6
+- DESIGN_FILES: 231
+- FORMULA_TOTAL: 4733
+- archive_endpoint: OK
+- worker_log: NO_FATAL
+- memory_api_log: NO_FATAL
+- topic_isolation_live_test: PENDING in NOT_CLOSED
+
+====================================================================================================
+END_FILE: docs/REPORTS/AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/AREAL_REVIEW_CHECKLIST.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 88eeb6bf28decadbddd9083ab82ccd26a16f1bd9560ca9f1d7158f6f8b40805c
+====================================================================================================
+# AREAL_REVIEW_CHECKLIST
+
+## Mandatory constraints
+
+- no point patches
+- no regression
+- no new architecture layers
+- no new Drive folder trees
+- no duplicate hooks
+- CANON_FINAL must not be ignored
+- memory.db must receive slim reference data only
+- indexer must not download files over 5MB
+- topic_2, topic_5, topic_210 must not mix contexts
+
+## Regression guards
+
+- ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4 remains in ai_router.py
+- SAMPLE_ACCEPT_DIALOG_CONTEXT_FIX_V1 remains in final_closure_engine.py
+- VOICE_CONFIRM_AWAITING_V1 remains only in task_worker.py
+- CANON_FINAL absent from .gitignore
+
+## Smoke
+
+- owner reference context triggers on estimate/design/technadzor words
+- owner reference context stays empty on neutral chat
+- estimate template policy still works
+- /archive returns 200
+- upload retry service active
+- media_group exists
+- startup_recovery referenced
+- pin_manager referenced
+
+## Pending live-only checks
+
+- topic isolation live Telegram check
+- voice confirm live Telegram check
+- duplicate guard live Telegram check
+
+====================================================================================================
+END_FILE: docs/REPORTS/AREAL_REVIEW_CHECKLIST.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/CANON_CLOSURE_PLAN.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 70cf6069d4770d09d3c8e552d4a4458e994cdd00bd3b480642421d096611e80c
+====================================================================================================
+# AREAL-NEVA ORCHESTRA — CANON CLOSURE PLAN
+# 30.04.2026 10:30 | FACT-ONLY | Basis: live DB + LATEST_HANDOFF + NOT_CLOSED
+
+## ПРИОРИТЕТ ИСТИНЫ
+```
+1. Живой сервер (logs/db)
+2. LATEST_HANDOFF.md (30.04.2026 05:40)
+3. NOT_CLOSED.md
+4. VERIFIED chat_exports
+5. ONE_SHARED_CONTEXT
+6. CANON_FINAL
+7. INSTALLED без live-test ≠ работает
+8. BROKEN/REJECTED/UNKNOWN → не использовать
+```
+
+## VERIFIED (факт: LATEST_HANDOFF + live тесты)
+```
+✅ Drive upload OAuth → UPLOAD_OK
+✅ Telegram fallback → работает
+✅ upload_retry_queue cron 10min
+✅ topic folder isolation (chat/topic_N/)
+✅ file intake → NEEDS_CONTEXT → меню
+✅ FILE_CHOICE_PRIORITY (reply/voice → выбор)
+✅ FILE_PARENT_STRICT (только NEEDS_CONTEXT)
+✅ OAuth scope=drive везде (topic_drive_oauth + google_io + drive_folder_resolver)
+✅ daemon override.conf с OAuth vars
+✅ daemon использует upload_file_to_topic
+✅ services: task-worker ACTIVE | telegram-ingress ACTIVE | memory-api ACTIVE
+```
+
+## INSTALLED НО НЕ VERIFIED (не считать рабочим)
+```
+⚠️ PATCH_SOURCE_GUARD_V1
+⚠️ PATCH_FILE_ERROR_RETRY_V1
+⚠️ PATCH_DRIVE_BOTMSG_SAVE_V1
+⚠️ PATCH_CRASH_BOTMSG_V1
+⚠️ PATCH_RETRY_TG_MSG_V1
+⚠️ PATCH_DAEMON_USE_OAUTH_V1
+⚠️ PATCH_VOICE_OAUTH_V1
+⚠️ PATCH_DUPLICATE_GUARD_V1
+⚠️ PATCH_MULTI_FILE_INTAKE_V1
+⚠️ PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1
+```
+
+## ПОДТВЕРЖДЁННЫЕ БАГИ (из live DB topic=210 + code)
+
+### BUG_1: AWAITING_CONFIRMATION_WITHOUT_RESULT
+```
+Факт код: task_worker.py строка 2070
+_update_task(state="AWAITING_CONFIRMATION") — ставится ВСЕГДА
+
+Факт DB: id=6e385bf1 result="Файл КЖ АК-М-160.pdf скачан, ожидает анализа"
+был AWAITING_CONFIRMATION, бот спрашивал "Доволен?"
+```
+
+### BUG_2: TEMPLATE_IS_OCR_NOT_STRUCTURE
+```
+Факт код: artifact_pipeline.py строки 294-360
+analyze_downloaded_file игнорирует user_text/intent
+PDF → _extract_pdf → текст → _build_word "Сводка по документу"
+
+Факт DB: id=cc9d2911 caption="Шаблон проекта"
+result="GSPublisherVersion 0.89.100.100 Архитектурный раздел..."
+= OCR текст, не структурная модель
+
+Факт DB: id=7b287c50 [VOICE] "посмотри структуру КД"
+result="Структура проекта КД включает следующие основные этапы..."
+= DeepSeek выдумал, не извлёк из файла
+```
+
+### BUG_3: NEGATIVE_INPUT_NOT_REVISION
+```
+Факт DB topic=210:
+"И?" → новая text задача → общий ответ
+"Какой результат?" → новая text задача → общий ответ
+"Так нет результата" → новая text задача → CANCELLED
+= создаёт мусор вместо revision parent task
+```
+
+### BUG_4: GENERIC_AS_FINAL_RESULT
+```
+Факт DB topic=210 (финалы задач):
+"Этот чат предназначен для проектирования..." — DONE
+"Структура проекта КД включает этапы..." — DONE
+"Файл содержит проект архитектурного раздела..." — DONE
+"Выбор принят" без engine — DONE
+```
+
+### BUG_5: PROJECT_ENGINE_ABSENT
+```
+Факт: core/project_engine.py не существует на сервере
+Факт: core/template_manager.py не подключён к pipeline
+Факт: artifact_pipeline.py не имеет ветки intent=template
+```
+
+---
+
+## 12 ПРОХОДОВ ЗАКРЫТИЯ (строго по порядку)
+
+### PASS 1 — PATCH_CONFIRM_ONLY_ON_DONE_V1
+```
+Файл: task_worker.py строки 2068-2075
+Статус: ТЗ готово → ждёт "да"
+
+AWAITING_CONFIRMATION только если:
+- result не содержит: "ожидает анализа", "Ошибка", "не удалась",
+  "завершилась ошибкой", "недоступен", "этапы", "предназначен для"
+- len(result.strip()) > 100
+- error_message пустой
+- для file task: есть drive_link или artifact_path
+
+Иначе: state=FAILED, error=RESULT_NOT_READY
+Acceptance: незавершённая задача → FAILED (не "Доволен?")
+```
+
+### PASS 2 — PATCH_TEMPLATE_INTENT_V1
+```
+Файлы: core/artifact_pipeline.py + core/template_manager.py
+Статус: ТЗ готово → ждёт "да"
+
+intent=template + PDF → extract_project_template_model()
+НЕ _build_word("Сводка")
+
+Минимальная PROJECT_TEMPLATE_MODEL:
+{
+  "project_type": "АР/КЖ/КД/КМ/КМД/КР",
+  "sheet_register": [],
+  "marks": [],
+  "sections": [],
+  "axes_grid": [],
+  "dimensions": [],
+  "nodes": [],
+  "specifications": [],
+  "stamp_fields": [],
+  "variable_parameters": [],
+  "output_documents": []
+}
+
+Acceptance: АР/КД/КЖ PDF → JSON модель + DOCX состав листов
+```
+
+### PASS 3 — ГОЛОСОВОЙ CONFIRM
+```
+Файл: telegram_daemon.py ~строка 601
+Статус: P1, ждёт явного "да"
+
+[VOICE] да → confirm AWAITING_CONFIRMATION
+[VOICE] нет → reject → WAITING_CLARIFICATION
+```
+
+### PASS 4 — LIVE-ТЕСТЫ INSTALLED ПАТЧЕЙ
+```
+Статус: нужен Telegram тест (не код)
+
+Тесты:
+1. reply на ошибку → "Перезапускаю обработку файла"
+2. отправить тот же файл дважды → "Этот файл уже обрабатывался"
+3. несколько файлов → один артефакт
+4. https://... ссылка → меню действий
+```
+
+### PASS 5 — ESTIMATE PDF → EXCEL → DRIVE
+```
+Файл: core/estimate_engine.py
+Pipeline: PDF → pdfplumber → таблица → Python → openpyxl → Drive
+Формулы: =C*D, =SUM
+Без таблицы: FAILED
+```
+
+### PASS 6 — КЖ PDF PIPELINE
+```
+Файл: core/artifact_pipeline.py + project_engine.py
+КЖ PDF → classify pages → structural_model → DOCX/XLSX
+```
+
+### PASS 7 — PROJECT_ENGINE END-TO-END
+```
+Файл: core/project_engine.py (создать после PASS 2)
+Template model → DOCX + XLSX → Drive link
+```
+
+### PASS 8 — TECHNADZOR / GEMINI VISION
+```
+Файл: core/technadzor_engine.py
+Фото → Gemini → нормы СП/ГОСТ → DOCX акт → Drive
+```
+
+### PASS 9 — OCR TABLE → EXCEL
+```
+Файл: core/ocr_engine.py
+Фото таблицы → Excel
+```
+
+### PASS 10 — SEARCH QUALITY
+```
+Файл: task_worker.py + search layer
+Результат: таблица + цена + ссылка + checked_at + риск
+```
+
+### PASS 11 — MODEL_ROUTER
+```
+Файл: core/model_router.py (создать)
+photo → Gemini | search → Perplexity | calc → Python | final → DeepSeek
+```
+
+### PASS 12 — FINAL END-TO-END TEST
+```
+16 обязательных live-тестов:
+1. text → DONE
+2. voice → результат
+3. voice confirm → только AWAITING_CONFIRMATION
+4. file без caption → меню
+5. PDF смета → XLSX формулы → Drive
+6. АР PDF → PROJECT_TEMPLATE_MODEL
+7. фото дефект → DOCX акт
+8. reply на ошибку → перезапуск
+9. topic isolation (210 ≠ 2 ≠ 5)
+10. Drive fail → TG → retry
+11. дубль файла → guard
+12. ссылка → меню
+13. шаблон → новый документ
+14. memory recall по topic_id
+15. monitor_jobs работает
+16. GitHub ONE_SHARED_CONTEXT актуален
+```
+
+---
+
+## GITHUB ISSUES
+
+```
+Issue #2 "Drive artifact upload":
+LATEST_HANDOFF: engine_base restored, OAuth UPLOAD_OK
+Статус: OBSOLETE_BY_LATEST_HANDOFF_30_04_2026
+Действие: закрыть как superseded
+```
+
+---
+
+## ЗАПРЕЩЁННЫЕ ФИНАЛЬНЫЕ ОТВЕТЫ
+```
+❌ "Файл скачан, ожидает анализа"
+❌ "Структура проекта включает следующие основные этапы"
+❌ "Файл содержит проект архитектурного раздела"
+❌ "Этот чат предназначен для..."
+❌ "Анализирую, результат будет готов"
+❌ "Проверяю доступные файлы"
+❌ "Выбор принят" без engine
+❌ "Какие именно файлы вас интересуют?"
+```
+
+====================================================================================================
+END_FILE: docs/REPORTS/CANON_CLOSURE_PLAN.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 1afb741a6d274eadcc7dbc343085c539838e95be731d4f55361f535fb106113c
+====================================================================================================
+# ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT
+
+status: OK
+timestamp: 20260502_163729
+
+## FIXED
+- M-80 / Каркас под ключ -> frame_house
+- M-80 / Газобетон_под ключ -> gasbeton_or_masonry_with_monolithic_foundation
+- M-110 / Каркас под ключ -> frame_house
+- M-110 / Газобетон -> gasbeton_or_masonry_with_monolithic_foundation
+- крыша и перекр.xlsx -> roof_and_floors
+- фундамент_Склад2.xlsx -> foundation
+
+## VERIFIED
+- formula_total: 4733
+- ai_router estimate policy context remains enabled
+- web price confirmation remains required
+- logistics confirmation remains required
+- final XLSX/PDF remains forbidden before price and logistics confirmation
+
+====================================================================================================
+END_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/REPORTS/ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md
@@ -8331,6 +8750,73 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
+BEGIN_FILE: chat_exports/CHAT_EXPORT__2026-07-07_FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 91b2a5b03ceb3317eac2475d705640692ac7b300406ba5ad51abb2a05acb1db2
+====================================================================================================
+{
+  "chat_name": "2026-07-07 FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD",
+  "exported_at": "2026-07-06T21:31:38.468673+00:00",
+  "source_model": "Codex GPT-5",
+  "source_scope": "Verified server facts from current session only. No secrets included.",
+  "repository": "rj7hmz9cvm-lgtm/areal-neva-core",
+  "system": "AREAL-NEVA / ORIC Telegram orchestra",
+  "applied_canons": [
+    "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
+    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md §16.4 and §17.3",
+    "docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md",
+    "docs/ARCHITECTURE/WORKITEM_V1.md"
+  ],
+  "runtime_files_patched": [
+    "core/file_context_intake.py",
+    "task_worker.py",
+    "core/file_memory_bridge.py",
+    "core/active_dialog_state.py",
+    "core/reply_repeat_parent.py"
+  ],
+  "patches": [
+    "TELEGRAM source link is preserved for file memory and duplicate answers via telegram_chat_id + telegram_message_id.",
+    "Historical memory recall now includes source Telegram file link when metadata exists and does not expose task UUID as public answer.",
+    "Duplicate file guard covers drive_file/file/photo/image/document instead of drive_file only.",
+    "drive_file path now runs common file_context prehandle before topic engines, preventing topic_2 PDF pipeline from bypassing duplicate guard.",
+    "Duplicate guard answer is WAITING_CLARIFICATION and asks what to do: update sample, process again, compare versions, ignore duplicate.",
+    "Public live-dialogue helper outputs were cleaned from internal task/status wording."
+  ],
+  "live_verification": [
+    "Worker restarted by direct flock task_worker.py method; systemd was not touched.",
+    "SERVER_PY_COMPILE_OK for task_worker.py and core/file_context_intake.py; earlier compile also covered file_memory_bridge.py, active_dialog_state.py, reply_repeat_parent.py.",
+    "DIFF_CHECK_OK for task_worker.py and core/file_context_intake.py.",
+    "Smoke duplicate finder: photo -> document returned DUP_FOUND True and source link https://t.me/c/3725299009/111.",
+    "First live-control task b7f12c67-dup-live-20260707-001 exposed bypass: drive_file went into topic_2 pipeline.",
+    "Second live-control task b7f12c67-dup-live-20260707-002 passed: state WAITING_CLARIFICATION, reply_to_message_id 10504, bot_message_id 12057, result starts with “Смотри, этот файл ты уже скидывал”.",
+    "Log evidence: PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1 handled task_id=b7f12c67-dup-live-20260707-002."
+  ],
+  "not_touched": [
+    "systemd unit files",
+    ".env",
+    "credentials/tokens/sessions",
+    "core/ai_router.py",
+    "core/reply_sender.py",
+    "core/google_io.py",
+    "Git branches"
+  ],
+  "open_blockers": [
+    "Need owner-driven live test with a newly resent real photo/document in Telegram across relevant topics.",
+    "Topic_2 full canon remains partial; estimate/photo/OCR/multifile flows still need separate verification.",
+    "General live-dialogue completion and memory behavior still need continued topic-by-topic checks."
+  ],
+  "safe_git_policy": [
+    "Do not stage .env, token.json, credentials.json, sessions, data, runtime, logs, backups, databases, or media artifacts.",
+    "Commit only verified source files and clean factual handoff/export files."
+  ]
+}
+
+====================================================================================================
+END_FILE: chat_exports/CHAT_EXPORT__2026-07-07_FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
 BEGIN_FILE: chat_exports/CHAT_EXPORT__AI_Orchestra__2026-04-25.txt
 FILE_CHUNK: 1/1
 SHA256_FULL_FILE: 76fa9e7a765801b225f4298ecbc166b3083f0e588f7b8a692289623fedde399a
@@ -9286,16 +9772,5 @@ SHA256_FULL_FILE: b03264115264bda9ab91e50965f0051c8c426118c4224ba5570a5e0b3d124c
 }
 ====================================================================================================
 END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-24.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8161954bcafa594961a27820a8b8addedaddb991b7d7569190148d0f451d7006
-====================================================================================================
-﻿{"chat_id":"AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT","chat_name":"AREAL-NEVA ORCHESTRA — technical contour and memory closure","exported_at":"2026-04-27T00:00:00+02:00","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA ORCHESTRA server-first Telegram orchestration. Canon: diagnostics first, facts only, no forbidden files, backups before edits, server base /root/.areal-neva-core, Google Drive AI_ORCHESTRA target folder 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl for this export request.","architecture":"Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram. File contour uses task_worker.py _handle_drive_file, core/file_intake_router.py, core/estimate_engine.py, core/engine_base.py, core/file_pipeline_overlay.py, and new core/pdf_spec_extractor.py. Heavy artifacts intended for Google Drive.","pipeline":"Task lifecycle discussed as NEW -> IN_PROGRESS -> WAITING_CLARIFICATION/AWAITING_CONFIRMATION/FAILED -> DONE -> ARCHIVED. File flow: Telegram/Drive file -> download -> real type / intent detection -> route_file -> engine -> artifact -> Drive upload -> Telegram result -> confirmation -> memory guard.","files":["/root/.areal-neva-core/task_worker.py -> task lifecycle, file handling, memory save/guard, reply/message binding","/root/.areal-neva-core/core/engine_base.py -> Drive stages, upload wrapper, quality gate, detect_real_file_type","/root/.areal-neva-core/core/estimate_engine.py -> XLSX/PDF estimate processing","/root/.areal-neva-core/core/file_intake_router.py -> file intent and route_file dispatch","/root/.areal-neva-core/core/file_pipeline_overlay.py -> normalize router payload","/root/.areal-neva-core/core/pdf_spec_extractor.py -> PDF table/text specification extraction","/root/.areal-neva-core/google_io.py -> sync upload_to_drive, forbidden to modify","/root/.areal-neva-core/data/core.db -> runtime tasks DB","/root/.areal-neva-core/data/memory.db -> memory DB","/root/BACKUPS/areal-neva-core/PRE_PATCH_FULL_SAFE_20260424_120337 -> full safe server backup"],"code":"Python 3.12, systemd services, SQLite core.db/memory.db, Telegram bot pipeline, Google Drive integration, pdfplumber/pdf2image/pytesseract/openpyxl/docx. Server path /root/.areal-neva-core. Python venv /root/.areal-neva-core/.venv/bin/python3.","patches":["PRE_PATCH_FULL_SAFE_20260424_120337 -> full server backup -> status: applied_by_terminal","file_pipeline_overlay.py usable payload fix -> status: applied_by_terminal","estimate_engine.py invalid PDF signature / OCR fallback / XLSX quality gate -> status: applied_by_terminal","file_intake_router.py await technadzor / no None / filename intent / real type routing -> status: applied_by_terminal","engine_base.py upload link validation / detect_real_file_type / _run_upload_sync handling -> status: applied_by_terminal","task_worker.py result guard / waiting_result / route_file dict guard / memory guard / stale NEW cleanup -> status: applied_by_terminal","pdf_spec_extractor.py new module -> status: applied_by_terminal","archive pipeline ZIP/RAR/7Z -> status: drafted/partial, current controlled response ARCHIVE_PIPELINE_NOT_IMPLEMENTED"],"commands":["ssh areal 'bash -s' << 'ENDSSH' ...","systemctl is-active areal-task-worker telegram-ingress areal-memory-api","python -m py_compile target files","sqlite3 /root/.areal-neva-core/data/core.db SELECT state,COUNT(*) FROM tasks GROUP BY state","journalctl -u areal-task-worker --since ...","file target PDF","cp <file> <file>.bak.<timestamp>","kill test OCR processes when timeout needed"],"db":"core.db facts from terminal: ARCHIVED 371, AWAITING_CONFIRMATION 45, CANCELLED 91 after stale NEW cleanup, DONE 10, FAILED 677, WAITING_CLARIFICATION 1. drive_file states included ARCHIVED 1, AWAITING_CONFIRMATION 4, CANCELLED 36, FAILED 393, WAITING_CLARIFICATION 1. drive_files stages included ARTIFACT_CREATED 8, CALCULATED 1, DISCOVERED 352, DOWNLOADED 32, UPLOADED 1, discovered 33. NEW tasks were cleaned from 33 to absent via STALE_NEW_CLEANUP.","memory":"memory guard added/verified against recent rows: TEST_MEMORY_CLEAN=OK. Guard skips PIPELINE_NOT_EXECUTED, internal /root paths, traceback, SyntaxError, NameError, invalid PDF, empty estimate, coroutine warnings. Full real-file memory verification after final successful file task remains not proven in chat.","services":["areal-task-worker: active in diagnostics","telegram-ingress: active in diagnostics","areal-memory-api: active in diagnostics","drive_ingest.py: process present in ps output","memory_api_server.py: process present in ps output","telegram_daemon.py: process present in ps output"],"canons":["Diagnostics first before patches","Backup before edit: cp <file> <file>.bak.<timestamp>","Do not touch forbidden files: .env, credentials.json, google_io.py, telegram_daemon.py unless proven blocker, memory.db schema, sessions, systemd","No architecture rewrite; patch only confirmed live anchors","Telegram is interface; server is runtime/source for logic and memory","File pipeline must produce artifact or controlled error, not internal paths","Memory must not save errors, tracebacks, internal paths, stale/failed technical noise","Voice .ogg must bypass file pipeline and go to STT","Task replies and bot_message_id must preserve continuation when proven","Use Google Drive for heavy artifacts; server keeps code/config/log/runtime only"],"decisions":["Use pdf_spec_extractor before OCR -> because KJ PDF extraction failed with primitive regex/OCR","Detect real file type by signature -> because extension/MIME cannot be trusted and HTML disguised PDF was observed","Keep google_io.py untouched -> upload_to_drive sync confirmed at /root/.areal-neva-core/google_io.py line 28","Full backup must not be deleted -> rollback safety","Do not claim closed unless tests verify py_compile, service active, logs clean, rows/artifact or controlled error"],"errors":["SyntaxError in engine_base.py after bad patch -> restored from backup and repatched","SyntaxError in estimate_engine.py after bad patch -> restored from backup and repatched","NameError result at module level -> fixed by restore and function-scoped result variable","UnboundLocalError os in estimate_engine.py -> caused by local import subprocess,tempfile,os -> fixed by removing local os import","route_file returned controlled fail ESTIMATE_EMPTY_RESULT XLSX too small 6100 bytes -> root cause missing PDF spec extractor","OCR direct test slow/hanging -> tesseract process observed and killed when needed","Google Drive create_file Action lacks parentId/parents/content support -> exact folder placement not supported by exposed tool"],"solutions":["Full server backup created","Invalid PDF signature controlled as INVALID_PDF_SIGNATURE","route_file now returns dict rather than None","text_result no longer makes payload usable when artifact/link expected unless no artifact/link exists","filename intent detection added","real type detection drafted/applied in engine_base","pdf_spec_extractor module created for pdfplumber tables/text","stale NEW tasks cancelled","memory guard added","Drive stages FAILED/COMPLETED introduced in patch plan"],"state":"Export made while final technical contour validation was still in progress. Worker recovered from crashes. Memory guard base check passed. Technical contour stabilized but final pdf_spec_extractor direct test result was not pasted after latest patch block.","what_working":["Full backup exists: /root/BACKUPS/areal-neva-core/PRE_PATCH_FULL_SAFE_20260424_120337","Services active in multiple diagnostics","py_compile passed in diagnostics before later patch stages","Invalid PDF signature test passed earlier","route_file returned dict and controlled failure earlier","memory recent-row guard test passed earlier","stale NEW cleanup removed 33 NEW tasks"],"what_broken":["KJ PDF extraction previously failed with ESTIMATE_EMPTY_RESULT: XLSX too small 6100 bytes","Archive ZIP/RAR/7Z pipeline not fully implemented, current status controlled not implemented","Google Docs/Sheets native export pipeline not live-proven","DWG/DXF engine not live-proven","reply-to-clarification continuation not live-proven","drive_files stage casing had both discovered and DISCOVERED before normalization work"],"what_not_done":["Final successful rows_count > 0 after pdf_spec_extractor patch not pasted in chat","Native Google Docs/Sheets export live test not done","ZIP multi-file merge live test not done","Voice .ogg STT split live test not done","Topic isolation after real file task not fully proven","Exact Drive parentId creation not possible through current exposed create_file schema"],"current_breakpoint":"Latest terminal output before this export reached final direct estimate test stage after creating pdf_spec_extractor and rewriting estimate_engine. Need terminal result: success/error/excel_path/drive_link/xlsx_size/rows_count.","root_causes":["Technical contour trusted extension/MIME and lacked real signature detector","PDF estimate extraction lacked dedicated project/spec table parser","Primitive regex/OCR was insufficient for KJ project PDFs","Earlier generated patches violated scope/anchor rules causing SyntaxError/NameError","Drive Action schema does not expose parentId for create_file despite user requirement"],"verification":["Folder AI_ORCHESTRA earlier found at 13No7... and export request target now uses 14bYA9...","File created by Drive Action with id 1t2bGLl-BcTiToAlzUSfO0vW5gOunY8FhKKYSEgqrON4","Services active output appeared in terminal diagnostics","Target PDF exists, 2.6M, file reports PDF document version 1.6","Earlier TEST_INVALID_PDF_SIGNATURE=OK","Earlier TEST_EMPTY_PDF_CONTROLLED_FAIL=OK","Earlier TEST_FILENAME_INTENT=OK","Earlier TEST_ROUTE_FILE_DICT=OK False ESTIMATE_EMPTY_RESULT","Earlier TEST_MEMORY_CLEAN=OK"],"limits":["Use tail/journalctl short output only","Do not modify forbidden files","Do not use ssh areal && cd local Mac anti-pattern","Commands should be single Mac Terminal ssh block","Google Drive create_file connector currently supports only title and mime_type; no parentId/parents/content","If Drive folder placement fails, manual move may be required"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-27.txt
 FILE_CHUNK: 1/1
 ====================================================================================================

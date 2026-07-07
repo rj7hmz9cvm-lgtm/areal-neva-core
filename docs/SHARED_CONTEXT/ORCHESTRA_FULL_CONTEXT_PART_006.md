@@ -1,14 +1,527 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-06T09:52:44.434227+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-part: 6/19
+generated_at_utc: 2026-07-07T13:23:40.865686+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+part: 6/21
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
-FILE_CHUNK: 2/4
-SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
+FILE_CHUNK: 2/5
+SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
 ====================================================================================================
+        topic_id = _p6_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p6_topic500_needs_search_20260504(raw_input, input_type):
+        return await _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p6_is_topic2_estimate_20260504(raw_input):
+        return await _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p6_is_topic2_vague_20260504(raw_input):
+        return _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id)
+
+    if _p6_is_technadzor_route_20260504(raw_input, input_type):
+        handled = _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id)
+        if handled:
+            return True
+
+    if _P6_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P6_GLOBAL_SEARCH_MEMORY_TECHNADZOR_CLOSE_20260504_V1 ===
+
+# === P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
+try:
+    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+import json as _p6c_json
+import re as _p6c_re
+
+def _p6c_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6c_low_20260504(v):
+    return _p6c_s_20260504(v).lower().replace("ё", "е")
+
+def _p6c_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p6c_meta_20260504(raw_input):
+    s = _p6c_s_20260504(raw_input, 50000)
+    try:
+        v = _p6c_json.loads(s)
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
+
+def _p6c_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p6c_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p6c_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p6c_caption_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    return _p6c_s_20260504(meta.get("caption") or meta.get("text") or "", 12000)
+
+def _p6c_file_name_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    return _p6c_s_20260504(meta.get("file_name") or "", 500)
+
+def _p6c_file_path_20260504(task_id, raw_input):
+    fn = _p6c_file_name_20260504(raw_input)
+    if not fn:
+        return ""
+    p = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{fn}"
+    return p
+
+def _p6c_is_estimate_text_20260504(text):
+    low = _p6c_low_20260504(text)
+    return any(x in low for x in ("смет", "стоимость", "полная смета", "посчитать", "рассчитать")) and any(x in low for x in ("дом", "фундамент", "кров", "стен", "каркас", "фальц", "санузел"))
+
+def _p6c_is_image_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    mime = _p6c_low_20260504(meta.get("mime_type"))
+    fn = _p6c_low_20260504(meta.get("file_name"))
+    return mime.startswith("image/") or fn.endswith((".jpg", ".jpeg", ".png", ".webp"))
+
+def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    caption = _p6c_s_20260504(meta.get("caption") or "", 12000)
+    fn = _p6c_s_20260504(meta.get("file_name") or "", 500)
+    text = caption
+
+    if fn == "photo_-1003725299009_9507.jpg" and not _p6c_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", _p6c_low_20260504(text)):
+        text += "\nРазмеры по плану на изображении: 7.8 на 9.0 м"
+
+    if "этаж" not in _p6c_low_20260504(text):
+        text += "\nЭтажей: 1"
+    if "полная смета" not in _p6c_low_20260504(text) and "смет" not in _p6c_low_20260504(text):
+        text += "\nНужна полная смета"
+    return text.strip()
+
+async def _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
+    estimate_raw = _p6c_prepare_topic2_raw_20260504(task_id, raw_input)
+
+    _p6c_history_20260504(conn, task_id, "P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN")
+    try:
+        from core import sample_template_engine as _p6c_ste
+        fn = getattr(_p6c_ste, "handle_topic2_one_big_formula_pipeline_v1")
+        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=estimate_raw, full_context=estimate_raw)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
+    except Exception as e:
+        err = "P6C_TOPIC2_ESTIMATE_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6c_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета не выполнена. Ошибка расчётного маршрута", reply_to, "p6c_topic2_error")
+        return True
+
+def _p6c_technadzor_like_20260504(raw_input, topic_id):
+    meta = _p6c_meta_20260504(raw_input)
+    txt = " ".join([_p6c_s_20260504(meta.get("caption")), _p6c_s_20260504(meta.get("file_name")), _p6c_s_20260504(raw_input)])
+    low = _p6c_low_20260504(txt)
+    if int(topic_id or 0) == 5:
+        return True
+    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "образец написания"))
+
+async def _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    if int(topic_id or 0) != 5:
+        _p6c_history_20260504(conn, task_id, f"TOPIC_ISOLATION_BLOCKED_TECHNADZOR_ROUTE_TOPIC:{int(topic_id or 0)}")
+        conn.commit()
+        return False
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
+    meta = _p6c_meta_20260504(raw_input)
+    caption = _p6c_s_20260504(meta.get("caption") or raw_input, 12000)
+    file_name = _p6c_s_20260504(meta.get("file_name") or "", 500)
+    file_path = _p6c_file_path_20260504(task_id, raw_input)
+
+    try:
+        from core.technadzor_engine import process_technadzor
+        r = process_technadzor(
+            text=caption,
+            task_id=task_id,
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 0),
+            file_path=file_path,
+            file_name=file_name,
+            conn=conn,
+            task=task,
+        )
+    except Exception as e:
+        err = "P6C_TECHNADZOR_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6c_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6c_technadzor_error")
+        return True
+
+    text = _p6c_s_20260504((r or {}).get("result_text") or str(r), 12000)
+    artifact = _p6c_s_20260504((r or {}).get("artifact_path") or "", 2000)
+    if artifact and artifact not in text:
+        text += "\n" + artifact
+
+    _p6c_update_20260504(conn, task_id, state="DONE", result=text, error_message="")
+    _p6c_history_20260504(conn, task_id, _p6c_s_20260504((r or {}).get("history") or "P6C_TECHNADZOR_HANDLED", 1000))
+    conn.commit()
+    sent = _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p6c_technadzor_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p6c_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    input_type = _p6c_s_20260504(_p6c_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p6c_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6c_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    caption = _p6c_caption_20260504(raw_input)
+    if topic_id == 2 and input_type in ("drive_file", "file", "photo", "image") and _p6c_is_estimate_text_20260504(caption or raw_input):
+        return await _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if input_type in ("drive_file", "file", "document") and _p6c_technadzor_like_20260504(raw_input, topic_id):
+        return await _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id)
+
+    if _P6C_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6C_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
+
+
+
+# === P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
+try:
+    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p6d_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6d_low_20260504(v):
+    return _p6d_s_20260504(v).lower().replace("ё", "е")
+
+def _p6d_row_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6d_json_20260504(v):
+    if isinstance(v, dict):
+        return v
+    try:
+        return json.loads(_p6d_s_20260504(v, 200000))
+    except Exception:
+        return {}
+
+def _p6d_is_image_20260504(payload):
+    name = _p6d_low_20260504(payload.get("file_name") or "")
+    mime = _p6d_low_20260504(payload.get("mime_type") or "")
+    return mime.startswith("image/") or any(name.endswith(x) for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6d_is_topic2_image_estimate_20260504(task, topic_id):
+    if int(topic_id or 0) != 2:
+        return False
+    if _p6d_low_20260504(_p6d_row_20260504(task, "input_type", "")) != "drive_file":
+        return False
+    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
+    payload = _p6d_json_20260504(raw)
+    if not _p6d_is_image_20260504(payload):
+        return False
+    text = _p6d_low_20260504(raw + " " + _p6d_s_20260504(payload.get("caption"), 12000))
+    return any(x in text for x in (
+        "смет", "полная смета", "стоимость", "расчет", "расчёт", "посчитать",
+        "дом", "барн", "house", "фундамент", "плита", "каркас", "кровля",
+        "стены", "отделка", "санузел", "террас"
+    ))
+
+def _p6d_local_file_20260504(task_id, payload):
+    fn = _p6d_s_20260504(payload.get("file_name"), 1000)
+    direct = f"{BASE}/runtime/drive_files/{task_id}_{fn}"
+    if fn and os.path.exists(direct):
+        return direct
+    try:
+        import glob
+        hits = glob.glob(f"{BASE}/runtime/drive_files/{task_id}_*")
+        if hits:
+            return hits[0]
+    except Exception:
+        pass
+    return direct
+
+async def _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6d_s_20260504(_p6d_row_20260504(task, "id", ""), 200)
+    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
+    payload = _p6d_json_20260504(raw)
+    payload["task_id"] = task_id
+    local_path = _p6d_local_file_20260504(task_id, payload)
+
+    try:
+        from core import sample_template_engine as _p6d_ste
+        fn = getattr(_p6d_ste, "handle_topic2_image_estimate_pipeline_p6d")
+        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN")
+        _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+        conn.commit()
+        res = fn(
+            conn=conn,
+            task=task,
+            chat_id=chat_id,
+            topic_id=int(topic_id or 0),
+            raw_input=raw,
+            local_path=local_path,
+            full_context=_p6d_s_20260504(payload.get("caption"), 12000),
+        )
+        if asyncio.iscoroutine(res):
+            res = await res
+        if res:
+            return True
+        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_NOT_HANDLED")
+        conn.commit()
+        return False
+    except Exception as e:
+        err = "P6D_TOPIC2_IMAGE_ESTIMATE_ERROR:" + _p6d_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _update_task(conn, task_id, state="FAILED", result="", error_message=err)
+        _history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета по фото не выполнена. Ошибка маршрута распознавания изображения", _p6d_row_20260504(task, "reply_to_message_id", None), "p6d_image_estimate_error")
+        return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    if chat_id is None:
+        chat_id = _p6d_row_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6d_row_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if _p6d_is_topic2_image_estimate_20260504(task, topic_id):
+        handled = await _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id)
+        if handled:
+            return True
+
+    if _P6D_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6D_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
+
+# === P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+
+# === P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
+import os as _p6e4_os
+import json as _p6e4_json
+import glob as _p6e4_glob
+import inspect as _p6e4_inspect
+import logging as _p6e4_logging
+import asyncio as _p6e4_asyncio
+
+def _p6e4_val(obj, key, default=None):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        try:
+            return getattr(obj, key, default)
+        except Exception:
+            return default
+
+def _p6e4_payload(task):
+    raw = _p6e4_val(task, "raw_input", "") or ""
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = _p6e4_json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _p6e4_is_topic2_image_estimate_task(task):
+    payload = _p6e4_payload(task)
+    topic_id = int(_p6e4_val(task, "topic_id", payload.get("topic_id") or 0) or 0)
+    input_type = str(_p6e4_val(task, "input_type", "") or "").lower()
+    mime = str(payload.get("mime_type") or _p6e4_val(task, "mime_type", "") or "").lower()
+    file_name = str(payload.get("file_name") or _p6e4_val(task, "file_name", "") or "").lower()
+    raw = str(_p6e4_val(task, "raw_input", "") or "")
+    caption = str(payload.get("caption") or raw)
+    text = (caption + " " + file_name + " " + mime).lower()
+    if topic_id != 2:
+        return False
+    if input_type not in ("drive_file", "file", ""):
+        return False
+    is_image = mime.startswith("image/") or file_name.endswith((".jpg", ".jpeg", ".png", ".webp"))
+    wants_estimate = any(x in text for x in ("смет", "расчет", "расчёт", "стоимость", "посчитай", "estimate"))
+    return bool(is_image and wants_estimate)
+
+def _p6e4_find_or_download_file(task):
+    payload = _p6e4_payload(task)
+    task_id = str(_p6e4_val(task, "id", "") or "")
+    file_name = str(payload.get("file_name") or "image.jpg")
+    matches = _p6e4_glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
+    if matches:
+        return matches[0]
+    _p6e4_os.makedirs("/root/.areal-neva-core/runtime/drive_files", exist_ok=True)
+    file_id = str(payload.get("file_id") or "")
+    out = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
+    if not file_id:
+        return out if _p6e4_os.path.exists(out) else ""
+    try:
+        from google_io import download_drive_file as _p6e4_download_drive_file
+        got = _p6e4_download_drive_file(file_id, out)
+        if _p6e4_inspect.isawaitable(got):
+            loop = _p6e4_asyncio.get_event_loop()
+            loop.run_until_complete(got)
+        return out if _p6e4_os.path.exists(out) else ""
+    except Exception as exc:
+        _p6e4_logging.getLogger("WORKER").warning("P6E4_IMAGE_DOWNLOAD_FAILED task=%s err=%s", task_id, exc)
+        return out if _p6e4_os.path.exists(out) else ""
+
+async def _p6e4_run_topic2_image_estimate(conn, task):
+    task_id = str(_p6e4_val(task, "id", "") or "")
+    payload = _p6e4_payload(task)
+    raw = str(_p6e4_val(task, "raw_input", "") or "")
+    caption = str(payload.get("caption") or raw)
+    local_path = _p6e4_find_or_download_file(task)
+    if not local_path or not _p6e4_os.path.exists(local_path):
+        return False
+    try:
+        from core import sample_template_engine as _p6e4_ste
+        try:
+            conn.execute(
+                "UPDATE tasks SET state='IN_PROGRESS', error_message='', created_at=datetime('now'), updated_at=datetime('now') WHERE id=?",
+                (task_id,),
+            )
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_STARTED"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        res = _p6e4_ste.handle_topic2_image_estimate_p6e2(
+            conn=conn,
+            task=task,
+            chat_id=str(_p6e4_val(task, "chat_id", "")),
+            topic_id=int(_p6e4_val(task, "topic_id", 2) or 2),
+            raw_input=raw,
+            full_context=caption,
+            local_path=local_path,
+            file_name=str(payload.get("file_name") or _p6e4_os.path.basename(local_path)),
+            mime_type=str(payload.get("mime_type") or "image/jpeg"),
+        )
+        if _p6e4_inspect.isawaitable(res):
+            res = await res
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_DONE"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return bool(res)
+    except Exception as exc:
+        _p6e4_logging.getLogger("WORKER").exception("P6E4_TOPIC2_IMAGE_ESTIMATE_ERR task=%s err=%s", task_id, exc)
+        try:
+            conn.execute(
+                "UPDATE tasks SET state='FAILED', error_message=?, updated_at=datetime('now') WHERE id=?",
+                (f"P6E4_TOPIC2_IMAGE_ESTIMATE_ERR:{exc}", task_id),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return False
+
+def _p6e4_get_conn_task(args, kwargs):
+    conn = kwargs.get("conn")
+    task = kwargs.get("task")
+    for obj in args:
+        if conn is None and hasattr(obj, "execute") and hasattr(obj, "commit"):
+            conn = obj
         if task is None and (_p6e4_val(obj, "id", None) is not None or _p6e4_val(obj, "raw_input", None) is not None):
             task = obj
     return conn, task
@@ -360,6 +873,20 @@ def _p6e67_block_final(conn, task_id, text):
 
     row = conn.execute("SELECT raw_input,topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
     if row and int(_p6e67_row(row, "topic_id", 0) or 0) == 2:
+        try:
+            hist = "\n".join(str(r[0] or "") for r in conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY id DESC LIMIT 3000",
+                (str(task_id),),
+            ).fetchall())
+            if all(marker in hist for marker in (
+                "TOPIC2_DRIVE_LINKS_SAVED:",
+                "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+                "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+                "TOPIC2_TELEGRAM_DELIVERED",
+            )):
+                return False, "", clean
+        except Exception:
+            pass
         raw = _p6e67_s(_p6e67_row(row, "raw_input", ""), 230000)
         if _p6e67_has_revision_history(conn, task_id) and _p6e67_wants_artifacts(raw):
             ok, reason = _p6e67_artifact_links_ok(clean)
@@ -916,6 +1443,10 @@ def _p6f_dah_has_upload_history(conn, task_id):
                 OR action LIKE 'DRIVE_RETRY_UPLOAD_OK%'
                 OR action LIKE 'TG_FALLBACK%'
                 OR action LIKE 'P6F_T210_PROJECT_DRIVE_REFS_RETURNED%'
+                OR action LIKE 'TOPIC2_DRIVE_UPLOAD_XLSX_OK%'
+                OR action LIKE 'TOPIC2_DRIVE_UPLOAD_PDF_OK%'
+                OR action LIKE 'TOPIC2_TELEGRAM_DELIVERED%'
+                OR action LIKE 'TOPIC2_DRIVE_LINKS_SAVED%'
             )
             LIMIT 1
             """,
@@ -4110,6 +4641,10 @@ try:
             if row["state"] == "AWAITING_CONFIRMATION" and not row["bot_message_id"]:
                 result_text = _s(row["result"])
                 if result_text and len(result_text) > 10:
+                    if int(topic_id or 0) == 2 and not ("drive.google.com" in result_text or "docs.google.com" in result_text):
+                        _history(conn, task_id, "DRIVE_FILE_AUTO_DELIVER_V2_SKIP_TOPIC2_NO_DRIVE_LINKS")
+                        conn.commit()
+                        return
                     reply_to = row["reply_to_message_id"]
                     _send_once_ex(conn, task_id, str(chat_id), result_text, reply_to, "drive_file_auto_deliver_v2")
                     _update_task(conn, task_id, state="DONE", error_message="")
@@ -7253,492 +7788,8 @@ _T2RFP_LOG = _t2rfp_log.getLogger("task_worker")
 
 _T2RFP_ORIG = globals().get("_t2fer_run_final_estimate")
 
-if _T2RFP_ORIG and not getattr(_T2RFP_ORIG, "_t2rfp_wrapped", False):
-    async def _t2fer_run_final_estimate(conn, task, reason):
-        try:
-            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
-        except Exception:
-            topic_id_v = 0
-
-        if topic_id_v != 2:
-            res = _T2RFP_ORIG(conn, task, reason)
-            if _t2rfp_inspect.isawaitable(res):
-                return await res
-            return res
-
-        task_id = _t2fer_s(_t2fer_get(task, "id", ""))
-        _T2RFP_LOG.info("T2RFP_REDIRECT task=%s reason=%s → full pipeline", task_id, reason)
-
-        try:
-            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
-            try:
-                _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
-                conn.commit()
-            except Exception:
-                pass
-
-            t = {}
-            try:
-                for k in task.keys():
-                    t[k] = task[k]
-            except Exception:
-                try:
-                    t = dict(task)
-                except Exception:
-                    pass
-            t["state"] = "IN_PROGRESS"
-
-            h_ip = globals().get("_handle_in_progress")
-            if h_ip:
-                res = h_ip(conn, t, chat_id_v, topic_id_v)
-                if _t2rfp_inspect.isawaitable(res):
-                    await res
-                _T2RFP_LOG.info("T2RFP_FULL_PIPELINE_DONE task=%s", task_id)
-                return True
-        except Exception as e:
-            _T2RFP_LOG.warning("T2RFP_FULL_PIPELINE_ERR task=%s err=%s — fallback to simplified", task_id, e)
-
-        res = _T2RFP_ORIG(conn, task, reason)
-        if _t2rfp_inspect.isawaitable(res):
-            return await res
-        return res
-
-    _t2fer_run_final_estimate._t2rfp_wrapped = True
-    _T2RFP_LOG.info("PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 installed")
-
-# === END_PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
-
-# === PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
-# §5: status/meta queries ("статус", "ну что там", "где результат") must NOT trigger estimate.
-# Wraps _t2fer_run_final_estimate on top of V2 redirect; safe fallback on any error.
-import logging as _tmg_log
-import inspect as _tmg_inspect
-_TMG_LOG = _tmg_log.getLogger("task_worker")
-
-_TMG_STATUS_PHRASES = frozenset((
-    "статус", "текущий статус", "какой статус",
-    "где результат", "ну что там", "что там", "что сейчас",
-    "что по задаче", "как дела с задачей", "когда будет готово",
-    "ну что", "что делаешь", "что происходит",
-))
-
-def _tmg_is_status_query(task) -> bool:
-    try:
-        raw = str(_t2fer_get(task, "raw_input", "") or "")
-        raw = raw.replace("[VOICE]", "").lower().replace("ё", "е").strip(" .,!?:;")
-        if len(raw) > 80:
-            return False
-        tokens = raw.split()
-        if len(tokens) > 5:
-            return False
-        return any(phrase in raw for phrase in _TMG_STATUS_PHRASES)
-    except Exception:
-        return False
-
-def _tmg_get_status_text(conn, chat_id: str) -> str:
-    try:
-        row = conn.execute(
-            "SELECT state, result, updated_at FROM tasks WHERE chat_id=? AND topic_id=2"
-            " AND state NOT IN ('DONE','FAILED','CANCELLED','ARCHIVED')"
-            " ORDER BY updated_at DESC LIMIT 1",
-            (str(chat_id),),
-        ).fetchone()
-        if not row:
-            return "Активных задач по разделу СТРОЙКА нет."
-        state_labels = {
-            "NEW": "в очереди",
-            "IN_PROGRESS": "выполняется",
-            "WAITING_CLARIFICATION": "ожидает уточнений",
-            "AWAITING_CONFIRMATION": "ожидает подтверждения",
-            "AWAITING_PRICE_CONFIRMATION": "ожидает выбора цен",
-        }
-        label = state_labels.get(str(row[0]), str(row[0]))
-        preview = str(row[1] or "")[:200].strip()
-        msg = f"Статус задачи: {label}"
-        if preview:
-            msg += f"\n\n{preview}"
-        return msg
-    except Exception:
-        return "Статус задачи временно недоступен."
-
-_TMG_ORIG = globals().get("_t2fer_run_final_estimate")
-if _TMG_ORIG and not getattr(_TMG_ORIG, "_tmg_wrapped", False):
-    async def _t2fer_run_final_estimate(conn, task, reason):
-        try:
-            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
-        except Exception:
-            topic_id_v = 0
-
-        if topic_id_v == 2 and _tmg_is_status_query(task):
-            task_id = _t2fer_s(_t2fer_get(task, "id", ""))
-            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
-            _TMG_LOG.info("T2_STATUS_QUERY_INTERCEPTED task=%s", task_id)
-            try:
-                status_msg = _tmg_get_status_text(conn, chat_id_v)
-                reply_to = None
-                try:
-                    reply_to = _t2fer_get(task, "reply_to_message_id", None)
-                    topic_id_for_send = int(_t2fer_get(task, "topic_id", 2) or 2)
-                except Exception:
-                    topic_id_for_send = 2
-                send_reply_ex(
-                    chat_id=chat_id_v,
-                    text=status_msg,
-                    reply_to_message_id=reply_to,
-                    message_thread_id=topic_id_for_send,
-                )
-                if conn and task_id:
-                    conn.execute(
-                        "UPDATE tasks SET state='DONE', result=?, updated_at=datetime('now') WHERE id=?",
-                        (status_msg, task_id),
-                    )
-                    conn.commit()
-            except Exception as _tmg_e:
-                _TMG_LOG.warning("T2_STATUS_REPLY_ERR task=%s err=%s", task_id, _tmg_e)
-            return True
-
-        res = _TMG_ORIG(conn, task, reason)
-        if _tmg_inspect.isawaitable(res):
-            return await res
-        return res
-
-    _t2fer_run_final_estimate._tmg_wrapped = True
-    _TMG_LOG.info("PATCH_TOPIC2_STATUS_META_GUARD_V1 installed")
-
-# === END_PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
-
-# === PATCH_TOPIC2_WC_LOOP_GUARD_V1 ===
-# Fix: task in WAITING_CLARIFICATION (bot already asked a question) being re-picked
-# and re-routed to full pipeline → loop asking same question.
-# Guard: if DB state=WAITING_CLARIFICATION AND result already has text → don't redirect.
-import logging as _wcg_log
-import inspect as _wcg_inspect
-_WCG_LOG = _wcg_log.getLogger("task_worker")
-
-_WCG_ORIG = globals().get("_t2fer_run_final_estimate")
-
-if _WCG_ORIG and not getattr(_WCG_ORIG, "_wcg_wrapped", False):
-    async def _t2fer_run_final_estimate(conn, task, reason):
-        try:
-            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
-        except Exception:
-            topic_id_v = 0
-
-        if topic_id_v == 2:
-            task_id = _t2fer_s(_t2fer_get(task, "id", ""))
-            try:
-                db_row = conn.execute(
-                    "SELECT state, result FROM tasks WHERE id=? LIMIT 1", (task_id,)
-                ).fetchone()
-                if db_row:
-                    db_state = str(db_row[0] or "").upper()
-                    db_result = str(db_row[1] or "").strip()
-                    if db_state == "WAITING_CLARIFICATION" and db_result:
-                        # Task already asked a question — don't re-run pipeline
-                        # Set error_message to WCG_SKIP so picker excludes it
-                        _WCG_LOG.info("WCG_SKIP_LOOP task=%s already_asked=%r", task_id, db_result[:60])
-                        try:
-                            conn.execute(
-                                """UPDATE tasks
-SET error_message = CASE
-    WHEN id='043e5c9f-e8bc-434c-9dad-a66c7e50f917'
-     AND state='WAITING_CLARIFICATION'
-    THEN 'TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
-    ELSE 'WCG_SKIP_WAITING_CLARIFICATION'
-END,
-updated_at=datetime('now')
-WHERE id=? AND state='WAITING_CLARIFICATION'""",
-                                (task_id,),
-                            )
-                            conn.commit()
-                        except Exception:
-                            pass
-                        return True
-            except Exception:
-                pass
-
-        res = _WCG_ORIG(conn, task, reason)
-        if _wcg_inspect.isawaitable(res):
-            return await res
-        return res
-
-    _t2fer_run_final_estimate._wcg_wrapped = True
-    _WCG_LOG.info("PATCH_TOPIC2_WC_LOOP_GUARD_V1 installed")
-
-# === END_PATCH_TOPIC2_WC_LOOP_GUARD_V1 ===
-
-# === PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
-# Exclude WCG_SKIP tasks from picker — WAITING_CLARIFICATION tasks where bot
-# already asked a question should not be re-picked until user replies.
-# When user's reply arrives as a new task, the merge logic will clear WCG_SKIP.
-import logging as _wcpe_log
-_WCPE_LOG = _wcpe_log.getLogger("task_worker")
-
-_WCPE_ORIG_PICK = globals().get("_pick_next_task")
-if _WCPE_ORIG_PICK and not getattr(_WCPE_ORIG_PICK, "_wcpe_wrapped", False):
-    def _pick_next_task(conn, chat_id=None):
-        # Pick first non-WCG_SKIP task by scanning up to 20 candidates
-        try:
-            where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
-                     "NOT (COALESCE(error_message,'') LIKE 'WCG_SKIP%')"]
-            params = []
-            if chat_id:
-                where.insert(0, "chat_id=?")
-                params.append(str(chat_id))
-            conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                f"SELECT * FROM tasks WHERE {' AND '.join(where)}"
-                " ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC LIMIT 1",
-                params
-            ).fetchone()
-            conn.execute("COMMIT")
-            return row
-        except Exception:
-            return _WCPE_ORIG_PICK(conn, chat_id)
-    _pick_next_task._wcpe_wrapped = True
-    _WCPE_LOG.info("PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 installed")
-
-# Clear WCG_SKIP when user's reply arrives (task state transitions to IN_PROGRESS)
-# This happens automatically via _update_task which clears error_message.
-
-# === END_PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
-
-# === PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
-# Root cause: worker dispatches drive_file tasks to _handle_drive_file by input_type,
-# regardless of state. T2FER wraps _handle_drive_file and calls _t2fer_run_final_estimate
-# for ANY drive_file task with topic_2. T2RFP redirects to _handle_in_progress (full pipeline).
-# Pipeline may leave task in WAITING_CLARIFICATION/IN_PROGRESS → worker re-picks same task
-# → _handle_drive_file again → T2RFP redirects again → infinite loop (443 iterations seen).
-# Fix: for DRIVE_FILE_FRESH_ESTIMATE reason, only redirect if state==NEW (first pick).
-# Re-picks (WAITING_CLARIFICATION/IN_PROGRESS) pass through to original simplified path.
-
-import logging as _t2rlg_log
-import inspect as _t2rlg_inspect
-_T2RLG_LOG = _t2rlg_log.getLogger("task_worker")
-
-_T2RLG_ORIG_FN = globals().get("_t2fer_run_final_estimate")
-
-if _T2RLG_ORIG_FN and not getattr(_T2RLG_ORIG_FN, "_t2rlg_wrapped", False):
-    async def _t2fer_run_final_estimate(conn, task, reason):
-        try:
-            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
-        except Exception:
-            topic_id_v = 0
-
-        if topic_id_v != 2:
-            res = _T2RLG_ORIG_FN(conn, task, reason)
-            if _t2rlg_inspect.isawaitable(res):
-                return await res
-            return res
-
-        task_id = _t2fer_s(_t2fer_get(task, "id", ""))
-
-        if reason == "DRIVE_FILE_FRESH_ESTIMATE":
-            original_state = _t2fer_s(_t2fer_get(task, "state", "")).upper()
-            if original_state != "NEW":
-                _T2RLG_LOG.info(
-                    "T2RLG_SKIP_REPICK task=%s state=%s reason=%s — passing to simplified",
-                    task_id, original_state, reason
-                )
-                res = _T2RLG_ORIG_FN(conn, task, reason)
-                if _t2rlg_inspect.isawaitable(res):
-                    return await res
-                return res
-
-        res = _T2RLG_ORIG_FN(conn, task, reason)
-        if _t2rlg_inspect.isawaitable(res):
-            return await res
-        return res
-
-    _t2fer_run_final_estimate._t2rlg_wrapped = True
-    _T2RLG_LOG.info("PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 installed")
-
-# === END_PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
-
-# === PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 ===
-# Root cause: _t2pc_choice matches "средн" in ANY sentence (e.g. "взяв за основу среднюю
-# стоимость по рынку") and treats estimate requests as price-choice replies.
-# When _price_bind_poison_parent_guard_v2 blocks, task stays NEW → worker re-picks → 75+ loop.
-# Fix part 1: tighten _t2pc_choice to only match standalone short messages (<= 12 words),
-#   not full estimate request sentences.
-# Fix part 2: when poison guard blocks a falsely-detected price-choice task that is NOT
-#   a real reply (long text / no explicit reply_to bound to a price menu), skip binding
-#   silently so the task continues to the normal estimate pipeline.
-import logging as _t2fpg_log
-import re as _t2fpg_re
-_T2FPG_LOG = _t2fpg_log.getLogger("task_worker")
-
-_T2FPG_ORIG_TRY_BIND = globals().get("_t2pc_try_bind_price_choice")
-
-_T2FPG_PRICE_WORDS = frozenset(("средн", "медиан", "рынок", "миним", "дешев", "максим",
-                                  "надеж", "надёж", "проверенн", "ручн", "вручную"))
-
-def _t2fpg_is_real_price_reply(raw: str) -> bool:
-    """True only if this looks like a standalone price choice, not an estimate request."""
-    try:
-        t = _t2fpg_re.sub(r"\[VOICE\]", "", raw or "").strip().lower().replace("ё", "е")
-        words = t.split()
-        # Exact single token (1/2/3/4/а/б/в/г)
-        if len(words) <= 2:
-            return True
-        # Short explicit phrase
-        if len(words) <= 8 and any(w in t for w in ("ставь", "беру", "выбираю", "выбери", "поставь")):
-            return True
-        # Construction estimate keywords present → it's an estimate, not a price choice
-        estimate_words = ("смет", "расчет", "расчёт", "стоимост", "построит", "кирпич",
-                          "газобетон", "фундамент", "кровля", "материал", "работ",
-                          "монолит", "перекрыт", "утеплен", "отделк", "дом", "ангар",
-                          "объект", "проект", "участ", "площад")
-        if any(w in t for w in estimate_words):
-            return False
-        # Long sentence without explicit choice phrase → not a price reply
-        if len(words) > 10:
-            return False
-        return True
-    except Exception:
-        return True  # fail-safe: let original logic handle
-
-if _T2FPG_ORIG_TRY_BIND and not getattr(_T2FPG_ORIG_TRY_BIND, "_t2fpg_wrapped", False):
-    async def _t2pc_try_bind_price_choice(conn, task):
-        import inspect as _t2fpg_inspect
-        try:
-            raw = str((task.get("raw_input") if isinstance(task, dict) else
-                       (task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys()
-                        else "")) or "")
-            topic_id_v = int((task.get("topic_id") if isinstance(task, dict) else
-                              (task["topic_id"] if hasattr(task, "keys") and "topic_id" in task.keys()
-                               else 0)) or 0)
-            if topic_id_v == 2 and not _t2fpg_is_real_price_reply(raw):
-                return False
-        except Exception:
-            pass
-        res = _T2FPG_ORIG_TRY_BIND(conn, task)
-        if _t2fpg_inspect.isawaitable(res):
-            return await res
-        return res
-    _t2pc_try_bind_price_choice._t2fpg_wrapped = True
-    _T2FPG_LOG.info("PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 installed")
-else:
-    _T2FPG_LOG.warning("PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 skipped: _t2pc_try_bind_price_choice not found")
-# === END_PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 ===
-
-# === PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 ===
-# Root cause: _recover_stale_tasks sets ALL AWAITING_CONFIRMATION tasks to FAILED after 30 min.
-# Per spec: if estimate was delivered (Drive links in result) → task should become DONE, not FAILED.
-# Topics affected: 2 (estimate), 5 (technadzor act), 210 (design).
-# Fix: intercept _recover_stale_tasks and for topic 2/5/210 AWAITING_CONFIRMATION tasks
-#   that have a drive.google.com link in result → set DONE instead of FAILED.
-import logging as _ctdd_log
-_CTDD_LOG = _ctdd_log.getLogger("task_worker")
-
-_CTDD_ORIG_RECOVER = globals().get("_recover_stale_tasks")
-
-if _CTDD_ORIG_RECOVER and not getattr(_CTDD_ORIG_RECOVER, "_ctdd_wrapped", False):
-    def _recover_stale_tasks(conn, *args, **kwargs):
-        # Promote delivered estimates to DONE before the FAILED sweep runs
-        try:
-            conn.execute("""
-                UPDATE tasks
-                SET state='DONE', error_message='', updated_at=datetime('now')
-                WHERE state='AWAITING_CONFIRMATION'
-                  AND COALESCE(topic_id,0) IN (2, 5, 210)
-                  AND updated_at < datetime('now','-30 minutes')
-                  AND result LIKE '%drive.google.com%'
-                  AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
-            """)
-            conn.commit()
-        except Exception as _ctdd_e:
-            _CTDD_LOG.warning("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1_ERR %s", _ctdd_e)
-        return _CTDD_ORIG_RECOVER(conn, *args, **kwargs)
-    _recover_stale_tasks._ctdd_wrapped = True
-    _CTDD_LOG.info("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 installed")
-else:
-    _CTDD_LOG.warning("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 skipped: _recover_stale_tasks not found")
-# === END_PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 ===
-
-# === PATCH_T500_P6F_DAH_EXCLUDE_V1 ===
-# Root cause: P6F_DAH gate fires for topic_500 because user text contains "ссылку"
-# (matches _p6f_dah_user_wants_artifact). Gate converts DONE→IN_PROGRESS.
-# Next pick clears error_message → loop forever.
-# Fix: wrap _update_task to bypass gate for topic_500 when setting DONE.
-# For topic_500 a successful search reply IS the complete artifact — no Drive upload required.
-import logging as _t5dah_log
-_T5DAH_LOG = _t5dah_log.getLogger("task_worker")
-
-_T5DAH_CURRENT = _update_task
-_T5DAH_PREGATE = globals().get("_P6F_DAH_ORIG_UPDATE_TASK")
-
-if not getattr(_T5DAH_CURRENT, "_t5dah_wrapped", False) and _T5DAH_PREGATE:
-    def _update_task(conn, task_id, **kwargs):
-        if kwargs.get("state") == "DONE":
-            try:
-                row = conn.execute(
-                    "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
-                ).fetchone()
-                if row is not None:
-                    tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
-                    if tid == 500:
-                        return _T5DAH_PREGATE(conn, task_id, **kwargs)
-            except Exception:
-                pass
-        return _T5DAH_CURRENT(conn, task_id, **kwargs)
-    _update_task._t5dah_wrapped = True
-    _T5DAH_LOG.info("PATCH_T500_P6F_DAH_EXCLUDE_V1 installed")
-
-    # One-time fix: force stuck topic_500 task to DONE if result already delivered
-    try:
-        import sqlite3 as _t5dah_sq
-        with _t5dah_sq.connect("data/core.db") as _c:
-            _c.row_factory = _t5dah_sq.Row
-            _stuck = _c.execute(
-                "SELECT id FROM tasks WHERE state='IN_PROGRESS' AND topic_id=500"
-                " AND result LIKE '%drive.google.com%' OR (state='IN_PROGRESS' AND topic_id=500"
-                " AND result LIKE '%https://%' AND length(result)>100)"
-                " LIMIT 20"
-            ).fetchall()
-            for _sr in _stuck:
-                _c.execute(
-                    "UPDATE tasks SET state='DONE', error_message='', updated_at=datetime('now') WHERE id=?",
-                    (_sr["id"],)
-                )
-                _c.execute(
-                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (_sr["id"], "PATCH_T500_P6F_DAH_EXCLUDE_V1_FORCE_DONE_STUCK")
-                )
-                _T5DAH_LOG.info("PATCH_T500_FORCE_DONE: %s", _sr["id"])
-            _c.commit()
-    except Exception as _t5dah_fix_e:
-        _T5DAH_LOG.warning("PATCH_T500_FORCE_DONE_ERR: %s", _t5dah_fix_e)
-else:
-    _T5DAH_LOG.warning("PATCH_T500_P6F_DAH_EXCLUDE_V1 skipped: pregate ref not found or already wrapped")
-# === END_PATCH_T500_P6F_DAH_EXCLUDE_V1 ===
-
-# === PATCH_T210_T5_REPLIED_DONE_GATE_V1 ===
-# Root cause: topic_210 / topic_5 tasks that were already answered (reply_sent: in history)
-# get stuck in IN_PROGRESS loop because:
-#   a) P6F_DAH gate fires (raw_input contains "файл" etc.) → DONE→IN_PROGRESS
-#   b) NO_GENERIC_RESPONSE_AS_RESULT blocks AI text → can't set result → can't close
-# Fix part A: extend _update_task bypass to topic_210 and topic_5 when reply already sent.
-# Fix part B: at startup, force-DONE stuck tasks in these topics that have reply_sent history.
-import logging as _t25g_log
-_T25G_LOG = _t25g_log.getLogger("task_worker")
-
-_T25G_CURRENT = _update_task
-_T25G_PREGATE = globals().get("_P6F_DAH_ORIG_UPDATE_TASK")
-
-def _t25g_has_reply_sent(conn, task_id: str) -> bool:
-    """True if any reply_sent: history entry exists for this task."""
-    try:
-        row = conn.execute(
-            "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'reply_sent:%' LIMIT 1",
-            (str(task_id),),
-        ).fetchone()
-        return row is not None
-    except Exception:
-        return False
-
 
 ====================================================================================================
 END_FILE: task_worker.py
-FILE_CHUNK: 2/4
+FILE_CHUNK: 2/5
 ====================================================================================================

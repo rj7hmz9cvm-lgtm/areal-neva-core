@@ -1,7 +1,7 @@
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-06T09:52:44.488599+00:00
-GIT_SHA: 5d528b38229ba6dd2caeb4663a75c62515f156eb
+GENERATED_AT: 2026-07-07T13:23:40.943890+00:00
+GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -14,7 +14,7 @@ FAILED_LAST_24H: 0
 ## DB_STATE_COUNTS
 - ARCHIVED: 289
 - CANCELLED: 643
-- DONE: 207
+- DONE: 208
 - FAILED: 2706
 
 ## LATEST_FAILED
@@ -28,7 +28,8 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- state:IN_PROGRESS
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -46,8 +47,8 @@ TOPIC_5_SPECIAL: active_folder_override
 
 ## DRIVE_CHAT_EXPORTS_STATUS
 STATUS: SYNCED_LOCAL
-- /root/.areal-neva-core/chat_exports files=66
-- chat_exports files=66
+- /root/.areal-neva-core/chat_exports files=67
+- chat_exports files=67
 
 ## FORBIDDEN_FILES
 - .env

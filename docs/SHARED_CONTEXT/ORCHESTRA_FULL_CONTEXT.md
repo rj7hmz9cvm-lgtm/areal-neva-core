@@ -1,10 +1,10 @@
 # ORCHESTRA_FULL_CONTEXT
 
-generated_at_utc: 2026-07-06T09:52:44.447399+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-parts_count: 19
-included_full_files: 342
-excluded_records: 83
+generated_at_utc: 2026-07-07T13:23:40.884258+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+parts_count: 21
+included_full_files: 344
+excluded_records: 85
 
 OPERATING_PROTOCOL:
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
@@ -49,6 +49,8 @@ topic_6104=RABOTA_POISK
 - PART_017: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_017.md
 - PART_018: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_018.md
 - PART_019: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_019.md
+- PART_020: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_020.md
+- PART_021: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_021.md
 
 ## MANIFEST
 https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json

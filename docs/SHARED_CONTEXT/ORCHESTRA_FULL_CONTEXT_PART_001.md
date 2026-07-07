@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-07-06T09:52:44.428799+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-part: 1/19
+generated_at_utc: 2026-07-07T13:23:40.860686+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+part: 1/21
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c4164869d0309bc17b84a30208dc59dd81c23e70a8c75878409eeb9df0eda526
+SHA256_FULL_FILE: 58202a8aa446fe5b3473635a830336024d4a8124fd64e839ec69e573971cd1a5
 ====================================================================================================
 # LATEST HANDOFF — 2026-07-05 topic_2 / STROYKA
 
@@ -229,6 +229,211 @@ Verification at session close:
 - `python3 -m py_compile core/stroyka_estimate_canon.py core/price_enrichment.py core/topic2_input_gate.py task_worker.py` -> `PY_COMPILE_OK`.
 - `topic_2` task counts at close: `ARCHIVED=12`, `CANCELLED=143`, `DONE=205`, `FAILED=143`.
 - Cron GitHub sync was observed as enabled: `*/5 * * * * /root/.areal-neva-core/tools/full_context_aggregator_guard.sh ...`.
+
+---
+
+## Progress 2026-07-06 — two-day topic_2 rules and live repair record
+
+This is a factual handoff record for the work done on 2026-07-05 and 2026-07-06. It is not a new canon and does not rewrite existing canon text.
+
+Applied canon sources:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+Owner operating rules confirmed during the session:
+- Before any action, read and apply the relevant SSOT/canon.
+- Improvisation is forbidden: if a behavior is not written in SSOT/canon, do not do it by default.
+- Existing canons may only be appended to after explicit owner approval; do not rewrite or replace canon text.
+- Every task must be carried to completion unless the owner explicitly stops, cancels, or pauses it.
+- Before any server write: show canon/baseline/minimal target, make backup, and patch only the scoped file.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, branches, or Git push without explicit owner permission.
+
+Topic_2 functional rules clarified and treated as current working baseline:
+- `topic_2` / STROYKA estimates must be produced by the orchestra canonical engine, not manually by Codex.
+- Estimate input must come from the actual user task, uploaded project, photo, PDF, OCR text, or explicit clarification; old task data must not be mixed into a fresh task.
+- Unknown or missing data must be clarified with the user instead of invented.
+- Photo/PDF/OCR/voice/reply/pin/fixed-message context must participate in live dialogue according to canon; if a file was already provided, the bot must not ask for the same file again.
+- Price search must not run automatically when valid fresh cache/memory already contains the relevant prices.
+- When prices are missing or stale and internet prices are needed, search must be confirmed/authorized by the user and use Sonar/Perplexity only; DeepSeek is forbidden for search.
+- Topic_2 XLSX output must remain canonical `AREAL_CALC` with 15 columns; the old 8-column XLSX format is forbidden.
+- Work and material parts of one operation should stay in one estimate row when they are one smeta position, using work and material columns in the same 15-column row.
+- VAT baseline is 22%, not 20%; default estimate output is normally without VAT unless the user selects or confirms a VAT mode.
+- The supported VAT mode from the live correction is: materials with VAT, works without VAT.
+- Final topic_2 result must be delivered in Telegram with Google Drive links for XLSX and PDF. Local paths or manual file-only delivery are not canonical final output.
+- `DONE` is allowed only after explicit owner confirmation.
+
+Tasks and runtime work recorded from the two-day session:
+- VAT policy work: removed/avoided `НДС 20%` in checked topic_2 paths, switched visible VAT logic to 22%, and added user-facing clarification for VAT mode.
+- PDF/project flow work: waiting-project phrases bind to the subsequent PDF/file, and PDF without caption can bind to the waiting project task instead of asking for the same file again.
+- Confirm-close work: reply confirmation such as `да ок` closes the correct topic_2 parent only after explicit confirmation and updates topic_2 memory after `DONE`.
+- Search/memory baseline: recent valid Sonar/Perplexity price results should be reused from cache/memory when allowed; internet price search should not be repeated unnecessarily.
+- Foundation live task repair:
+  - parent task `ef67a6f0-c6e2-436e-904b-58d2c48ca3a0`;
+  - VAT correction child `b7b260d1-4d23-4819-ba3c-1970cad5a04b` merged back to the parent;
+  - latest Telegram final message: `bot_message_id=11843`;
+  - parent remains `AWAITING_CONFIRMATION`, not `DONE`, until explicit owner confirmation;
+  - final Drive Excel: `https://drive.google.com/file/d/1KZdfSEuuXoxMWh-93HoVIBI1i9lySfYP/view`;
+  - final Drive PDF: `https://drive.google.com/file/d/11sqwkORpp3AilkR2ys2C4qdyeyQ73rS6/view`.
+- Foundation XLSX/PDF repair:
+  - sand cushion and gravel base are now one mixed row each, with work and material prices in the same `AREAL_CALC` row;
+  - material VAT mode uses 22% on material totals only;
+  - checked final summary values: materials `1 141 542`, works `1 078 592`, logistics `241 875`, overhead `188 711`, total without VAT `2 650 721`, VAT 22% on materials `251 139`, total with material VAT `2 901 860`.
+
+Verification recorded:
+- `python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/ocr_engine.py` passed during the live repair.
+- PDF text was verified to contain the VAT/material totals.
+- No systemd change was made.
+- `.env`, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, and neighboring topics were not touched for this save record.
+
+Open blockers remain:
+- Topic_2 overall remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Still needs full live verification for photo with/without caption, OCR/PDF/XLSX/multifile intake, voice continuation, reply continuation, memory query, pin isolation, and file/project variants.
+- Still needs verification that every estimate row is sourced from the current project/user input or an explicit clarification/search source.
+- Canon append/addendum is not written here; if needed, it must be shown separately and appended only after explicit owner approval.
+
+---
+
+## Progress 2026-07-06 — topic_500 search delivery and output-format checkpoint
+
+This is a factual handoff record for the topic_500 / internet-search work done on 2026-07-06. The task is not fully closed.
+
+Applied canon sources:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+Canon addendum written:
+- `docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md` now has append-only `§11. Append-only addendum 2026-07-06 — long result delivery and contact-first search output`.
+- The addendum fixes the contract for long search results: full result goes to Google Drive, Telegram receives the Drive link.
+- The addendum fixes public procurement/service-local output: `Profile/поставщик`, `Сайт/ссылка`, `Телефон`, `Цена/условия`, `Город/регион`, `Доставка/выезд`, `Дата проверки`, `Статус проверки`.
+- It records that link/profile and phone are the main user-facing fields for contractor/supplier search.
+- It records that service comments, internal statuses, unnecessary explanation blocks, and unhelpful risk/comment blocks must not pollute the public result.
+
+Runtime work completed:
+- `core/reply_sender.py`: long Telegram replies are written to `data/telegram_artifacts`, uploaded to Google Drive through the existing topic Drive OAuth path, and delivered to Telegram as a Drive link.
+- `core/search_session.py`: topic_500 procurement/service-local prompt and postprocess now prefer compact contact-first public output.
+- `core/output_sanitizer.py`: internal English search markers are translated for public output, and the old false text "Полный результат смотри в файле" was removed unless a real file/link exists.
+- `task_worker.py`: topic_500 search tasks are protected from being swallowed by old confirmation/clarification state, and validator accepts Russian source-status markers.
+
+Live evidence:
+- Previous long search result was uploaded to Google Drive and delivered in Telegram:
+  - `bot_message_id=11912`
+  - Drive file: `https://drive.google.com/file/d/1OP6KUrXNnrYLkpitHUF7TMxhTUCti93m/view`
+- Earlier long-result delivery also succeeded:
+  - Drive file: `https://drive.google.com/file/d/1TkZ066-n56ElEuAWfN2h3PW2KnpaVk6X/view`
+- Worker was restarted by the existing direct `flock ... task_worker.py` method; systemd was not touched.
+
+Open blockers remain:
+- The user reports that answer logic is still not fully correct.
+- Task completion/finalization appears to be a broader lifecycle/dialogue blocker, not only topic_500.
+- Reply continuation, final confirmation, and lifecycle completion must be checked across the relevant canon before further patches.
+- This checkpoint is intentionally not marked DONE and should be continued after the owner explains the next failure case.
+
+Verification recorded:
+- `python3 -m py_compile core/search_session.py core/reply_sender.py core/output_sanitizer.py task_worker.py core/ai_router.py` passed after the runtime changes.
+- `.env` was not touched.
+- systemd was not touched.
+- No GitHub push was performed during this checkpoint.
+## Progress 2026-07-06 — memory/live dialogue topic isolation repair
+
+This is a factual handoff record for the memory, archive, ContextLoader, and live-dialogue context repair done on 2026-07-06. It is not a new canon and does not rewrite existing canon text.
+
+Applied canon / SSOT rules:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.3: Git/Drive/DB/patch actions require explicit owner approval.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.4: diagnostics first: logs -> db -> pin -> memory -> context -> patch.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.5: read current file -> patch only gap -> compile -> restart -> logs.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.8: do not expose `.env`, credentials, sessions, tokens, or forbidden files without explicit permission.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §12/§14: GitHub stores only clean safe context; full server export and private values must not be pushed.
+- `docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md`: GitHub = brain, server = runtime, Drive = reserve; memory context must be isolated by chat/topic.
+
+Server backup:
+- Backup directory: `/root/.areal-neva-core/backups/memory_lifecycle_20260706_181724`.
+- Contents: `runtime_files_with_secrets.tgz` and `memory.db`.
+- Backup intentionally excludes media, PDFs, XLSX artifacts, Telegram artifacts, Drive exports, templates, and heavy runtime output.
+- Secrets were backed up only on the server and were not printed or copied into this handoff.
+
+Runtime files patched:
+- `memory_api_server.py`: ensures `topic_id` and `scope` columns exist; `/archive` and `/memory` writes preserve `topic_id/scope`; `/memory` GET can filter by `chat_id + topic_id + key`.
+- `core/context_loader.py`: short memory now uses live Memory API on `127.0.0.1:8091` with Authorization instead of stale port `8765`.
+- `task_worker.py`: topic role and DONE memory writes now populate `topic_id/scope` for role, user input, task summary, and assistant output.
+- `core/archive_distributor.py`: archive distribution writes `topic_id/scope` into `memory.db`.
+
+DB maintenance:
+- `data/memory.db` was backed up before DB writes.
+- Existing concrete topic keys were backfilled from `topic_N_*` prefixes into `memory.topic_id`.
+- No memory rows were deleted.
+- `topic_0_*` remains topic 0 by design.
+
+Verification:
+- `.venv/bin/python3 -m py_compile memory_api_server.py core/context_loader.py task_worker.py core/archive_distributor.py` -> `PY_COMPILE_OK`.
+- `areal-memory-api.service` restarted and active.
+- `areal-task-worker.service` restarted and active.
+- Memory API health -> `{"status":"ok"}`.
+- ContextLoader smoke test for chat `-1003725299009`, topic `2` returned 5 rows with `TOPIC_IDS [2]`.
+- `concrete_topic_prefixed_topic0` -> `0`.
+
+Not touched:
+- No systemd unit files were edited.
+- No launch commands were changed.
+- `.env`, credentials, tokens, and sessions were not edited and not printed.
+- `core/ai_router.py`, `core/reply_sender.py`, and `core/google_io.py` were not edited in this repair.
+- Neighboring topic logic was not intentionally changed.
+- No media/artifact folders were backed up or pushed.
+- No branch was created.
+
+Open verification:
+- Live Telegram scenarios still need separate owner-driven tests: reply continuation, voice continuation, memory query, pin isolation, file/photo/PDF intake, and correct DONE closure per topic.
+
+
+---
+
+## Progress 2026-07-07 — global file memory / duplicate guard live repair
+
+This is a factual handoff record for the live-dialogue file memory and duplicate-file repair done on 2026-07-07. It is not a new canon and does not replace existing canons.
+
+Applied canon / SSOT rules:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` §16.4: file without caption must reply to the file message and enter menu/clarification flow.
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` §17.3: repeated file must trigger `FILE_DUPLICATE_MEMORY_GUARD_V1` / “Файл уже есть”.
+- `docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md`: `drive_file.raw_input` contains `file_id`, `file_name`, `mime_type`, `caption`, `telegram_message_id`, `telegram_chat_id`.
+- `docs/ARCHITECTURE/WORKITEM_V1.md`: supported input types include `text / voice / photo / file / drive_file / url / mixed`.
+
+Runtime files patched:
+- `core/file_context_intake.py`: duplicate guard now covers `drive_file`, `file`, `photo`, `image`, `document`; it preserves `telegram_chat_id`, builds Telegram source links, and returns `reply_to_message_id` for the current file message.
+- `task_worker.py`: `drive_file` now runs common file-context prehandle before topic engines through `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1`; file-like prehandle is allowed even for otherwise isolated topic routes without opening ordinary text routing.
+- `core/file_memory_bridge.py`: historical file-memory answers can include the source Telegram message link when metadata exists.
+- `core/active_dialog_state.py` and `core/reply_repeat_parent.py`: public helper answers were cleaned from internal task/status wording.
+
+Live evidence:
+- Worker restart used the existing direct `flock ... task_worker.py` method; systemd was not touched.
+- `python3 -m py_compile task_worker.py core/file_context_intake.py` -> `SERVER_PY_COMPILE_OK`.
+- `git diff --check -- task_worker.py core/file_context_intake.py` -> `DIFF_CHECK_OK`.
+- Smoke duplicate finder returned `DUP_FOUND True` for `photo` -> `document` and generated `https://t.me/c/3725299009/111`.
+- First live-control task `b7f12c67-dup-live-20260707-001` found the real bypass: `drive_file` skipped common duplicate guard and entered topic_2 PDF pipeline.
+- After `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1`, second live-control task `b7f12c67-dup-live-20260707-002` passed:
+  - state `WAITING_CLARIFICATION`;
+  - `reply_to_message_id=10504`;
+  - `bot_message_id=12057`;
+  - result starts with `Смотри, этот файл ты уже скидывал`;
+  - source line includes `https://t.me/c/3725299009/10504`;
+  - log line: `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1 handled task_id=b7f12c67-dup-live-20260707-002`.
+
+Not touched:
+- No systemd unit files were edited.
+- `.env`, credentials, tokens, sessions, databases, runtime media, and secrets were not printed or pushed.
+- `core/ai_router.py`, `core/reply_sender.py`, and `core/google_io.py` were not edited for this repair.
+- No branch was created.
+
+Open verification:
+- Need owner-driven live Telegram test with a freshly resent real photo/document/file in the target topics.
+- Topic_2 full canon remains partial and still needs separate verification for estimate/photo/OCR/PDF/XLSX/multifile, memory, reply, voice, pin isolation, and DONE closure.
+- General live-answer completion and memory behavior remain broader open contours.
+
+Clean export:
+- `chat_exports/CHAT_EXPORT__2026-07-07_FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD.json`
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
@@ -3974,7 +4179,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 103509646b362d86b5f02a04860f699084f11c2f4447b6803b220aad0593f257
+SHA256_FULL_FILE: 73ed24db58cca5661b9326d07037765e3a29a369156929e901d11d7dcd9a3c3e
 ====================================================================================================
 # TOPIC_2 STROYKA — CANONICAL ESTIMATE CONTRACT
 Версия: v1 | Дата: 2026-05-07 | Статус: CANON_LOCK
@@ -4156,6 +4361,49 @@ DONE — только после явного «да» от пользовате
 - «НДС 20%»
 - «Предварительная смета готова» если нет canonical markers
 
+## §12. Append-only addendum 2026-07-06 — live estimate behavior
+
+Этот раздел дописывает правила topic_2 и не заменяет предыдущие пункты канона.
+
+### Source of estimate facts
+- Смета должна строиться только из текущего задания пользователя, загруженного проекта, фото, PDF, OCR-текста, reply-контекста или явного уточнения пользователя.
+- Старые задачи, старые raw_input, старые pin/active context и старые шаблонные параметры нельзя подмешивать в новое задание.
+- Если данных не хватает, нужно задать точный уточняющий вопрос. Выдумывать позиции, объёмы, материалы или параметры запрещено.
+- Оркестр обязан считать как сметчик и технический специалист: объёмы должны быть технически обоснованы по геометрии, толщине, выпуску, этажности, составу работ и проектным данным.
+
+### Live dialogue and files
+- Фото, PDF, OCR, voice, reply, pin/fixed-message context и продолжение живого диалога являются частью canonical topic_2 flow.
+- Если файл уже был прислан в текущем контексте задачи, повторно запрашивать тот же файл запрещено.
+- Файл без caption должен привязываться к ожидающей его topic_2 задаче, если такая задача существует и topic/thread совпадает.
+- Голосовое сообщение должно быть распознано в текст и обработано как продолжение текущей задачи, если оно относится к активному parent task.
+
+### Prices and search usage
+- Интернет-цены не запускаются самовольно.
+- Перед новым поиском нужно проверить свежую память/cache по тем же материалам, региону и режиму цены.
+- Если свежие подтверждённые цены уже есть в memory/cache, повторный интернет-поиск не выполняется.
+- Если цены отсутствуют или устарели, оркестр должен получить явное подтверждение пользователя на поиск или использовать уже заданное пользователем указание искать цены.
+- Search для topic_2 используется только как инструмент для prices/materials/suppliers/logistics/norms и не смешивает topic_2 output с topic_500 final.
+- Search route для topic_2 — только Sonar/Perplexity. DeepSeek запрещён для интернет-поиска и fallback search.
+
+### XLSX row semantics
+- `AREAL_CALC` остаётся обязательным 15-колоночным форматом.
+- Работы и материалы одной сметной операции должны находиться в одной строке, если это одна сметная позиция: цена работ и цена материалов заполняются в соответствующих колонках этой строки.
+- Запрещено создавать лишние отдельные строки "материал" и "работа", если операция уже представлена одной строкой и канонические 15 колонок позволяют разнести work/material внутри строки.
+- Шаблоны и образцы являются образцами структуры, а не фиксированным эталоном состава работ. Секции могут расширяться по фактам проекта, но без выдуманных позиций.
+
+### VAT
+- Актуальная ставка НДС для topic_2: 22%.
+- Старые `НДС 20%`, `0.2`, `1.2` как финальная VAT-логика запрещены.
+- По умолчанию смета обычно считается без НДС, если пользователь не выбрал иной режим.
+- Если режим НДС неясен, оркестр должен уточнить: без НДС или с НДС 22%.
+- Поддерживаемый режим: материалы с НДС 22%, работы без НДС. В этом режиме НДС считается только от суммы материалов.
+
+### Final and DONE
+- Финальный результат topic_2 должен приходить в Telegram в каноническом формате с Google Drive ссылками на XLSX и PDF.
+- Локальные пути, `/tmp`, `/root`, raw JSON или ручная выдача файлов вместо Drive links не являются каноническим финалом.
+- `DONE` разрешён только после явного подтверждения пользователя именно по соответствующему parent task.
+- Фраза подтверждения должна закрывать только связанную задачу в topic_2 и не должна отменять или закрывать соседние задачи.
+
 ====================================================================================================
 END_FILE: docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md
 FILE_CHUNK: 1/1
@@ -4164,7 +4412,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 063372c428bbf2e42b2406dbe2061a789e44d74678b08c12db0af5693f329735
+SHA256_FULL_FILE: 9b6e7ee9c5469930d049d689cf0d43caaad2be1655b146b65703029b89601025
 ====================================================================================================
 # TOPIC_500 — UNIVERSAL ADAPTIVE INTERNET SEARCH CANON
 Версия: v1 | Дата: 2026-05-07 | Статус: CANON_LOCK
@@ -4279,6 +4527,51 @@ buy / купить / найти где купить · price / цена / сто
 ## §9. Final rule
 topic_500 = universal adaptive internet search.
 Supplier / price / TCO logic — один из режимов.
+
+## §10. Append-only addendum 2026-07-06 — search authorization, cache, and model isolation
+
+Этот раздел дописывает правила topic_500 и cross-topic search usage; он не заменяет предыдущие пункты канона.
+
+### Search authorization
+- Интернет-поиск не запускается самовольно для обычного разговора или продолжения старой темы.
+- Search intent должен быть явным в текущем пользовательском сообщении или явно подтверждён пользователем в ходе уточнения.
+- Если пользователь попросил уточнить актуальные цены, найти товары, проверить стоимость, найти поставщика или проверить свежие данные, это считается разрешением на соответствующий search route в рамках текущей задачи.
+
+### Cache and memory first
+- Перед новым интернет-поиском оркестр обязан проверить свежую память/cache по тому же предмету, региону, режиму цены и источнику.
+- Если свежий подтверждённый результат уже есть, повторный интернет-поиск запрещён.
+- Если cache/memory неполные, устарели или не покрывают конкретную позицию, поиск выполняется только для недостающих позиций.
+
+### Model isolation
+- Любой internet/search route выполняется только через Sonar/Perplexity.
+- DeepSeek запрещён для интернет-поиска, search fallback и подмены search model.
+- Если Sonar/Perplexity недоступен, нужно вернуть ошибку поиска или запросить ручные данные; fallback на DeepSeek запрещён.
+
+### Cross-topic usage
+- Для topic_2 STROYKA search используется как инструмент для prices/materials/suppliers/logistics/norms.
+- Search-инструмент не должен превращать topic_2 ответ в topic_500 final и не должен смешивать outputs разных topic.
+- Результат search должен содержать источник, checked_at/date и статус подтверждения; выдуманные цены, ссылки и поставщики запрещены.
+
+## §11. Append-only addendum 2026-07-06 — long result delivery and contact-first search output
+
+Этот раздел дописывает правила topic_500 и общего delivery-слоя для длинных search-ответов; он не заменяет предыдущие пункты канона и не меняет логику соседних топиков.
+
+### Long search result delivery
+- Если search-ответ превышает лимит удобной Telegram-выдачи, полный результат должен сохраняться файлом на Google Drive.
+- В Telegram должен приходить короткий публичный ответ со ссылкой на Google Drive файл.
+- Нельзя писать пользователю "смотри в файле", если файл реально не создан и ссылка не отправлена.
+- Локальный путь на сервере, `/tmp`, `/root` или внутренний artifact path не являются пользовательским финалом.
+
+### Procurement/service-local public output
+- Для procurement и service/local публичный результат должен быть компактным contact-first списком.
+- Ключевые поля: `Profile/поставщик`, `Сайт/ссылка`, `Телефон`, `Цена/условия`, `Город/регион`, `Доставка/выезд`, `Дата проверки`, `Статус проверки`.
+- Главные пользовательские поля для поиска исполнителей/поставщиков: ссылка на сайт/profile/card и номер телефона.
+- Если прямой телефон не найден, строка должна быть помечена как неподтверждённая и не должна выдавать отсутствие телефона как подтверждённый результат.
+- Служебные комментарии, внутренние статусы, лишние пояснения, блоки "что проверить" и неуместные risk-комментарии не должны засорять публичную выдачу.
+
+### Not closed / open blocker
+- Логика ответов, reply continuation и завершение задач должны проверяться отдельно как общий lifecycle/dialogue blocker.
+- Этот addendum фиксирует delivery и public search-output contract; он не означает, что lifecycle completion полностью закрыт.
 
 ====================================================================================================
 END_FILE: docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md
@@ -7498,6 +7791,148 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/SESSION_20260706_TOPIC2_TWO_DAY_SAVE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a5a2b240acd550bce9039eb0a2a8244c8ed5ea546dbf9f95f5f1c37475d0da89
+====================================================================================================
+# SESSION 2026-07-06 — topic_2 two-day save record
+
+This file records what was done and what rules were established during the 2026-07-05 and 2026-07-06 topic_2 work. It is a handoff/session record, not a replacement for existing canons.
+
+## Scope
+
+- Topic: `topic_2` / STROYKA / estimates.
+- Related shared contour: internet/product price search as a tool for prices/materials/suppliers/logistics.
+- No new branches.
+- No GitHub push in this save step.
+- No systemd changes.
+- No launch command changes.
+- No `.env` or secret changes.
+- No neighboring topic changes.
+- No edits to `core/ai_router.py`, `core/reply_sender.py`, or `core/google_io.py`.
+
+## Canon Sources Read
+
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+## Owner Rules Confirmed
+
+- Before any action, read the applicable SSOT/canon.
+- Improvisation is forbidden.
+- If behavior is not written in SSOT/canon, do not do it by default.
+- Existing canons may only be appended to after explicit owner approval; do not rewrite existing canon text.
+- Every task must be carried to completion unless the owner explicitly stops/cancels/pauses it.
+- Before any write: show applied canon, baseline, target, make backup, then patch only scoped files.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, branches, or Git push without explicit owner permission.
+
+## Topic_2 Rules Captured From The Session
+
+- Topic_2 estimates must be generated by the orchestra canonical engine, not manually by Codex.
+- The estimate must use the actual current user task, uploaded project, photo, PDF, OCR text, or explicit clarification.
+- Old task data must not be mixed into a fresh task.
+- Missing or unclear data must trigger a clarification question; invented positions or invented parameters are forbidden.
+- The orchestra must behave as a smeta/technical specialist: volumes and quantities must be technically plausible and derived from task/project facts.
+- Photo/PDF/OCR/voice/reply/pin/fixed-message context must work as part of live dialogue.
+- If a file was already sent, the bot must not request the same file again.
+- Internet price search must not be repeated if valid fresh cache/memory already contains the needed prices.
+- If prices are missing/stale and internet prices are needed, the user must confirm/authorize the search.
+- Search route must use Sonar/Perplexity only; DeepSeek is forbidden for internet/search.
+- Topic_2 XLSX must remain `AREAL_CALC` with 15 columns.
+- The old 8-column XLSX format is forbidden.
+- Work and material parts of one operation should stay in one estimate row when they are one smeta position.
+- VAT is 22%, not 20%.
+- Default estimate output is normally without VAT unless the user confirms a VAT mode.
+- The live-supported VAT mode is: materials with VAT, works without VAT.
+- Final topic_2 output must be delivered in Telegram with Google Drive links for XLSX and PDF.
+- Local paths or manual file-only delivery are not canonical final output.
+- `DONE` is allowed only after explicit owner confirmation.
+
+## Work Completed 2026-07-05
+
+- VAT policy work started:
+  - removed/avoided forbidden `НДС 20%` in checked topic_2 runtime paths;
+  - visible VAT logic moved to 22%;
+  - default output remains without VAT unless VAT mode is requested/confirmed.
+- Live PDF/project flow work:
+  - waiting-project phrases such as "сейчас скину проект/PDF/файл" bind to the following file instead of starting a wrong estimate;
+  - PDF drive file without caption can bind to the waiting topic_2 project task;
+  - old raw_input revive for waiting-project phrases was blocked.
+- Confirmation and memory work:
+  - explicit confirmation replies such as `да ок` close the correct topic_2 parent;
+  - child confirmation tasks close correctly;
+  - topic_2 memory keys are written after `DONE`, not before.
+- Verified live project task:
+  - parent `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` was closed after explicit confirmation;
+  - final XLSX/PDF Drive links were produced;
+  - `AREAL_CALC` 15-column structure was verified.
+
+## Work Completed 2026-07-06
+
+- Runtime baseline recorded:
+  - `core/price_enrichment.py`: recent Perplexity/Sonar material search cache; DeepSeek is not a search fallback.
+  - `core/stroyka_estimate_canon.py`: VAT default without VAT, 22% wording, canonical artifact naming, final confirmation close, stricter source matching, project/material/work row logic.
+  - `core/topic2_estimate_final_close_v2.py`: final artifact bridge and guards against invalid zero/area-only final artifacts.
+  - `task_worker.py`: topic_2 drive-file picker/clarification routing and canonical generation for price-confirmed Drive files.
+- Live foundation repair:
+  - parent task `ef67a6f0-c6e2-436e-904b-58d2c48ca3a0`;
+  - VAT correction child `b7b260d1-4d23-4819-ba3c-1970cad5a04b` merged back to parent;
+  - Telegram final message `bot_message_id=11843`;
+  - parent remains `AWAITING_CONFIRMATION`, not `DONE`.
+- Foundation XLSX/PDF changes verified:
+  - sand cushion and gravel base are now mixed work+material rows, not duplicated split material/work rows;
+  - material VAT mode calculates 22% from material totals only;
+  - final result includes Drive links:
+    - Excel: `https://drive.google.com/file/d/1KZdfSEuuXoxMWh-93HoVIBI1i9lySfYP/view`
+    - PDF: `https://drive.google.com/file/d/11sqwkORpp3AilkR2ys2C4qdyeyQ73rS6/view`
+  - final checked values:
+    - Materials: `1 141 542`
+    - Works: `1 078 592`
+    - Logistics: `241 875`
+    - Overhead: `188 711`
+    - Total without VAT: `2 650 721`
+    - VAT 22% on materials: `251 139`
+    - Total with material VAT: `2 901 860`
+
+## Backups Mentioned During The Session
+
+- `core/stroyka_estimate_canon.py.bak_20260706_foundation_work_live_apply`
+- `data/core.db.bak_20260706_foundation_work_live_apply_requeue`
+- `task_worker.py.bak_20260706_foundation_price_search_timeout`
+- `data/core.db.bak_20260706_foundation_timeout_requeue`
+- `core/stroyka_estimate_canon.py.bak_20260706_foundation_base_combined_rows`
+- `data/core.db.bak_20260706_foundation_combined_rows_recalc`
+- `task_worker.py.bak_20260706_topic2_vat_final_revision`
+- `core/stroyka_estimate_canon.py.bak_20260706_topic2_material_vat`
+- `data/core.db.bak_20260706_topic2_material_vat_requeue`
+
+## Verification
+
+- `python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/ocr_engine.py` passed during the live repair.
+- PDF text was verified to contain material VAT lines and final totals.
+- No systemd changes.
+- No `.env` changes.
+- No neighboring topic changes.
+- No manual GitHub push in this save step.
+
+## Open Blockers
+
+- Topic_2 remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Photo with/without caption still needs full live verification.
+- OCR/PDF/XLSX/multifile intake still needs full live verification.
+- Voice continuation still needs full live verification.
+- Reply continuation, memory query, pin isolation, and file/project variants still need full live verification.
+- Need continued verification that every final estimate row comes from the current project/user input, explicit clarification, or an authorized search/cache source.
+- If these rules must become canon text, append-only canon addendum must be shown separately and written only after explicit owner approval.
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/SESSION_20260706_TOPIC2_TWO_DAY_SAVE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
 FILE_CHUNK: 1/1
 SHA256_FULL_FILE: 5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d91
@@ -7740,424 +8175,5 @@ SHA256_FULL_FILE: 5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a0b45f76910f3947da57374617e22726ee05cfa4e0914a178e50c4d04773bcef
-====================================================================================================
-# ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT
-
-STATUS: CODE_CLOSED_ALL_THREE_DIRECTIONS
-
-Patched or preserved:
-- core/project_route_guard.py
-- core/project_engine.py
-- docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md
-
-Code closures:
-- topic_2 / smeta: ESTIMATE_PRIORITY_FIX_V1
-- topic_210 / projects: SHEETS_NORMALIZE_V1
-- topic_210 / projects: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
-- topic_210 / projects: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1
-- topic_210 / projects: CANON_LIST_QUERY_GUARD_V1 preserved
-- topic_500 / search: FILE_TECH_CONTOUR_FOLLOWUP_V2 preserved
-- topic_500 / search: SEARCH_TOPIC500_FTCF_ISOLATION_V1 preserved
-
-Forbidden files not patched:
-- task_worker.py
-- telegram_daemon.py
-- core/reply_sender.py
-- google_io.py
-- core/ai_router.py
-- systemd units
-- Drive/OAuth
-- memory.db schema
-- core.db schema
-- .env
-- credentials
-- sessions
-
-Runtime artifacts:
-- /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__MEMORY_CATALOG_INDEX.json
-- /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__*_memory_catalog.json when missing sections exist
-
-Known untracked ignored by owner directive:
-- data/db_backups/
-- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md
-
-====================================================================================================
-END_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c7bbe40bc6d5bc2d938e81400151a0f2cdacf9d5be8538f0f1c25c7843f0aac0
-====================================================================================================
-# AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT
-
-status: OK
-version: AREAL_REFERENCE_FULL_MONOLITH_V1
-updated_at: 2026-05-02T20:20:56.522887+00:00
-estimate_files: 6
-design_files: 231
-technadzor_files: 1
-formula_total: 4733
-
-## Final verify
-
-- ESTIMATE_FILES: 6
-- DESIGN_FILES: 231
-- FORMULA_TOTAL: 4733
-- archive_endpoint: OK
-- worker_log: NO_FATAL
-- memory_api_log: NO_FATAL
-- topic_isolation_live_test: PENDING in NOT_CLOSED
-
-====================================================================================================
-END_FILE: docs/REPORTS/AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/AREAL_REVIEW_CHECKLIST.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 88eeb6bf28decadbddd9083ab82ccd26a16f1bd9560ca9f1d7158f6f8b40805c
-====================================================================================================
-# AREAL_REVIEW_CHECKLIST
-
-## Mandatory constraints
-
-- no point patches
-- no regression
-- no new architecture layers
-- no new Drive folder trees
-- no duplicate hooks
-- CANON_FINAL must not be ignored
-- memory.db must receive slim reference data only
-- indexer must not download files over 5MB
-- topic_2, topic_5, topic_210 must not mix contexts
-
-## Regression guards
-
-- ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4 remains in ai_router.py
-- SAMPLE_ACCEPT_DIALOG_CONTEXT_FIX_V1 remains in final_closure_engine.py
-- VOICE_CONFIRM_AWAITING_V1 remains only in task_worker.py
-- CANON_FINAL absent from .gitignore
-
-## Smoke
-
-- owner reference context triggers on estimate/design/technadzor words
-- owner reference context stays empty on neutral chat
-- estimate template policy still works
-- /archive returns 200
-- upload retry service active
-- media_group exists
-- startup_recovery referenced
-- pin_manager referenced
-
-## Pending live-only checks
-
-- topic isolation live Telegram check
-- voice confirm live Telegram check
-- duplicate guard live Telegram check
-
-====================================================================================================
-END_FILE: docs/REPORTS/AREAL_REVIEW_CHECKLIST.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/CANON_CLOSURE_PLAN.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 70cf6069d4770d09d3c8e552d4a4458e994cdd00bd3b480642421d096611e80c
-====================================================================================================
-# AREAL-NEVA ORCHESTRA — CANON CLOSURE PLAN
-# 30.04.2026 10:30 | FACT-ONLY | Basis: live DB + LATEST_HANDOFF + NOT_CLOSED
-
-## ПРИОРИТЕТ ИСТИНЫ
-```
-1. Живой сервер (logs/db)
-2. LATEST_HANDOFF.md (30.04.2026 05:40)
-3. NOT_CLOSED.md
-4. VERIFIED chat_exports
-5. ONE_SHARED_CONTEXT
-6. CANON_FINAL
-7. INSTALLED без live-test ≠ работает
-8. BROKEN/REJECTED/UNKNOWN → не использовать
-```
-
-## VERIFIED (факт: LATEST_HANDOFF + live тесты)
-```
-✅ Drive upload OAuth → UPLOAD_OK
-✅ Telegram fallback → работает
-✅ upload_retry_queue cron 10min
-✅ topic folder isolation (chat/topic_N/)
-✅ file intake → NEEDS_CONTEXT → меню
-✅ FILE_CHOICE_PRIORITY (reply/voice → выбор)
-✅ FILE_PARENT_STRICT (только NEEDS_CONTEXT)
-✅ OAuth scope=drive везде (topic_drive_oauth + google_io + drive_folder_resolver)
-✅ daemon override.conf с OAuth vars
-✅ daemon использует upload_file_to_topic
-✅ services: task-worker ACTIVE | telegram-ingress ACTIVE | memory-api ACTIVE
-```
-
-## INSTALLED НО НЕ VERIFIED (не считать рабочим)
-```
-⚠️ PATCH_SOURCE_GUARD_V1
-⚠️ PATCH_FILE_ERROR_RETRY_V1
-⚠️ PATCH_DRIVE_BOTMSG_SAVE_V1
-⚠️ PATCH_CRASH_BOTMSG_V1
-⚠️ PATCH_RETRY_TG_MSG_V1
-⚠️ PATCH_DAEMON_USE_OAUTH_V1
-⚠️ PATCH_VOICE_OAUTH_V1
-⚠️ PATCH_DUPLICATE_GUARD_V1
-⚠️ PATCH_MULTI_FILE_INTAKE_V1
-⚠️ PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1
-```
-
-## ПОДТВЕРЖДЁННЫЕ БАГИ (из live DB topic=210 + code)
-
-### BUG_1: AWAITING_CONFIRMATION_WITHOUT_RESULT
-```
-Факт код: task_worker.py строка 2070
-_update_task(state="AWAITING_CONFIRMATION") — ставится ВСЕГДА
-
-Факт DB: id=6e385bf1 result="Файл КЖ АК-М-160.pdf скачан, ожидает анализа"
-был AWAITING_CONFIRMATION, бот спрашивал "Доволен?"
-```
-
-### BUG_2: TEMPLATE_IS_OCR_NOT_STRUCTURE
-```
-Факт код: artifact_pipeline.py строки 294-360
-analyze_downloaded_file игнорирует user_text/intent
-PDF → _extract_pdf → текст → _build_word "Сводка по документу"
-
-Факт DB: id=cc9d2911 caption="Шаблон проекта"
-result="GSPublisherVersion 0.89.100.100 Архитектурный раздел..."
-= OCR текст, не структурная модель
-
-Факт DB: id=7b287c50 [VOICE] "посмотри структуру КД"
-result="Структура проекта КД включает следующие основные этапы..."
-= DeepSeek выдумал, не извлёк из файла
-```
-
-### BUG_3: NEGATIVE_INPUT_NOT_REVISION
-```
-Факт DB topic=210:
-"И?" → новая text задача → общий ответ
-"Какой результат?" → новая text задача → общий ответ
-"Так нет результата" → новая text задача → CANCELLED
-= создаёт мусор вместо revision parent task
-```
-
-### BUG_4: GENERIC_AS_FINAL_RESULT
-```
-Факт DB topic=210 (финалы задач):
-"Этот чат предназначен для проектирования..." — DONE
-"Структура проекта КД включает этапы..." — DONE
-"Файл содержит проект архитектурного раздела..." — DONE
-"Выбор принят" без engine — DONE
-```
-
-### BUG_5: PROJECT_ENGINE_ABSENT
-```
-Факт: core/project_engine.py не существует на сервере
-Факт: core/template_manager.py не подключён к pipeline
-Факт: artifact_pipeline.py не имеет ветки intent=template
-```
-
----
-
-## 12 ПРОХОДОВ ЗАКРЫТИЯ (строго по порядку)
-
-### PASS 1 — PATCH_CONFIRM_ONLY_ON_DONE_V1
-```
-Файл: task_worker.py строки 2068-2075
-Статус: ТЗ готово → ждёт "да"
-
-AWAITING_CONFIRMATION только если:
-- result не содержит: "ожидает анализа", "Ошибка", "не удалась",
-  "завершилась ошибкой", "недоступен", "этапы", "предназначен для"
-- len(result.strip()) > 100
-- error_message пустой
-- для file task: есть drive_link или artifact_path
-
-Иначе: state=FAILED, error=RESULT_NOT_READY
-Acceptance: незавершённая задача → FAILED (не "Доволен?")
-```
-
-### PASS 2 — PATCH_TEMPLATE_INTENT_V1
-```
-Файлы: core/artifact_pipeline.py + core/template_manager.py
-Статус: ТЗ готово → ждёт "да"
-
-intent=template + PDF → extract_project_template_model()
-НЕ _build_word("Сводка")
-
-Минимальная PROJECT_TEMPLATE_MODEL:
-{
-  "project_type": "АР/КЖ/КД/КМ/КМД/КР",
-  "sheet_register": [],
-  "marks": [],
-  "sections": [],
-  "axes_grid": [],
-  "dimensions": [],
-  "nodes": [],
-  "specifications": [],
-  "stamp_fields": [],
-  "variable_parameters": [],
-  "output_documents": []
-}
-
-Acceptance: АР/КД/КЖ PDF → JSON модель + DOCX состав листов
-```
-
-### PASS 3 — ГОЛОСОВОЙ CONFIRM
-```
-Файл: telegram_daemon.py ~строка 601
-Статус: P1, ждёт явного "да"
-
-[VOICE] да → confirm AWAITING_CONFIRMATION
-[VOICE] нет → reject → WAITING_CLARIFICATION
-```
-
-### PASS 4 — LIVE-ТЕСТЫ INSTALLED ПАТЧЕЙ
-```
-Статус: нужен Telegram тест (не код)
-
-Тесты:
-1. reply на ошибку → "Перезапускаю обработку файла"
-2. отправить тот же файл дважды → "Этот файл уже обрабатывался"
-3. несколько файлов → один артефакт
-4. https://... ссылка → меню действий
-```
-
-### PASS 5 — ESTIMATE PDF → EXCEL → DRIVE
-```
-Файл: core/estimate_engine.py
-Pipeline: PDF → pdfplumber → таблица → Python → openpyxl → Drive
-Формулы: =C*D, =SUM
-Без таблицы: FAILED
-```
-
-### PASS 6 — КЖ PDF PIPELINE
-```
-Файл: core/artifact_pipeline.py + project_engine.py
-КЖ PDF → classify pages → structural_model → DOCX/XLSX
-```
-
-### PASS 7 — PROJECT_ENGINE END-TO-END
-```
-Файл: core/project_engine.py (создать после PASS 2)
-Template model → DOCX + XLSX → Drive link
-```
-
-### PASS 8 — TECHNADZOR / GEMINI VISION
-```
-Файл: core/technadzor_engine.py
-Фото → Gemini → нормы СП/ГОСТ → DOCX акт → Drive
-```
-
-### PASS 9 — OCR TABLE → EXCEL
-```
-Файл: core/ocr_engine.py
-Фото таблицы → Excel
-```
-
-### PASS 10 — SEARCH QUALITY
-```
-Файл: task_worker.py + search layer
-Результат: таблица + цена + ссылка + checked_at + риск
-```
-
-### PASS 11 — MODEL_ROUTER
-```
-Файл: core/model_router.py (создать)
-photo → Gemini | search → Perplexity | calc → Python | final → DeepSeek
-```
-
-### PASS 12 — FINAL END-TO-END TEST
-```
-16 обязательных live-тестов:
-1. text → DONE
-2. voice → результат
-3. voice confirm → только AWAITING_CONFIRMATION
-4. file без caption → меню
-5. PDF смета → XLSX формулы → Drive
-6. АР PDF → PROJECT_TEMPLATE_MODEL
-7. фото дефект → DOCX акт
-8. reply на ошибку → перезапуск
-9. topic isolation (210 ≠ 2 ≠ 5)
-10. Drive fail → TG → retry
-11. дубль файла → guard
-12. ссылка → меню
-13. шаблон → новый документ
-14. memory recall по topic_id
-15. monitor_jobs работает
-16. GitHub ONE_SHARED_CONTEXT актуален
-```
-
----
-
-## GITHUB ISSUES
-
-```
-Issue #2 "Drive artifact upload":
-LATEST_HANDOFF: engine_base restored, OAuth UPLOAD_OK
-Статус: OBSOLETE_BY_LATEST_HANDOFF_30_04_2026
-Действие: закрыть как superseded
-```
-
----
-
-## ЗАПРЕЩЁННЫЕ ФИНАЛЬНЫЕ ОТВЕТЫ
-```
-❌ "Файл скачан, ожидает анализа"
-❌ "Структура проекта включает следующие основные этапы"
-❌ "Файл содержит проект архитектурного раздела"
-❌ "Этот чат предназначен для..."
-❌ "Анализирую, результат будет готов"
-❌ "Проверяю доступные файлы"
-❌ "Выбор принят" без engine
-❌ "Какие именно файлы вас интересуют?"
-```
-
-====================================================================================================
-END_FILE: docs/REPORTS/CANON_CLOSURE_PLAN.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1afb741a6d274eadcc7dbc343085c539838e95be731d4f55361f535fb106113c
-====================================================================================================
-# ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT
-
-status: OK
-timestamp: 20260502_163729
-
-## FIXED
-- M-80 / Каркас под ключ -> frame_house
-- M-80 / Газобетон_под ключ -> gasbeton_or_masonry_with_monolithic_foundation
-- M-110 / Каркас под ключ -> frame_house
-- M-110 / Газобетон -> gasbeton_or_masonry_with_monolithic_foundation
-- крыша и перекр.xlsx -> roof_and_floors
-- фундамент_Склад2.xlsx -> foundation
-
-## VERIFIED
-- formula_total: 4733
-- ai_router estimate policy context remains enabled
-- web price confirmation remains required
-- logistics confirmation remains required
-- final XLSX/PDF remains forbidden before price and logistics confirmation
-
-====================================================================================================
-END_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
 FILE_CHUNK: 1/1
 ====================================================================================================

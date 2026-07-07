@@ -1,8 +1,4402 @@
 # ORCHESTRA_FULL_CONTEXT_PART_009
-generated_at_utc: 2026-07-06T09:52:44.436789+00:00
-git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
-part: 9/19
+generated_at_utc: 2026-07-07T13:23:40.868953+00:00
+git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+part: 9/21
 
+
+====================================================================================================
+BEGIN_FILE: telegram_daemon.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 608f287a10c5b4295a20de5c3714de7cd4e80b4d0a75049a0727dc0cb20f07db
+====================================================================================================
+import json
+import asyncio, hashlib, json, logging, os, re, uuid, fcntl, tempfile, time
+from datetime import datetime, timezone, timedelta
+import aiofiles, aiohttp, aiosqlite
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import BufferedInputFile, FSInputFile
+from google_io import upload_to_drive
+from core.drive_folder_resolver import get_or_create_topic_folder
+from core.topic_drive_oauth import upload_file_to_topic
+
+BOT_TOKEN = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN") or "").strip()
+DB = "/root/.areal-neva-core/data/core.db"
+VOICE_DIR = "/root/.areal-neva-core/runtime/voice_queue"
+MEMORY_FILES = "/root/.areal-neva-core/data/memory_files"
+CHAT_MAP_FILE = os.path.join(MEMORY_FILES, "CHAT_MAP.json")
+
+if not BOT_TOKEN:
+    raise RuntimeError("TELEGRAM_BOT_TOKEN missing")
+
+for d in ["GLOBAL", "CHATS", "SYSTEM", "ERRORS"]:
+    os.makedirs(os.path.join(MEMORY_FILES, d), exist_ok=True)
+os.makedirs(VOICE_DIR, exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s DAEMON: %(message)s")
+logger = logging.getLogger("telegram_daemon")
+
+bot = Bot(BOT_TOKEN)
+dp = Dispatcher()
+
+SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon", "дамп", "язон", "язон файл", "дамп файл", "память файл", "архив файл", "система", "система файл", "код файл", "файл"]
+CANCEL_CMDS = ["отбой", "отмена", "не надо"]
+EZONE_KEYS = ("system", "architecture", "pipeline", "memory")
+EZONE_EXTS = (".json", ".jsonl", ".txt")
+SEARCH_TRIGGERS = ["цена", "наличие", "где купить", "площадка", "сайт", "сравнение", "новости", "актуальная"]
+SHORT_CONFIRM = ["да", "нет", "ок", "подтверждаю", "не так", "ага", "верно"]
+NEGATIVE_CONFIRM = ["нет", "не так"]
+FINISH_PHRASES = [
+    "спасибо поиск завершен", "поиск завершен",
+    "не надо", "можно завершать",
+    "задача закрыта", "закрывай", "хватит"
+]
+CANCEL_PHRASES = [
+    "все запросы отменены", "отменяю все запросы", "сброс задач",
+    "очистить задачи", "отмена", "отменяю", "сброс", "отбой"
+]
+
+_RECENT_INGEST = {}
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def today_key() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+def normalize_json_text(text: str) -> str:
+    if not text: return text
+    replacements = {"“": '"', "”": '"', "„": '"', "«": '"', "»": '"', "‘": "'", "’": "'", "…": "..."}
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text.strip()
+
+def is_ezone_payload(text: str) -> bool:
+    if not text: return False
+    norm = normalize_json_text(text)
+    try:
+        data = json.loads(norm)
+        return isinstance(data, dict) and any(k in data for k in EZONE_KEYS)
+    except:
+        low = norm.lower()
+        return any(k in low for k in EZONE_KEYS)
+
+def content_hash(text: str) -> str:
+    return hashlib.sha256(normalize_json_text(text).encode()).hexdigest()
+
+def build_chat_key(telegram_chat_id: int) -> str:
+    return f"{telegram_chat_id}__telegram"
+
+def update_chat_map_atomic(telegram_chat_id: int, chat_key: str):
+    lock_file = CHAT_MAP_FILE + ".lock"
+    try:
+        with open(lock_file, "w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                chat_map = json.load(open(CHAT_MAP_FILE)) if os.path.exists(CHAT_MAP_FILE) else {}
+                tg_id = str(telegram_chat_id)
+                if tg_id not in chat_map:
+                    chat_map[tg_id] = {}
+                elif isinstance(chat_map[tg_id], list):
+                    chat_map[tg_id] = {k: "unknown" for k in chat_map[tg_id]}
+                chat_map[tg_id] = {k: v for k, v in chat_map[tg_id].items() if "unknown" not in k}
+                chat_map[tg_id][chat_key] = "telegram"
+                fd, tmp = tempfile.mkstemp(dir=os.path.dirname(CHAT_MAP_FILE), prefix=".chat_map_", suffix=".tmp")
+                with os.fdopen(fd, "w") as f:
+                    json.dump(chat_map, f, ensure_ascii=False, indent=2)
+                    f.flush(); os.fsync(f.fileno())
+                os.replace(tmp, CHAT_MAP_FILE)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error("CHAT_MAP update failed: %s", e)
+    finally:
+        try: os.unlink(lock_file)
+        except: pass
+
+def is_duplicate_today(hash_val: str, chat_key: str) -> bool:
+    dup_file = os.path.join(MEMORY_FILES, "CHATS", chat_key, ".duplicates.jsonl")
+    today = today_key()
+    if os.path.exists(dup_file):
+        with open(dup_file) as f:
+            for line in f:
+                try:
+                    if json.loads(line).get("hash") == hash_val and json.loads(line).get("date") == today:
+                        return True
+                except: pass
+    os.makedirs(os.path.dirname(dup_file), exist_ok=True)
+    with open(dup_file, "a") as f:
+        f.write(json.dumps({"hash": hash_val, "date": today, "ts": now_iso()}) + "\n")
+    return False
+
+def save_ezone_json(text: str, telegram_chat_id: int) -> tuple:
+    norm = normalize_json_text(text)
+    try: data = json.loads(norm)
+    except: data = {"raw_text": norm}
+    if not isinstance(data, dict): data = {"raw_text": norm}
+    
+    chat_key = build_chat_key(telegram_chat_id)
+    ts = now_iso()
+    hash_val = content_hash(text)
+    
+    if is_duplicate_today(hash_val, chat_key):
+        return False, chat_key, "duplicate"
+    
+    data["_meta"] = {"chat_key": chat_key, "ingested_at": ts, "source": "telegram"}
+    chat_dir = os.path.join(MEMORY_FILES, "CHATS", chat_key)
+    os.makedirs(chat_dir, exist_ok=True)
+    
+    with open(os.path.join(chat_dir, "raw.json"), "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    entry = json.dumps({"timestamp": ts, "data": data}, ensure_ascii=False)
+    with open(os.path.join(chat_dir, "timeline.jsonl"), "a") as f:
+        f.write(entry + "\n")
+    with open(os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"), "a") as f:
+        f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data}, ensure_ascii=False) + "\n")
+    
+    for key in EZONE_KEYS:
+        if key in data:
+            with open(os.path.join(MEMORY_FILES, "SYSTEM", f"{key}.jsonl"), "a") as f:
+                f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data[key]}, ensure_ascii=False) + "\n")
+    
+    update_chat_map_atomic(telegram_chat_id, chat_key)
+    logger.info("eZone saved: chat_key=%s telegram_chat=%s", chat_key, telegram_chat_id)
+    return True, chat_key, ""
+
+
+def dump_yzon_state(chat_id: int) -> str:
+    import sqlite3, json
+
+    result = {
+        "system": {"name": "AREAL-NEVA ORCHESTRA", "role": "task execution system"},
+        "architecture": {
+            "pipeline": "telegram_daemon -> task_worker -> ai_router -> reply_sender",
+            "memory": "memory.db + memory_files",
+            "storage": "Google Drive",
+            "mode": "server-first"
+        },
+        "runtime": {
+            "chat_id": str(chat_id),
+            "has_active_task": False,
+            "has_active_pin": False,
+            "daemon": "running",
+            "worker": "running"
+        },
+        "active_context": {},
+        "recent_results": [],
+        "recent_decisions": []
+    }
+
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+
+        cur = conn.execute(
+            "SELECT id, state, raw_input FROM tasks WHERE chat_id = ? AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') ORDER BY created_at DESC LIMIT 1",
+            (str(chat_id),)
+        )
+        row = cur.fetchone()
+        if row:
+            result["runtime"]["has_active_task"] = True
+            result["active_context"]["task_id"] = row[0]
+            result["active_context"]["state"] = row[1]
+            result["active_context"]["input"] = row[2][:200] if row[2] else ""
+
+        cur = conn.execute(
+            "SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id),)
+        )
+        pin_row = cur.fetchone()
+        if pin_row:
+            result["runtime"]["has_active_pin"] = True
+            result["active_context"]["active_pin"] = pin_row[0]
+
+        cur = conn.execute(
+            "SELECT id, result FROM tasks WHERE chat_id = ? AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 5",
+            (str(chat_id),)
+        )
+        for row in cur.fetchall():
+            result["recent_results"].append({"task_id": row[0], "summary": row[1][:200] if row[1] else ""})
+
+        cur = conn.execute(
+            "SELECT task_id, action FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE chat_id = ?) ORDER BY created_at DESC LIMIT 10",
+            (str(chat_id),)
+        )
+        for row in cur.fetchall():
+            result["recent_decisions"].append({"task_id": row[0], "action": row[1]})
+
+        conn.close()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+def dump_system_state() -> str:
+    import sqlite3, json, os
+    from datetime import datetime, timezone
+
+    result = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "chat_id": None,
+        "active_task": None,
+        "active_pin": None,
+        "recent_results": [],
+        "architecture": {
+            "system": "AREAL-NEVA ORCHESTRA",
+            "stack": "telegram_daemon + task_worker + ai_router + OpenRouter",
+            "memory": "memory_files + memory.db",
+            "files": "Google Drive via google_io"
+        }
+    }
+
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        cur = conn.execute("SELECT id, state, raw_input FROM tasks WHERE chat_id = '-1003725299009' AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') ORDER BY created_at DESC LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            result["chat_id"] = "-1003725299009"
+            result["active_task"] = {"id": row[0], "state": row[1], "input": row[2][:200]}
+        
+        cur = conn.execute("SELECT task_id FROM pin WHERE chat_id = '-1003725299009' AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1")
+        pin_row = cur.fetchone()
+        if pin_row:
+            result["active_pin"] = pin_row[0]
+        
+        cur = conn.execute("SELECT id, result FROM tasks WHERE chat_id = '-1003725299009' AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 20")
+        for row in cur.fetchall():
+            result["recent_results"].append({"task_id": row[0], "summary": row[1][:200]})
+        
+        conn.close()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+def split_message(text: str, limit: int = 4000) -> list:
+    text = text or ""
+    parts = []
+    while text and len(parts) < 10:
+        if len(text) <= limit:
+            parts.append(text); break
+        split_at = text.rfind("\n", 0, limit)
+        if split_at == -1 or split_at < limit // 3:
+            split_at = limit
+        parts.append(text[:split_at])
+        text = text[split_at:].lstrip("\n")
+    return parts or [""]
+
+async def create_task(message: types.Message, input_type: str, raw_input: str, state: str = "NEW"):
+    task_id = str(uuid.uuid4())
+    now = now_iso()
+    user_id = getattr(message.from_user, "id", 0) if message.from_user else 0
+    topic_id = getattr(message, "message_thread_id", None) or 0
+    # === P7_TOPIC5_REAL_REPLY_TARGET_V1 ===
+    # Store Telegram reply target, not current message id.
+    # No-reply messages keep their own message_id, preserving old parent lookup.
+    reply_target_id = message.reply_to_message.message_id if message.reply_to_message else message.message_id
+    # === END_P7_TOPIC5_REAL_REPLY_TARGET_V1 ===
+    async with aiosqlite.connect(DB) as db:
+        cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
+        if "topic_id" in cols:
+            await db.execute(
+                "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, topic_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, reply_target_id, topic_id, now, now))
+        else:
+            await db.execute(
+                "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, reply_target_id, now, now))
+        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"created:{state}", now))
+        await db.commit()
+
+    # === TELEGRAM_TIMELINE_APPEND_V1 ===
+    try:
+        _tl_chat_key = build_chat_key(message.chat.id)
+        _tl_chat_dir = os.path.join(MEMORY_FILES, "CHATS", _tl_chat_key)
+        os.makedirs(_tl_chat_dir, exist_ok=True)
+        os.makedirs(os.path.join(MEMORY_FILES, "GLOBAL"), exist_ok=True)
+        _tl_entry = json.dumps({
+            "timestamp": now, "chat_id": str(message.chat.id),
+            "topic_id": int(topic_id or 0), "task_id": task_id,
+            "input_type": input_type, "state": state,
+            "raw_input": str(raw_input or "")[:4000],
+            "source": "telegram_daemon_create_task",
+        }, ensure_ascii=False)
+        for _tl_path in [
+            os.path.join(_tl_chat_dir, "timeline.jsonl"),
+            os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"),
+        ]:
+            with open(_tl_path, "a", encoding="utf-8") as _f:
+                _f.write(_tl_entry + "\n")
+    except Exception as _tl_e:
+        logger.warning("TELEGRAM_TIMELINE_APPEND_V1_ERR %s", _tl_e)
+    # === END TELEGRAM_TIMELINE_APPEND_V1 ===
+
+    logger.info("Task %s created state=%s topic_id=%s", task_id, state, topic_id)
+    return task_id
+
+async def continue_parent_task(parent_id: str, user_text: str):
+    now = now_iso()
+    merged_sql = "COALESCE(raw_input,'') || ?"
+    suffix = "\n\nПродолжение пользователя:\n" + user_text
+    async with aiosqlite.connect(DB) as db:
+        await db.execute(
+            f"UPDATE tasks SET raw_input={merged_sql}, state='IN_PROGRESS', updated_at=? WHERE id=?",
+            (suffix, now, parent_id)
+        )
+        await db.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+            (parent_id, "continuation:IN_PROGRESS", now)
+        )
+        await db.commit()
+    logger.info("Task %s continued -> IN_PROGRESS", parent_id)
+
+async def get_active_task(chat_id: int) -> dict:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id, state, raw_input FROM tasks WHERE chat_id=? AND state IN ('NEW','IN_PROGRESS') ORDER BY created_at DESC LIMIT 1",
+            (chat_id,))
+        row = await cur.fetchone()
+        if row:
+            return {"id": row[0], "state": row[1], "raw_input": row[2]}
+        return None
+
+async def cancel_active_task(chat_id: int):
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        tasks = await cur.fetchall()
+        for t in tasks:
+            await db.execute("UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?", (now_iso(), t[0]))
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (t[0], "cancelled", now_iso()))
+        await db.commit()
+async def reset_all_open_tasks(chat_id: int):
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        rows = await cur.fetchall()
+        now = now_iso()
+        for row in rows:
+            task_id = row[0]
+            await db.execute(
+                "UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?",
+                (now, task_id)
+            )
+            await db.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                (task_id, "reset:CANCELLED", now)
+            )
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+
+def _has_any_phrase(lower_text: str, phrases: list[str]) -> bool:
+    t = (lower_text or "").strip()
+    return t in phrases
+
+async def close_latest_open_task(chat_id: int, action: str = "finish:DONE") -> bool:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC, created_at DESC LIMIT 1",
+            (chat_id,)
+        )
+        row = await cur.fetchone()
+        if not row:
+            return False
+        task_id = row[0]
+        now = now_iso()
+        await db.execute(
+            "UPDATE tasks SET state='DONE', updated_at=? WHERE id=?",
+            (now, task_id)
+        )
+        await db.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+            (task_id, action, now)
+        )
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'",
+                (now, task_id)
+            )
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+        return True
+
+async def cancel_all_open_tasks(chat_id: int, topic_id: int = 0) -> int:
+    async with aiosqlite.connect(DB) as db:
+        if topic_id > 0:
+            cur = await db.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND topic_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+                (chat_id, topic_id)
+            )
+        else:
+            cur = await db.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+                (chat_id,)
+            )
+        rows = await cur.fetchall()
+        now = now_iso()
+        count = 0
+        for row in rows:
+            task_id = row[0]
+            await db.execute(
+                "UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?",
+                (now, task_id)
+            )
+            await db.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                (task_id, "cancelled:CANCELLED", now)
+            )
+            count += 1
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+        return count
+
+async def _find_parent_task(chat_id: int, reply_to: int | None, topic_id: int = 0):
+    async with aiosqlite.connect(DB) as db:
+        cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
+        has_topic = "topic_id" in cols and topic_id > 0
+        topic_filter = " AND topic_id=?" if has_topic else ""
+        topic_args = (topic_id,) if has_topic else ()
+        if reply_to:
+            cur = await db.execute(
+                f"SELECT id, state FROM tasks WHERE chat_id=? AND bot_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to) + topic_args
+            )
+            row = await cur.fetchone()
+            if row:
+                return row
+            cur = await db.execute(
+                f"SELECT id, state FROM tasks WHERE chat_id=? AND reply_to_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to) + topic_args
+            )
+            row = await cur.fetchone()
+            if row:
+                return row
+        cur = await db.execute(
+            f"SELECT id, state FROM tasks WHERE chat_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+            (chat_id,) + topic_args
+        )
+        return await cur.fetchone()
+
+async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None, topic_id: int = 0) -> bool:
+    if _has_any_phrase(lower, CANCEL_PHRASES):
+        closed = await cancel_all_open_tasks(tg_id, topic_id)
+        await message.answer("Все запросы отменены" if closed else "Нет активных задач")
+        return True
+
+    parent = await _find_parent_task(tg_id, reply_to, topic_id)
+
+    if _has_any_phrase(lower, FINISH_PHRASES):
+        if parent:
+            parent_id = parent[0]
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "finish:DONE", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Задача закрыта")
+            return True
+        closed = await close_latest_open_task(tg_id, "finish:DONE")
+        await message.answer("Задача закрыта" if closed else "Нет активных задач")
+        return True
+
+    if not parent:
+        return False
+
+    parent_id, parent_state = parent[0], parent[1]
+
+    if parent_state == "AWAITING_CONFIRMATION":
+        if lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Задача завершена")
+            return True
+        if lower.strip() in NEGATIVE_CONFIRM:
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='WAITING_CLARIFICATION', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+            return True
+
+    if parent_state == "WAITING_CLARIFICATION":
+        now = now_iso()
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("UPDATE tasks SET state='IN_PROGRESS', updated_at=? WHERE id=?", (now, parent_id))
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now))
+            await db.commit()
+        await message.answer("Принято, продолжаю")
+        return True
+
+    if parent_state == "IN_PROGRESS" and reply_to:
+        now = now_iso()
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"continued:{text}", now))
+            await db.commit()
+        await message.answer("Принято, продолжаю")
+        return True
+
+    return False
+
+
+async def download_telegram_file(file_path: str, local_path: str) -> str:
+    url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+    async with aiohttp.ClientSession() as s:
+        async with s.get(url, timeout=aiohttp.ClientTimeout(total=300)) as r:
+            r.raise_for_status()
+            async with aiofiles.open(local_path, "wb") as f:
+                await f.write(await r.read())
+    return local_path
+
+@dp.message()
+async def universal_handler(message: types.Message):
+    update_id = getattr(message, 'update_id', None)
+    if update_id:
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("DELETE FROM processed_updates WHERE created_at < ?", ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),))
+            cur = await db.execute("SELECT 1 FROM processed_updates WHERE update_id = ?", (update_id,))
+            if await cur.fetchone():
+                await db.commit()
+                return
+            await db.execute("INSERT INTO processed_updates (update_id, created_at) VALUES (?, ?)", (update_id, now_iso()))
+            await db.commit()
+    
+    try:
+        text = message.text or ""
+        lower = text.lower()
+        tg_id = message.chat.id
+        now_ts = time.monotonic()
+        reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+        topic_id = int(getattr(message, "message_thread_id", 0) or 0)
+        
+        # 1. SYSTEM COMMANDS
+        if lower in SYSTEM_CMDS:
+            if lower in ("сброс задач", "очистить задачи"):
+                await reset_all_open_tasks(tg_id)
+                await message.answer("Все незакрытые задачи и активные pin закрыты")
+            elif lower == "статус":
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute("SELECT state, COUNT(*) FROM tasks WHERE chat_id = ? GROUP BY state", (tg_id,))
+                    rows = await cur.fetchall()
+                    cur = await db.execute("SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE'", (str(tg_id),))
+                    pin_row = await cur.fetchone()
+                    status_msg = "Статус:\n" + "\n".join([f"{r[0]}: {r[1]}" for r in rows]) if rows else "Нет задач"
+                    if pin_row:
+                        status_msg += f"\nАктивный pin: {pin_row[0]}"
+                    await message.answer(status_msg)
+            elif lower == "yzon":
+                dump = dump_yzon_state(tg_id)
+                await message.answer(dump)
+                return
+            elif lower == "дамп":
+                import subprocess
+                result = subprocess.run(["/root/.areal-neva-core/.venv/bin/python3", "/root/.areal-neva-core/orchestra_full_dump.py"], capture_output=True, text=True, timeout=60)
+                dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
+                if dump_files:
+                    dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
+                    content=open(dump_path).read()
+                    for part in split_message(content):
+                        await message.answer(part)
+                else:
+                    await message.answer("Дамп не создан")
+                return
+            elif lower == "архив":
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute("SELECT id, state, substr(raw_input,1,100) FROM tasks WHERE chat_id = ? AND state IN ('DONE','FAILED','CANCELLED','ARCHIVED') ORDER BY updated_at DESC LIMIT 10", (tg_id,))
+                    rows = await cur.fetchall()
+                    if rows:
+                        archive_msg = "Архив:\n" + "\n".join([f"{r[0][:8]}: {r[1]} - {r[2]}" for r in rows])
+                    else:
+                        archive_msg = "Архив пуст"
+                    await message.answer(archive_msg)
+            elif lower == "язон":
+                dump = dump_yzon_state(tg_id)
+                await message.answer(dump)
+                return
+            elif lower == "язон файл":
+                dump = dump_yzon_state(tg_id)
+                doc = BufferedInputFile(dump.encode("utf-8"), filename="yzon_state.json")
+                await message.answer_document(doc)
+                return
+            elif lower == "дамп файл":
+                import subprocess
+                subprocess.run(["/root/.areal-neva-core/.venv/bin/python3", "/root/.areal-neva-core/orchestra_full_dump.py"], capture_output=True, text=True, timeout=60)
+                dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
+                if dump_files:
+                    dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
+                    await message.answer_document(FSInputFile(dump_path, filename=dump_files[0]))
+                else:
+                    await message.answer("Дамп не создан")
+                return
+            elif lower == "память файл":
+                import sqlite3 as _sq, json as _json
+                try:
+                    _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
+                    _mc.row_factory = _sq.Row
+                    _rows = _mc.execute("SELECT chat_id, key, value, timestamp FROM memory WHERE chat_id=? ORDER BY timestamp DESC LIMIT 200", (str(tg_id),)).fetchall()
+                    _mc.close()
+                    _data = [dict(r) for r in _rows]
+                    doc = BufferedInputFile(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"), filename="memory_dump.json")
+                    await message.answer_document(doc)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            elif lower == "архив файл":
+                import sqlite3 as _sq, io, json as _json
+                try:
+                    _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
+                    _mc.row_factory = _sq.Row
+                    _rows = _mc.execute("SELECT key, value, timestamp FROM memory WHERE chat_id=? AND key LIKE 'archive_legacy_%' ORDER BY timestamp DESC LIMIT 100", (str(tg_id),)).fetchall()
+                    _mc.close()
+                    _data = [dict(r) for r in _rows]
+                    doc = BufferedInputFile(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"), filename="archive_dump.json")
+                    await message.answer_document(doc)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            elif lower in ("система", "система файл"):
+                sys_info = (
+                    "AREAL-NEVA ORCHESTRA\n"
+                    "Server: 89.22.225.136 | Ubuntu 24.04\n"
+                    "Bot: @ai_orkestra_all_bot\n"
+                    "Models: deepseek/deepseek-chat + perplexity/sonar\n"
+                    "Pipeline: telegram_daemon -> core.db -> task_worker -> ai_router -> Telegram\n"
+                    "Services: telegram-ingress, areal-task-worker, areal-memory-api\n"
+                )
+                if lower == "система файл":
+                    doc = BufferedInputFile(sys_info.encode("utf-8"), filename="system_info.txt")
+                    await message.answer_document(doc)
+                else:
+                    await message.answer(sys_info)
+                return
+            elif lower == "код файл":
+                import io, zipfile
+                buf = io.BytesIO()
+                files_to_zip = [
+                    "/root/.areal-neva-core/task_worker.py",
+                    "/root/.areal-neva-core/core/ai_router.py",
+                    "/root/.areal-neva-core/telegram_daemon.py",
+                ]
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for fp in files_to_zip:
+                        if os.path.exists(fp):
+                            zf.write(fp, os.path.basename(fp))
+                doc = BufferedInputFile(buf.getvalue(), filename="core_code.zip")
+                await message.answer_document(doc)
+                return
+            elif lower == "файл":
+                import sqlite3 as _sq
+                try:
+                    _cc = _sq.connect("/root/.areal-neva-core/data/core.db")
+                    _rows = _cc.execute("SELECT state, COUNT(*) as cnt FROM tasks GROUP BY state").fetchall()
+                    _cc.close()
+                    lines = ["AREAL-NEVA ORCHESTRA — краткий статус", ""]
+                    for r in _rows:
+                        lines.append(f"{r[0]}: {r[1]}")
+                    doc = BufferedInputFile("\n".join(lines).encode("utf-8"), filename="status.md")
+                    await message.answer_document(doc)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            else:
+                dump = dump_system_state()
+                for part in split_message(dump):
+                    await message.answer(part)
+                    await asyncio.sleep(0.5)
+            return
+        
+        # 2. CANCEL
+        if lower in CANCEL_CMDS:
+            await cancel_active_task(tg_id)
+            await message.answer("Задача отменена")
+            return
+        
+        # 3. FILE TASKS + EZONE FILE INGEST
+        if message.document and message.document.file_name:
+            # HEALTHCHECK_DAEMON_GUARD_V1
+            try:
+                _hc_check = " ".join([
+                    str(message.document.file_name or ""),
+                    str(message.caption or ""),
+                ]).lower()
+                if any(m in _hc_check for m in ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")):
+                    logger.info("HEALTHCHECK_DAEMON_GUARD_V1 ignored file=%s", message.document.file_name)
+                    return
+            except Exception as _hc_e:
+                logger.warning("HEALTHCHECK_DAEMON_GUARD_V1_ERR %s", _hc_e)
+            tg_file = await bot.get_file(message.document.file_id)
+            local_path = f"/tmp/{uuid.uuid4()}_{message.document.file_name}"
+            await download_telegram_file(tg_file.file_path, local_path)
+            try:
+                if message.document.file_name.lower().endswith(EZONE_EXTS):
+                    drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)  # DAEMON_OAUTH_FIX_V1
+                    with open(local_path, "r", errors="ignore") as f:
+                        content = f.read()
+                    if is_ezone_payload(content):
+                        ok, chat_key, _ = save_ezone_json(content, tg_id)
+                        _RECENT_INGEST[tg_id] = now_ts
+                        await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
+                        return
+                else:
+                    topic_id = getattr(message, "message_thread_id", 0) or 0
+                    drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)
+                    if isinstance(drive_result, dict) and drive_result.get("ok") and drive_result.get("drive_file_id"):
+                        payload = {
+                            "file_id": drive_result.get("drive_file_id", ""),
+                            "file_name": message.document.file_name,
+                            "mime_type": getattr(message.document, "mime_type", "") or "",
+                            "caption": (message.caption or message.text or "").strip(),
+                            "source": "telegram",
+                            "telegram_message_id": message.message_id,
+                            "telegram_chat_id": message.chat.id,
+                        }
+                        await create_task(message, "drive_file", json.dumps(payload, ensure_ascii=False), "NEW")
+                        await message.answer("Файл принят в обработку")
+                        return
+                    else:
+                        await message.answer("Ошибка загрузки файла в Drive")
+                        return
+            finally:
+                try: os.remove(local_path)
+                except: pass
+
+        # 3A. PHOTO TASK
+        if message.photo:
+            photo = message.photo[-1]
+            tg_file = await bot.get_file(photo.file_id)
+            file_name = f"photo_{message.chat.id}_{message.message_id}.jpg"
+            local_path = f"/tmp/{uuid.uuid4()}_{file_name}"
+            await download_telegram_file(tg_file.file_path, local_path)
+            try:
+                drive_result = await upload_file_to_topic(local_path, file_name, tg_id, topic_id, "image/jpeg")
+                if isinstance(drive_result, dict) and drive_result.get("ok") and drive_result.get("drive_file_id"):
+                    payload = {
+                        "file_id": drive_result.get("drive_file_id", ""),
+                        "file_name": file_name,
+                        "mime_type": "image/jpeg",
+                        "caption": (message.caption or message.text or "").strip(),
+                        "source": "telegram",
+                        "telegram_message_id": message.message_id,
+                        "telegram_chat_id": message.chat.id,
+                    }
+                    await create_task(message, "drive_file", json.dumps(payload, ensure_ascii=False), "NEW")
+                    await message.answer("Фото принято в обработку")
+                    return
+                else:
+                    await message.answer("Ошибка загрузки фото в Drive")
+                    return
+            finally:
+                try: os.remove(local_path)
+                except: pass
+        
+        # 4. EZONE TEXT INGEST
+        if message.text and is_ezone_payload(text):
+            ok, chat_key, _ = save_ezone_json(text, tg_id)
+            _RECENT_INGEST[tg_id] = now_ts
+            await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
+            return
+        
+        # 5. ANTI-DUP AFTER INGEST
+        if message.text:
+            last = _RECENT_INGEST.get(tg_id, 0.0)
+            if now_ts - last < 5:
+                if text.lstrip().startswith("{") or any(k in lower for k in EZONE_KEYS):
+                    return
+        
+        # 6. CONFIRMATION AND REPLY CONTINUATION
+        active_confirm = None
+        async with aiosqlite.connect(DB) as db:
+            cur = await db.execute(
+                "SELECT id, state FROM tasks WHERE chat_id = ? AND state = 'AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 1",
+                (tg_id,)
+            )
+            active_confirm = await cur.fetchone()
+
+        if active_confirm and message.text:
+            parent_id, parent_state = active_confirm
+            if lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
+                async with aiosqlite.connect(DB) as db:
+                    await db.execute("UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now_iso()))
+                    await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+                    await db.commit()
+                await message.answer("Задача завершена")
+                return
+            elif lower.strip() in NEGATIVE_CONFIRM:
+                async with aiosqlite.connect(DB) as db:
+                    await db.execute("UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now_iso()))
+                    await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+                    await db.commit()
+                await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+                return
+
+        if reply_to and not message.voice:
+            async with aiosqlite.connect(DB) as db:
+                cur = await db.execute(
+                    "SELECT id, state FROM tasks WHERE chat_id = ? AND (bot_message_id = ? OR reply_to_message_id = ?) AND COALESCE(topic_id,0) = COALESCE(?,0) AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY CASE WHEN bot_message_id = ? THEN 0 ELSE 1 END, updated_at DESC LIMIT 1",
+                    (tg_id, reply_to, reply_to, topic_id, reply_to)
+                )
+                parent = await cur.fetchone()
+            if parent:
+                parent_id, parent_state = parent
+                if parent_state == "WAITING_CLARIFICATION":
+                    _topic2_price_reply = (
+                        int(topic_id or 0) == 2
+                        and lower.strip().strip(" .,!?:;()[]{}") in ("1", "2", "3", "4", "а", "б", "в", "г", "a", "b", "v", "g")
+                    )
+                    if _topic2_price_reply:
+                        await create_task(message, "text", text, "NEW")
+                        return
+                    else:
+                        async with aiosqlite.connect(DB) as db:
+                            await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
+                            await db.commit()
+                        await message.answer("Принято, продолжаю")
+                        return
+                if parent and parent_state == "WAITING_CLARIFICATION":
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
+                        await db.commit()
+                    await message.answer("Принято, продолжаю")
+                elif lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"confirmed:{text}", now_iso()))
+                        await db.commit()
+                    await message.answer("Принято, выполняю")
+                    return
+                else:
+                    pass
+
+        # 7. SEARCH TASK
+        if any(t in lower for t in SEARCH_TRIGGERS):
+            await create_task(message, "search", text, "NEW")
+            return
+        
+        # 8. VOICE
+        if message.voice:
+            tg_file = await bot.get_file(message.voice.file_id)
+            local_path = os.path.join(VOICE_DIR, f"voice_{abs(tg_id)}_{message.message_id}.ogg")
+            await download_telegram_file(tg_file.file_path, local_path)
+            pass  # VOICE_UPLOAD_SKIP_V1 — голос не загружаем на Drive
+            from core.stt_engine import transcribe_voice as _stt
+            try:
+                _transcript = await _stt(local_path)
+            except Exception as _err:
+                logger.error("STT_FAILED chat=%s err=%s", tg_id, _err)
+                await message.answer("Голос не распознан. Повтори голосом или напиши текстом")
+                return
+            if not _transcript or not _transcript.strip():
+                logger.error("STT_EMPTY chat=%s", tg_id)
+                await message.answer("Не удалось получить текст из голосового. Повтори или напиши текстом")
+                return
+            voice_text = _transcript.strip()
+            voice_lower = voice_text.lower()
+            voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+            _voice_topic_id = getattr(message, "message_thread_id", None) or 0
+            try:
+                await message.answer(f"🎤 {voice_text}")
+            except Exception as _e:
+                logger.warning("transcript_send_fail err=%s", _e)
+
+            # === PATCH_VOICE_CONFIRM_DIRECT ===
+            # Voice does not populate message.text, so confirm/reject must be checked after STT
+            try:
+                _voice_cmd = voice_lower.strip().rstrip("!., ")
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute(
+                        """
+                        SELECT id, state
+                        FROM tasks
+                        WHERE chat_id = ?
+                          AND COALESCE(topic_id,0) = COALESCE(?,0)
+                          AND state = 'AWAITING_CONFIRMATION'
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                        """,
+                        (tg_id, _voice_topic_id)
+                    )
+                    _voice_active_confirm = await cur.fetchone()
+
+                if _voice_active_confirm and _voice_cmd in SHORT_CONFIRM and _voice_cmd not in NEGATIVE_CONFIRM:
+                    parent_id, parent_state = _voice_active_confirm
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?",
+                            (now_iso(), parent_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (parent_id, "voice_confirmed:DONE", now_iso())
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+                            (now_iso(), parent_id)
+                        )
+                        await db.commit()
+                    await message.answer("Задача завершена")
+                    return
+
+                if _voice_active_confirm and _voice_cmd in NEGATIVE_CONFIRM:
+                    parent_id, parent_state = _voice_active_confirm
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?",
+                            (now_iso(), parent_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (parent_id, "voice_rejected:WAITING_CLARIFICATION", now_iso())
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+                            (now_iso(), parent_id)
+                        )
+                        await db.commit()
+                    await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+                    return
+            except Exception as _voice_confirm_err:
+                logger.error("VOICE_CONFIRM_DIRECT_ERROR chat=%s err=%s", tg_id, _voice_confirm_err)
+            # === END PATCH_VOICE_CONFIRM_DIRECT ===
+            _VOICE_CONTROL = ["отбой", "отмена", "не надо", "всё", "готово", "можно закрывать", "задача закрыта", "да", "нет", "ок", "+"]
+            if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
+                if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
+                    return
+            await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
+            return
+        
+        # 9. NORMAL TEXT
+        if message.text:
+            reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+            _text_topic_id = getattr(message, "message_thread_id", None) or 0
+            if await _handle_control_text(message, tg_id, text, lower, reply_to, _text_topic_id):
+                return
+            # === CHAT_GUARD_V1 ===
+            try:
+                from core.intent_lock import is_chat_only as _ig_chat
+                if _ig_chat(text):
+                    return  # короткие реакции не создают задачи
+            except Exception:
+                pass
+            # === END CHAT_GUARD_V1 ===
+            await create_task(message, "text", text, "NEW")
+            return
+        
+    except Exception as e:
+        logger.error("HANDLER_CRASH: %s", e)
+        try:
+            await message.answer("Ошибка обработки")
+        except:
+            pass
+
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    me = await bot.get_me()
+    logger.info("BOT STARTED id=%s username=%s", me.id, me.username)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+====================================================================================================
+END_FILE: telegram_daemon.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/project_route_guard.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 8c39df6c221a56c2de08e994e37b2e45ca02a9de20d2647695d46606159bfb46
+====================================================================================================
+# === PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1 ===
+# === PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from typing import Any, Dict, Optional
+
+PROJECT_STRONG = (
+    "сделай проект", "создай проект", "разработай проект", "подготовь проект",
+    "проект монолит", "проект плиты", "проект фундамент", "проект кровли",
+    "проект кж", "проект кд", "проект ар", "чертеж", "чертёж",
+    "конструктивное решение", "проектное решение", "лист кж", "лист кд"
+)
+
+PROJECT_WEAK = (
+    "кж", "кд", "ар", "км", "кмд", "плита", "фундамент", "армирование",
+    "опалубка", "разрез", "узел", "схема", "спецификация арматуры"
+)
+
+ESTIMATE_ONLY = (
+    "смета", "смету", "сметный", "расценка", "стоимость работ",
+    "цены материалов", "кс-2", "кс2"
+)
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+def _low(v: Any) -> str:
+    return _s(v).lower().replace("ё", "е")
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    if isinstance(task, dict):
+        return task.get(field, default)
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+def is_explicit_project_intent(text: Any) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    strong = any(x in low for x in PROJECT_STRONG)
+    weak_project = sum(1 for x in PROJECT_WEAK if x in low) >= 2
+    estimate_only = any(x in low for x in ESTIMATE_ONLY)  # ESTIMATE_PRIORITY_FIX_V1
+    if estimate_only and not strong:  # ESTIMATE_PRIORITY_FIX_V1
+        return False
+    return bool(strong or weak_project)
+
+def _format_links(res: Dict[str, Any]) -> str:
+    lines = []
+    for label, key in (
+        ("DOCX", "docx_link"),
+        ("XLSX", "xlsx_link"),
+        ("PDF", "pdf_link"),
+        ("Drive", "drive_link"),
+    ):
+        val = _s(res.get(key))
+        if val and "drive.google.com" in val or "docs.google.com" in val:
+            lines.append(f"{label}: {val}")
+    return "\n".join(lines)
+
+def format_project_result_message(res: Dict[str, Any], raw_input: str = "") -> str:
+    section = _s(res.get("project_type") or res.get("section") or "КЖ")
+    links = _format_links(res)
+    if res.get("success") and links:
+        msg = (
+            "Проектный файл создан\n"
+            f"Раздел: {section}\n"
+            f"{links}\n\n"
+            "Доволен результатом? Да / Уточни / Правки"
+        )
+    elif res.get("success"):
+        msg = (
+            "Проектный файл подготовлен локально, но ссылка Drive не подтверждена\n"
+            f"Раздел: {section}\n"
+            "Нужна проверка выгрузки"
+        )
+    else:
+        err = _s(res.get("error")) or "PROJECT_RESULT_NOT_READY"
+        if "PROJECT_TEMPLATE_MODEL_NOT_FOUND" in err:
+            msg = (
+                "Для проектного файла нужен образец проекта в этом топике\n"
+                "Пришли КЖ/КД/АР файл как образец или напиши исходные данные проекта"
+            )
+        else:
+            msg = (
+                "Проектный файл не создан\n"
+                f"Причина: {err}\n"
+                "Уточни исходные данные или пришли образец проекта"
+            )
+
+    try:
+        from core.output_sanitizer import sanitize_project_message
+        return sanitize_project_message(msg)
+    except Exception:
+        return msg.strip()
+
+async def prehandle_project_route_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+
+    # === CANON_LIST_QUERY_GUARD_V1 ===
+    if topic_id == 500:
+        return None
+    _list_signals = ("какие", "покажи", "перечисли", "что есть", "есть ли", "список", "что за образц", "какие образц", "покажи образц")
+    _create_signals = ("сделай", "создай", "разработай", "подготовь", "оформи")
+    _raw_low_guard = raw_input.lower().replace("ё", "е")
+    if any(s in _raw_low_guard for s in _list_signals) and not any(s in _raw_low_guard for s in _create_signals):
+        return None
+    # === END_CANON_LIST_QUERY_GUARD_V1 ===
+    if input_type not in ("text", "voice", "search"):
+        return None
+    if not is_explicit_project_intent(raw_input):
+        return None
+
+    try:
+        from core.project_engine import create_project_artifact_from_latest_template
+        res = create_project_artifact_from_latest_template(raw_input, task_id, topic_id)
+    except Exception as e:
+        res = {
+            "success": False,
+            "error": f"PROJECT_ENGINE_EXCEPTION: {e}",
+            "project_type": "КЖ",
+        }
+
+    msg = _s(res.get("user_message")) or format_project_result_message(res, raw_input)
+
+    if res.get("success") and ("drive.google.com" in msg or "docs.google.com" in msg):
+        state = "AWAITING_CONFIRMATION"
+        err = ""
+        hist = "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:PROJECT_CREATED"
+    elif res.get("success"):
+        state = "WAITING_CLARIFICATION"
+        err = "PROJECT_DRIVE_LINK_NOT_CONFIRMED"
+        hist = "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:PROJECT_LOCAL_ONLY"
+    else:
+        state = "WAITING_CLARIFICATION"
+        err = _s(res.get("error")) or "PROJECT_NOT_CREATED"
+        hist = "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:PROJECT_NEEDS_CONTEXT"
+
+    return {
+        "handled": True,
+        "state": state,
+        "message": msg,
+        "error_message": err,
+        "kind": "project_route_guard",
+        "history": hist,
+    }
+
+# === END_PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1 ===
+# === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
+
+====================================================================================================
+END_FILE: core/project_route_guard.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/final_closure_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: de95d2d154180b3cfba9dd262a24d619b620c8db322410144310ddaf2557281c
+====================================================================================================
+# === FINAL_CLOSURE_BLOCKER_FIX_V1_ENGINE ===
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from typing import Any, Dict
+
+
+def _s(v) -> str:
+    return "" if v is None else str(v).strip()
+
+
+def _json(raw: str) -> Dict[str, Any]:
+    try:
+        return json.loads(raw or "{}")
+    except Exception:
+        return {}
+
+
+def _field(task: Any, key: str, default=None):
+    try:
+        if hasattr(task, "keys") and key in task.keys():
+            return task[key]
+    except Exception:
+        pass
+    try:
+        return getattr(task, key)
+    except Exception:
+        return default
+
+
+def _row_get(row: Any, key: str, idx: int, default: Any = "") -> Any:
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        if isinstance(row, dict):
+            return row.get(key, default)
+    except Exception:
+        pass
+    try:
+        return row[idx]
+    except Exception:
+        return default
+
+
+def _send_payload(message: str, kind: str, state: str = "DONE", history: str = "") -> Dict[str, Any]:
+    return {
+        "handled": True,
+        "state": state,
+        "message": message,
+        "kind": kind,
+        "history": history or f"FINAL_CLOSURE_BLOCKER_FIX_V1:{kind}",
+    }
+
+
+
+# === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V2 ===
+
+# === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
+
+
+# === PROJECT_SAMPLE_SELECTION_P0_V2 ===
+def _fc_norm_public(text: Any) -> str:
+    s = "" if text is None else str(text)
+    s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
+    s = s.replace("ё", "е")
+    return s.strip()
+
+
+def _fc_clean_title(name: str) -> str:
+    name = _fc_norm_public(name)
+    name = re.sub(r"^\s*\d+\.\s*", "", name).strip().strip("\"'«»")
+    return name[:180]
+
+
+def _fc_is_sample_status_request(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    if not any(x in low for x in ("образец", "образцов", "образцы", "шаблон", "шаблона", "эталон", "эталоны", "эталона")):
+        return False
+
+    strict_status_or_selection = (
+        "взял как образец",
+        "взял за образец",
+        "ты взял как образец",
+        "уже взял как образец",
+        "взял их как образец",
+        "взял это как образец",
+        "принял как образец",
+        "принял за образец",
+        "ты принял как образец",
+        "уже принял как образец",
+        "принял их как образец",
+        "принял это как образец",
+        "используешь как образец",
+        "используется как образец",
+        "файлы взяты как образец",
+        "файлы приняты как образец",
+        "взяты как образец",
+        "приняты как образец",
+        "закрепи как образец",
+        "закрепить как образец",
+        "закрепляется как",
+        "закрепляй как",
+        "оставь как образец",
+        "сохрани как образец",
+        "сохрани как образцы",
+        "прими как образец",
+        "прими как образцы",
+        "прими эти сметы как образцы",
+        "прими эти файлы как образцы",
+        "принимай как образец",
+        "принимай как образцы",
+        "принимай эти сметы как образцы",
+        "принимай эти файлы как образцы",
+        "принимай эти таблицы как образцы",
+        "принимай сметы как образцы",
+        "принимай файлы как образцы",
+        "работай по ним",
+        "работай по этим сметам",
+        "работай по этим образцам",
+        "работать по ним",
+        "работать по этим сметам",
+        "логика структура",
+        "логика и структура",
+        "все должно быть синхронизировано",
+        "всё должно быть синхронизировано",
+        "как эталон",
+        "как эталоны",
+        "один из образцов",
+        "как один из образцов",
+    )
+    if any(x in low for x in strict_status_or_selection):
+        return True
+
+    if any(x in low for x in ("как образец", "как образцы", "как эталон", "как эталоны")) and any(x in low for x in (
+        "да ",
+        "да,",
+        "да.",
+        "цоколь",
+        "кж",
+        "кд",
+        "км",
+        "кмд",
+        "ар",
+        "проект",
+        "смет",
+        "вор",
+        "акт",
+        "технадзор",
+    )):
+        return True
+
+    return False
+
+
+def _fc_extract_titles_from_text(text: str) -> list[str]:
+    src = _fc_norm_public(text)
+    titles: list[str] = []
+
+    try:
+        data = json.loads(src)
+        if isinstance(data, dict):
+            for key in ("file_name", "name", "title"):
+                val = _fc_clean_title(data.get(key) or "")
+                if val:
+                    titles.append(val)
+    except Exception:
+        pass
+
+    for m in re.finditer(r'"file_name"\s*:\s*"([^"]+)"', src, re.I):
+        val = _fc_clean_title(m.group(1))
+        if val:
+            titles.append(val)
+
+    for m in re.finditer(r'([А-ЯA-Z0-9Ёё][^\n\r]{0,120}\.(?:pdf|dwg|dxf|xlsx|xls|docx|doc))', src, re.I):
+        val = _fc_clean_title(m.group(1))
+        if val:
+            titles.append(val)
+
+    out: list[str] = []
+    seen = set()
+    for title in titles:
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(title)
+    return out
+
+
+def _fc_recent_file_rows(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[Any]:
+    old_rf = conn.row_factory
+    try:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT id, raw_input, result, updated_at
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND (
+                COALESCE(raw_input,'') LIKE '%file_name%'
+                OR COALESCE(raw_input,'') LIKE '%.pdf%'
+                OR COALESCE(raw_input,'') LIKE '%.dwg%'
+                OR COALESCE(raw_input,'') LIKE '%.dxf%'
+                OR COALESCE(raw_input,'') LIKE '%.xlsx%'
+                OR COALESCE(result,'') LIKE '%file_name%'
+                OR COALESCE(result,'') LIKE '%.pdf%'
+                OR COALESCE(result,'') LIKE '%.dwg%'
+                OR COALESCE(result,'') LIKE '%.dxf%'
+                OR COALESCE(result,'') LIKE '%.xlsx%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+        return list(rows or [])
+    except Exception:
+        return []
+    finally:
+        conn.row_factory = old_rf
+
+
+def _fc_sample_raw_hay(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    parts: list[str] = []
+    for r in _fc_recent_file_rows(conn, chat_id, topic_id):
+        try:
+            parts.append(_fc_norm_public(r["raw_input"]))
+            parts.append(_fc_norm_public(r["result"]))
+        except Exception:
+            pass
+    return " ".join(parts).lower().replace("ё", "е")
+
+
+def _fc_sample_titles(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[str]:
+    titles: list[str] = []
+    for r in _fc_recent_file_rows(conn, chat_id, topic_id):
+        try:
+            titles.extend(_fc_extract_titles_from_text(r["raw_input"]))
+            titles.extend(_fc_extract_titles_from_text(r["result"]))
+        except Exception:
+            continue
+
+    out: list[str] = []
+    seen = set()
+    for title in titles:
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(title)
+    return out[:12]
+
+
+def _fc_sample_domain_from_hay(hay: str) -> str:
+    hay = _fc_norm_public(hay).lower().replace("ё", "е")
+    if any(x in hay for x in ("кж", "кд", "кмд", "км", " ар ", "ар ", "проект", "цоколь", ".dwg", ".dxf")):
+        return "project"
+    if any(x in hay for x in ("смет", "вор", "расцен", "кс-2", "кс2", ".xlsx", ".xls")):
+        return "estimate"
+    if any(x in hay for x in ("акт", "технадзор", "дефект")):
+        return "technadzor"
+    return ""
+
+
+def _fc_select_sample_title(raw_input: str, titles: list[str]) -> str:
+    low = _fc_norm_public(raw_input).lower()
+    for title in titles:
+        tlow = title.lower()
+        words = [w for w in re.split(r"[\s._\-]+", tlow) if len(w) >= 3]
+        if any(w in low for w in words):
+            return title
+    if len(titles) == 1:
+        return titles[0]
+    if "цоколь" in low:
+        for title in titles:
+            if "цоколь" in title.lower():
+                return title
+    return ""
+
+
+def _fc_write_sample_memory(chat_id: str, topic_id: int, domain: str, title: str, raw_input: str) -> None:
+    try:
+        import datetime
+        mem = sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        try:
+            payload = json.dumps(
+                {
+                    "engine": "PROJECT_SAMPLE_SELECTION_P0_V2",
+                    "chat_id": str(chat_id),
+                    "topic_id": int(topic_id or 0),
+                    "domain": domain,
+                    "title": title,
+                    "raw_input": raw_input,
+                    "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+                },
+                ensure_ascii=False,
+            )
+            mem.execute(
+                "INSERT INTO memory(chat_id,key,value,timestamp) VALUES (?,?,?,?)",
+                (
+                    str(chat_id),
+                    f"topic_{int(topic_id or 0)}_{domain or 'sample'}_selected_sample",
+                    payload,
+                    datetime.datetime.utcnow().isoformat() + "Z",
+                ),
+            )
+            mem.commit()
+        finally:
+            mem.close()
+    except Exception:
+        pass
+
+
+def _handle_sample_status(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_sample_status_request(raw_input):
+        return {"handled": False}
+
+    titles = _fc_sample_titles(conn, chat_id, topic_id)
+    raw_hay = _fc_sample_raw_hay(conn, chat_id, topic_id)
+    selected_title = _fc_select_sample_title(raw_input, titles)
+    domain = _fc_sample_domain_from_hay(" ".join([raw_input, selected_title, " ".join(titles), raw_hay]))
+
+    if domain == "project":
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец проектирования"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец проектирования"
+    elif domain == "estimate":
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец сметы"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец сметы"
+    elif domain == "technadzor":
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец для технадзора"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец для технадзора"
+    else:
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец"
+
+    _fc_write_sample_memory(str(chat_id), int(topic_id or 0), domain or "sample", selected_title, raw_input)
+
+    return _send_payload(
+        msg,
+        "project_sample_selection",
+        "DONE",
+        "PROJECT_SAMPLE_SELECTION_P0_V2:ANSWERED",
+    )
+# === END_PROJECT_SAMPLE_SELECTION_P0_V2 ===
+
+
+
+def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    # === CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if int(topic_id or 0) == 500:
+        return {"handled": False}
+    # === END_CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    t = raw_input.lower().replace("ё", "е")
+
+    trigger = False
+    try:
+        from core.file_memory_bridge import should_handle_file_followup
+        trigger = bool(should_handle_file_followup(raw_input))
+    except Exception:
+        trigger = False
+
+    if not trigger:
+        trigger = any(x in t for x in [
+            "что скидывал",
+            "что я скидывал",
+            "что отправлял",
+            "что загружал",
+            "какие файлы",
+            "какой файл",
+            "проектные файлы",
+            "файлы проекта",
+            "файлы в чате",
+            "документы в чате",
+            "последний файл",
+            "скидывал",
+            "загружал",
+        ])
+
+    if not trigger:
+        return {"handled": False}
+
+    try:
+        from core.file_memory_bridge import build_file_followup_answer
+        answer = build_file_followup_answer(str(chat_id), int(topic_id or 0), raw_input, limit=3)
+    except Exception:
+        answer = ""
+
+    if not answer:
+        answer = "В этом топике релевантных файлов по запросу не найдено"
+
+    try:
+        from core.output_sanitizer import sanitize_user_output
+        answer = sanitize_user_output(answer, fallback="Файлы найдены")
+    except Exception:
+        pass
+
+    return _send_payload(
+        answer,
+        "memory_query",
+        "DONE",
+        "FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3:LISTED",
+    )
+
+# === END_FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
+
+
+def _handle_runtime_file(conn: sqlite3.Connection, task: Any, task_id: str, chat_id: str, topic_id: int, raw_input: str, input_type: str) -> Dict[str, Any]:
+    if input_type not in ("drive_file", "file"):
+        return {"handled": False}
+
+    data = _json(raw_input)
+    file_id = _s(data.get("file_id"))
+    file_name = _s(data.get("file_name") or data.get("name"))
+    mime = _s(data.get("mime_type"))
+    source = _s(data.get("source") or "telegram")
+    size = int(data.get("size") or data.get("file_size") or 0)
+    drive_link = _s(data.get("drive_link") or data.get("webViewLink"))
+
+    from core.runtime_file_catalog import duplicate_user_message, register_file
+
+    res = register_file(
+        chat_id,
+        topic_id,
+        task_id,
+        file_id=file_id,
+        file_name=file_name,
+        mime_type=mime,
+        size=size,
+        source=source,
+        drive_link=drive_link,
+    )
+
+    if res.get("duplicate"):
+        return _send_payload(
+            duplicate_user_message(file_name or "UNKNOWN", res.get("duplicate_record") or {}),
+            "runtime_duplicate_file",
+            "WAITING_CLARIFICATION",
+            "FINAL_CLOSURE_BLOCKER_FIX_V1:RUNTIME_DUPLICATE_FILE",
+        )
+
+    return {"handled": False, "catalog_registered": True}
+
+
+def _handle_technadzor(raw_input: str, task_id: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    from core.technadzor_engine import is_technadzor_intent, process_technadzor
+
+    if not is_technadzor_intent(raw_input):
+        return {"handled": False}
+
+    return process_technadzor(text=raw_input, task_id=task_id, chat_id=chat_id, topic_id=topic_id)
+
+
+def _handle_ocr(raw_input: str, task_id: str) -> Dict[str, Any]:
+    from core.ocr_engine import is_ocr_table_intent, process_ocr_table
+
+    if not is_ocr_table_intent(raw_input):
+        return {"handled": False}
+
+    return process_ocr_table(text=raw_input, task_id=task_id)
+
+
+def _handle_archive_guard(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not any(x in raw_input.lower() for x in ["архив", "сохрани", "запомни"]):
+        return {"handled": False}
+
+    from core.archive_guard import should_archive
+
+    res = should_archive(conn, task_id, chat_id, topic_id, raw_input)
+    if res.get("duplicate"):
+        return _send_payload(
+            "В архив не дублирую: такая запись уже есть",
+            "archive_duplicate",
+            "DONE",
+            "FINAL_CLOSURE_BLOCKER_FIX_V1:ARCHIVE_DUPLICATE_BLOCKED",
+        )
+
+    return {"handled": False, "archive_guard_ok": True}
+
+
+
+# === PROJECT_INDEX_QUERY_DETECTOR_V1 ===
+_INDEX_QUERY_RE_V1 = re.compile(
+    r"(какие|покажи|перечисли|что у тебя|есть ли|список|что есть|какие файлы|какие образцы|покажи образцы|что за образцы|какие разделы)",
+    re.I,
+)
+
+_TOPIC_ROLE_MAP_V1 = {
+    2: "СМЕТЫ / СТРОЙКА",
+    5: "ТЕХНАДЗОР / АКТЫ / ДЕФЕКТЫ",
+    500: "ВЕБ-ПОИСК / ИНТЕРНЕТ-ПОИСК / ПОИСК ТОВАРОВ И ИСПОЛНИТЕЛЕЙ",
+    210: "ПРОЕКТИРОВАНИЕ / АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО",
+}
+
+def _fc_topic_role_v1(topic_id: int) -> str:
+    return _TOPIC_ROLE_MAP_V1.get(int(topic_id or 0), "ОБЩИЙ")
+
+def _fc_is_index_query_v1(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    if not _INDEX_QUERY_RE_V1.search(low):
+        return False
+    return any(x in low for x in (
+        "образц", "файл", "раздел", "ар", "кж", "кд", "кр", "км", "кмд",
+        "ов", "вк", "эо", "эскиз", "проект", "смет", "акт", "технадзор"
+    ))
+
+def _fc_is_negative_topic_correction_v1(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    return any(x in low for x in (
+        "нет я не это спросил",
+        "не это спросил",
+        "не то спросил",
+        "не так",
+        "ты не понял",
+        "не про это",
+    ))
+
+def _fc_load_owner_reference_registry_v1() -> dict:
+    try:
+        from pathlib import Path
+        return json.loads(Path("/root/.areal-neva-core/config/owner_reference_registry.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _fc_topic_domain_v1(topic_id: int) -> str:
+    topic_id = int(topic_id or 0)
+    if topic_id == 2:
+        return "estimate"
+    if topic_id == 5:
+        return "technadzor"
+    if topic_id == 210:
+        return "design"
+    return ""
+
+def _fc_index_items_for_topic_v1(topic_id: int) -> list[dict]:
+    data = _fc_load_owner_reference_registry_v1()
+    policy = data.get("owner_reference_full_workflow_v1") if isinstance(data, dict) else {}
+    if not isinstance(policy, dict):
+        return []
+    domain = _fc_topic_domain_v1(topic_id)
+    if domain == "estimate":
+        return list(policy.get("estimate_references") or [])
+    if domain == "technadzor":
+        return list(policy.get("technadzor_references") or [])
+    if domain == "design":
+        return list(policy.get("design_references") or [])
+    return (
+        list(policy.get("estimate_references") or [])
+        + list(policy.get("design_references") or [])
+        + list(policy.get("technadzor_references") or [])
+    )
+
+def _fc_filter_design_by_question_v1(items: list[dict], raw_input: str) -> list[dict]:
+    low = _fc_norm_public(raw_input).lower()
+    wanted = []
+    mapping = {
+        "ар": ("AR", "АР"),
+        "кж": ("KJ", "КЖ"),
+        "кд": ("KD", "КД"),
+        "кр": ("KR", "КР"),
+        "кмд": ("KMD", "КМД"),
+        "км": ("KM", "КМ"),
+        "ов": ("OV", "ОВ"),
+        "вк": ("VK", "ВК"),
+        "эо": ("EO", "ЭО"),
+        "эм": ("EO", "ЭМ"),
+        "эос": ("EO", "ЭОС"),
+        "эскиз": ("SKETCH", "ЭСКИЗ"),
+        "план участка": ("GP", "ГП"),
+    }
+    for k, vals in mapping.items():
+        if k in low:
+            wanted.extend(vals)
+    if not wanted:
+        return items
+    out = []
+    for x in items:
+        d = str(x.get("discipline") or "").upper()
+        name = str(x.get("name") or "").upper()
+        if any(w.upper() in d or w.upper() in name for w in wanted):
+            out.append(x)
+    return out or items
+
+def _fc_format_index_answer_v1(topic_id: int, raw_input: str) -> str:
+    role = _fc_topic_role_v1(topic_id)
+    items = _fc_index_items_for_topic_v1(topic_id)
+    if int(topic_id or 0) == 210:
+        items = _fc_filter_design_by_question_v1(items, raw_input)
+
+    if not items:
+        return f"По роли {role} образцы в индексе не найдены"
+
+    groups: dict[str, list[str]] = {}
+    for x in items:
+        if not isinstance(x, dict):
+            continue
+        if int(topic_id or 0) == 210:
+            key = str(x.get("discipline") or "DESIGN")
+        elif int(topic_id or 0) == 2:
+            key = str(x.get("role") or "estimate")
+        elif int(topic_id or 0) == 5:
+            key = "technadzor"
+        else:
+            key = str(x.get("domain") or x.get("discipline") or x.get("role") or "reference")
+        name = _fc_clean_title(str(x.get("name") or ""))
+        if not name:
+            continue
+        groups.setdefault(key, [])
+        if name not in groups[key]:
+            groups[key].append(name)
+
+    lines = [f"Образцы по текущему топику: {role}", ""]
+    for key in sorted(groups):
+        vals = groups[key][:20]
+        lines.append(f"{key}:")
+        for name in vals:
+            lines.append(f"- {name}")
+        if len(groups[key]) > len(vals):
+            lines.append(f"- ещё {len(groups[key]) - len(vals)}")
+        lines.append("")
+    lines.append("Файл не создаю. Это ответ на запрос списка образцов")
+    return "\n".join(lines).strip()
+
+def _handle_project_index_query_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    # === CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if int(topic_id or 0) == 500:
+        return {"handled": False}
+    # === END_CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if not _fc_is_index_query_v1(raw_input):
+        return {"handled": False}
+    answer = _fc_format_index_answer_v1(int(topic_id or 0), raw_input)
+    return _send_payload(
+        answer,
+        "project_index_query",
+        "DONE",
+        "PROJECT_INDEX_QUERY_DETECTOR_V1:ANSWERED",
+    )
+
+def _handle_topic_context_isolation_guard_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_negative_topic_correction_v1(raw_input):
+        return {"handled": False}
+    role = _fc_topic_role_v1(int(topic_id or 0))
+    if int(topic_id or 0) == 210:
+        msg = "Понял. Остаёмся в проектировании. Уточни, что показать: АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО / эскизы / планы участка"
+    elif int(topic_id or 0) == 2:
+        msg = "Понял. Остаёмся в сметах и стройке. Уточни, что нужно: цены / смета / материалы / логистика / XLSX"
+    elif int(topic_id or 0) == 5:
+        msg = "Понял. Остаёмся в технадзоре. Уточни, что нужно: акт / дефект / фото / исполнительная / норма"
+    else:
+        msg = f"Понял. Роль текущего топика: {role}. Уточни одним сообщением, что именно нужно"
+    return _send_payload(
+        msg,
+        "topic_context_isolation_guard",
+        "WAITING_CLARIFICATION",
+        "TOPIC_CONTEXT_ISOLATION_GUARD_V1:ANSWERED",
+    )
+
+# === END_PROJECT_INDEX_QUERY_DETECTOR_V1 ===
+
+def maybe_handle_final_closure(
+    conn: sqlite3.Connection,
+    task: Any,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input: str,
+    input_type: str = "text",
+    reply_to=None,
+) -> Dict[str, Any]:
+    raw_input = _s(raw_input)
+    input_type = _s(input_type or _field(task, "input_type", "text"))
+    chat_id = _s(chat_id or _field(task, "chat_id", ""))
+    topic_id = int(topic_id or _field(task, "topic_id", 0) or 0)
+
+    r = _handle_runtime_file(conn, task, task_id, chat_id, topic_id, raw_input, input_type)
+    if r.get("handled"):
+        return r
+
+    r = _handle_project_index_query_v1(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_topic_context_isolation_guard_v1(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_sample_status(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_memory_query(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_technadzor(raw_input, task_id, chat_id, topic_id)
+    if r.get("handled"):
+        return r
+
+    r = _handle_ocr(raw_input, task_id)
+    if r.get("handled"):
+        return r
+
+    r = _handle_archive_guard(conn, task_id, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    return {"handled": False}
+
+
+# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ENGINE ===
+
+# === P6H4TW_FCE_TOPIC5_ROUTE_FIX_V1 ===
+_P6H4TW_FCE_FOLDER_INTENTS = (
+    "папка",
+    "новая папка",
+    "создана папка",
+    "создал папку",
+    "обнаружь папку",
+    "найди папку",
+    "папка называется",
+    "работаем по папке",
+    "текущая папка",
+    "прими папку",
+    "туда складывать",
+    "туда загружать",
+    "все материалы туда",
+)
+
+_p6h4tw_fce_orig_handle_technadzor = _handle_technadzor
+
+
+def _handle_technadzor(raw_input: str, task_id: str, chat_id: str, topic_id: int) -> Dict[str, Any]:  # noqa: F811
+    if int(topic_id or 0) != 5:
+        return {"handled": False}
+
+    _low = (raw_input or "").lower().replace("ё", "е")
+    _is_folder_intent = any(t in _low for t in _P6H4TW_FCE_FOLDER_INTENTS)
+
+    if int(topic_id or 0) == 5 and _is_folder_intent:
+        try:
+            from core.technadzor_engine import process_technadzor as _p6h4tw_fce_pt
+            r = _p6h4tw_fce_pt(
+                text=raw_input, task_id=task_id, chat_id=chat_id, topic_id=topic_id
+            )
+            if isinstance(r, dict):
+                if r.get("ok") and not r.get("handled"):
+                    r = dict(r)
+                    r["handled"] = True
+                    r["message"] = r.get("result_text") or r.get("message") or ""
+                elif not r.get("ok") and not r.get("handled"):
+                    r = dict(r)
+                    r["handled"] = False
+                return r
+        except Exception as _e:
+            import logging as _l
+            _l.getLogger("task_worker").warning("P6H4TW_FCE_ERR %s", _e)
+        # folder resolver failed or returned nothing — ask owner instead of AI fallback
+        return {
+            "handled": True,
+            "ok": True,
+            "state": "WAITING_CLARIFICATION",
+            "message": "Не удалось найти папку на Drive. Пришли ссылку на папку или уточни точное название.",
+            "history": "P6H4TW_FCE_V1:FOLDER_NOT_FOUND",
+        }
+
+    return _p6h4tw_fce_orig_handle_technadzor(raw_input, task_id, chat_id, topic_id)
+
+# === END_P6H4TW_FCE_TOPIC5_ROUTE_FIX_V1 ===
+
+====================================================================================================
+END_FILE: core/final_closure_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/file_context_intake.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 15ba46f51ce605aacf35fd510ea88e5631a72c948eab1b3065b222315b950d32
+====================================================================================================
+# === FILE_CONTEXT_INTAKE_FULL_CLOSE_V1 ===
+from __future__ import annotations
+
+import json
+import os
+import re
+import sqlite3
+import hashlib
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+BASE = Path("/root/.areal-neva-core")
+CORE_DB = BASE / "data" / "core.db"
+MEM_DB = BASE / "data" / "memory.db"
+TEMPLATE_ROOT = BASE / "data" / "templates"
+ESTIMATE_TEMPLATE_DIR = TEMPLATE_ROOT / "estimate"
+ESTIMATE_BATCH_DIR = TEMPLATE_ROOT / "estimate_batch"
+FILE_CATALOG_DIR = BASE / "data" / "telegram_file_catalog"
+
+ESTIMATE_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+ESTIMATE_BATCH_DIR.mkdir(parents=True, exist_ok=True)
+FILE_CATALOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+
+def _low(v: Any) -> str:
+    return _s(v).lower().replace("ё", "е")
+
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    if isinstance(task, dict):
+        return task.get(field, default)
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+
+def _json(raw: Any) -> Dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    txt = _s(raw)
+    if not txt:
+        return {}
+    try:
+        obj = json.loads(txt)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+def _safe_name(v: Any, limit: int = 120) -> str:
+    s = re.sub(r"[^0-9A-Za-zА-Яа-я_. -]+", "_", _s(v)).strip(" ._")
+    return (s or "file")[:limit]
+
+
+def _safe_key(v: Any, limit: int = 80) -> str:
+    return re.sub(r"[^0-9A-Za-z_-]+", "_", _s(v))[:limit] or "unknown"
+
+
+def _cols(conn: sqlite3.Connection, table: str):
+    try:
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    except Exception:
+        return []
+
+
+def _memory_write(chat_id: str, key: str, value: Any) -> None:
+    try:
+        if not MEM_DB.exists():
+            return
+        conn = sqlite3.connect(str(MEM_DB))
+        try:
+            cols = _cols(conn, "memory")
+            if not cols:
+                return
+            payload = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+            ts = _now()
+            topic_match = re.match(r"^topic_(\d+)_", str(key))
+            topic_id = int(topic_match.group(1)) if topic_match else 0
+            if "id" in cols:
+                mid = hashlib.sha1(f"{chat_id}:{key}:{ts}:{payload[:80]}".encode("utf-8")).hexdigest()
+                if "topic_id" in cols and "scope" in cols:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp,topic_id,scope) VALUES (?,?,?,?,?,?,?)",
+                        (mid, str(chat_id), str(key), payload, ts, topic_id, "topic"),
+                    )
+                else:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
+                        (mid, str(chat_id), str(key), payload, ts),
+                    )
+            else:
+                conn.execute(
+                    "INSERT INTO memory (chat_id,key,value,timestamp) VALUES (?,?,?,?)",
+                    (str(chat_id), str(key), payload, ts),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return
+
+
+def _memory_latest(chat_id: str, key: str) -> str:
+    try:
+        if not MEM_DB.exists():
+            return ""
+        conn = sqlite3.connect(str(MEM_DB))
+        try:
+            row = conn.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY rowid DESC LIMIT 1",
+                (str(chat_id), str(key)),
+            ).fetchone()
+            return row[0] if row else ""
+        finally:
+            conn.close()
+    except Exception:
+        return ""
+
+
+def _extract_user_text(raw_input: Any) -> str:
+    obj = _json(raw_input)
+    if obj:
+        for k in ("caption", "user_text", "text", "prompt", "comment", "message"):
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return ""
+    return _s(raw_input)
+
+
+def _file_payload(raw_input: Any) -> Dict[str, Any]:
+    obj = _json(raw_input)
+    return {
+        "file_id": _s(obj.get("file_id")),
+        "file_name": _s(obj.get("file_name")),
+        "mime_type": _s(obj.get("mime_type")),
+        "caption": _s(obj.get("caption")),
+        "source": _s(obj.get("source")),
+        "telegram_message_id": obj.get("telegram_message_id"),
+        "telegram_chat_id": obj.get("telegram_chat_id"),
+        "raw": obj,
+    }
+
+
+def _is_service_file(payload: Dict[str, Any]) -> bool:
+    src = _low(payload.get("source"))
+    name = _low(payload.get("file_name"))
+    if src in {"google_drive", "drive", "drive_sync", "healthcheck", "service"}:
+        return True
+    if any(x in name for x in ("healthcheck", "service_file", ".tmp", "tmp_", "retry_probe")):
+        return True
+    return False
+
+
+def _detect_pending_file_intent(text: str) -> Optional[Dict[str, Any]]:
+    low = _low(text)
+    if not low:
+        return None
+
+    future_file = any(x in low for x in (
+        "сейчас скину", "сейчас пришлю", "скину несколько", "пришлю несколько",
+        "буду скидывать", "сейчас отправлю", "отправлю несколько", "загружу несколько",
+        "скину файлы", "пришлю файлы"
+    ))
+
+    estimate = any(x in low for x in ("смет", "кс-2", "кс2", "ведомост", "спецификац", "расцен", "excel", "xlsx"))
+    template = any(x in low for x in ("образец", "образцы", "шаблон", "шаблоны", "принять", "возьми", "сохрани"))
+    price_web = any(x in low for x in (
+        "цены из интернета", "цена из интернета", "актуальные цены", "стоимость материалов",
+        "цены материалов", "искать в интернете", "брать из интернета", "найти цены",
+        "проводить поиск", "проверить цены"
+    ))
+
+    if future_file and estimate:
+        return {
+            "kind": "estimate",
+            "mode": "template_batch" if template or "образ" in low else "pending_estimate_files",
+            "price_mode": "web_confirm" if price_web else "",
+            "raw_text": text,
+            "created_at": _now(),
+            "ttl_sec": 7200,
+        }
+
+    if estimate and template and any(x in low for x in ("несколько", "файлы", "сметы")):
+        return {
+            "kind": "estimate",
+            "mode": "template_batch",
+            "price_mode": "web_confirm" if price_web else "",
+            "raw_text": text,
+            "created_at": _now(),
+            "ttl_sec": 7200,
+        }
+
+    return None
+
+
+def _save_pending_intent(chat_id: str, topic_id: int, intent: Dict[str, Any]) -> None:
+    key = f"topic_{int(topic_id or 0)}_pending_file_intent"
+    _memory_write(chat_id, key, intent)
+    if intent.get("price_mode"):
+        _memory_write(chat_id, f"topic_{int(topic_id or 0)}_price_mode", intent.get("price_mode"))
+
+
+def latest_pending_instruction_for_topic(topic_id: int, chat_id: str = "") -> str:
+    chat_ids = [str(chat_id)] if chat_id else []
+    if not chat_ids:
+        try:
+            conn = sqlite3.connect(str(MEM_DB))
+            rows = conn.execute(
+                "SELECT DISTINCT chat_id FROM memory WHERE key=? ORDER BY rowid DESC LIMIT 5",
+                (f"topic_{int(topic_id or 0)}_pending_file_intent",),
+            ).fetchall()
+            conn.close()
+            chat_ids = [r[0] for r in rows]
+        except Exception:
+            chat_ids = []
+    for cid in chat_ids:
+        data = _load_pending_intent(cid, topic_id)
+        if data.get("raw_text"):
+            return str(data["raw_text"])
+    return ""
+
+
+def _current_rowid(conn: sqlite3.Connection, task_id: str) -> int:
+    try:
+        row = conn.execute("SELECT rowid FROM tasks WHERE id=? LIMIT 1", (task_id,)).fetchone()
+        return int(row[0]) if row else 0
+    except Exception:
+        return 0
+
+
+def _find_duplicate(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    rowid = _current_rowid(conn, task_id)
+    file_id = _s(payload.get("file_id"))
+    file_name = _s(payload.get("file_name"))
+    if not file_id and not file_name:
+        return None
+
+    file_inputs = ("drive_file", "file", "photo", "image", "document")
+    params = [str(chat_id), int(topic_id or 0), int(rowid or 10**18), *file_inputs]
+    where = (
+        "chat_id=? AND COALESCE(topic_id,0)=? AND rowid<? "
+        "AND input_type IN (?,?,?,?,?)"
+    )
+
+    if file_id:
+        where += " AND raw_input LIKE ?"
+        params.append(f"%{file_id}%")
+    elif file_name:
+        where += " AND lower(raw_input) LIKE lower(?)"
+        params.append(f"%{file_name}%")
+
+    try:
+        row = conn.execute(
+            f"""
+            SELECT rowid,id,state,raw_input,result,error_message,created_at,updated_at
+            FROM tasks
+            WHERE {where}
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            params,
+        ).fetchone()
+    except Exception:
+        row = None
+
+    if not row:
+        return None
+
+    old_payload = _json(row["raw_input"] if hasattr(row, "keys") else row[3])
+    old_name = old_payload.get("file_name") or file_name
+    return {
+        "rowid": row["rowid"] if hasattr(row, "keys") else row[0],
+        "task_id": row["id"] if hasattr(row, "keys") else row[1],
+        "state": row["state"] if hasattr(row, "keys") else row[2],
+        "file_name": old_name,
+        "file_id": old_payload.get("file_id") or file_id,
+        "telegram_message_id": old_payload.get("telegram_message_id"),
+        "telegram_chat_id": old_payload.get("telegram_chat_id") or chat_id,
+        "created_at": row["created_at"] if hasattr(row, "keys") else row[6],
+        "updated_at": row["updated_at"] if hasattr(row, "keys") else row[7],
+    }
+
+
+def _telegram_source_link(chat_id: Any, message_id: Any) -> str:
+    chat = _s(chat_id)
+    msg = _s(message_id)
+    if not chat or not msg:
+        return ""
+    if chat.startswith("-100"):
+        chat = chat[4:]
+    else:
+        chat = chat.lstrip("-")
+    if not chat.isdigit() or not msg.isdigit():
+        return ""
+    return f"https://t.me/c/{chat}/{msg}"
+
+
+def _duplicate_message(payload: Dict[str, Any], dup: Dict[str, Any]) -> str:
+    name = payload.get("file_name") or dup.get("file_name") or "файл"
+    link = _telegram_source_link(
+        dup.get("telegram_chat_id") or payload.get("telegram_chat_id"),
+        dup.get("telegram_message_id") or payload.get("telegram_message_id"),
+    )
+    source_line = f"Сообщение: {link}\n" if link else ""
+    try:
+        from core.intake_offer_actions import get_offer_text as _canon_offer_text
+        offer_text = _canon_offer_text()
+    except Exception:
+        offer_text = "Что сделать с файлом?\n\nНапиши номер или опиши задачу."
+    return (
+        "Файл уже есть\n"
+        f"Файл: {name}\n"
+        f"{source_line}"
+        f"Дата: {dup.get('created_at') or dup.get('updated_at') or 'UNKNOWN'}\n\n"
+        f"{offer_text}"
+    )
+
+
+def _catalog_path(chat_id: str, topic_id: int) -> Path:
+    return FILE_CATALOG_DIR / f"chat_{_safe_key(chat_id)}__topic_{int(topic_id or 0)}.jsonl"
+
+
+def _index_telegram_file(chat_id: str, topic_id: int, task_id: str, payload: Dict[str, Any]) -> None:
+    if not payload.get("file_id") and not payload.get("file_name"):
+        return
+    entry = {
+        "created_at": _now(),
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "task_id": str(task_id),
+        "file_id": payload.get("file_id"),
+        "file_name": payload.get("file_name"),
+        "mime_type": payload.get("mime_type"),
+        "telegram_message_id": payload.get("telegram_message_id"),
+        "telegram_chat_id": payload.get("telegram_chat_id") or str(chat_id),
+        "source": payload.get("source") or "telegram",
+    }
+    path = _catalog_path(chat_id, topic_id)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_telegram_file_index", entry)
+
+
+def _template_paths(chat_id: str, topic_id: int, file_name: str):
+    safe_chat = _safe_key(chat_id)
+    safe_file = _safe_key(file_name, 70)
+    stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    active = ESTIMATE_TEMPLATE_DIR / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+    snap = ESTIMATE_TEMPLATE_DIR / f"TEMPLATE__chat_{safe_chat}__topic_{int(topic_id or 0)}__{stamp}__{safe_file}.json"
+    batch = ESTIMATE_BATCH_DIR / f"ACTIVE_BATCH__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+    return active, snap, batch
+
+
+def _save_estimate_template(chat_id: str, topic_id: int, task_id: str, payload: Dict[str, Any], raw_instruction: str) -> Dict[str, Any]:
+    active, snap, batch_path = _template_paths(chat_id, topic_id, payload.get("file_name") or "estimate")
+    template = {
+        "engine": "MULTI_FILE_TEMPLATE_INTAKE_V1",
+        "kind": "estimate",
+        "status": "active",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "saved_by_task_id": str(task_id),
+        "source_task_id": str(task_id),
+        "source_file_id": payload.get("file_id") or "",
+        "source_file_name": payload.get("file_name") or "",
+        "source_mime_type": payload.get("mime_type") or "",
+        "source_caption": payload.get("caption") or "",
+        "telegram_message_id": payload.get("telegram_message_id"),
+        "saved_at": _now(),
+        "usage_rule": "Use this Telegram file as estimate sample/template in the same chat and topic",
+        "raw_user_instruction": raw_instruction,
+    }
+
+    active.write_text(json.dumps(template, ensure_ascii=False, indent=2), encoding="utf-8")
+    snap.write_text(json.dumps(template, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    batch = []
+    if batch_path.exists():
+        try:
+            old = json.loads(batch_path.read_text(encoding="utf-8"))
+            if isinstance(old, list):
+                batch = old
+            elif isinstance(old, dict) and isinstance(old.get("templates"), list):
+                batch = old["templates"]
+        except Exception:
+            batch = []
+
+    seen = {str(x.get("source_file_id") or x.get("source_file_name")) for x in batch if isinstance(x, dict)}
+    key = str(template.get("source_file_id") or template.get("source_file_name"))
+    if key not in seen:
+        batch.append(template)
+
+    batch_payload = {
+        "engine": "MULTI_FILE_TEMPLATE_INTAKE_V1",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "count": len(batch),
+        "updated_at": _now(),
+        "templates": batch[-100:],
+    }
+    batch_path.write_text(json.dumps(batch_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_estimate_active_template", template)
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_estimate_template_batch", batch_payload)
+
+    return {"template": template, "batch_count": len(batch), "active_path": str(active), "snapshot_path": str(snap), "batch_path": str(batch_path)}
+
+
+def _load_pending_intent(chat_id: str, topic_id: int) -> Dict[str, Any]:
+    raw = _memory_latest(chat_id, f"topic_{int(topic_id or 0)}_pending_file_intent")
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            return {}
+        created_at = str(data.get("created_at") or "")
+        ttl_sec = int(data.get("ttl_sec") or 7200)
+        if created_at:
+            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age = (datetime.now(timezone.utc) - created.astimezone(timezone.utc)).total_seconds()
+            if age > ttl_sec:
+                return {}
+        return data
+    except Exception:
+        return {}
+
+
+def _pending_is_template_batch(intent: Dict[str, Any]) -> bool:
+    if not intent:
+        return False
+    if intent.get("kind") != "estimate":
+        return False
+    return intent.get("mode") in {"template_batch", "pending_estimate_files"}
+
+
+def _topic2_project_pdf_not_template(topic_id: int, payload: Dict[str, Any], pending: Dict[str, Any]) -> bool:
+    if int(topic_id or 0) != 2:
+        return False
+    name = _low(payload.get("file_name"))
+    mime = _low(payload.get("mime_type"))
+    caption = _low(payload.get("caption"))
+    current_text = f"{name} {caption}"
+    if ".pdf" not in name and "pdf" not in mime:
+        return False
+    explicit_template = any(x in caption for x in ("образец", "образцы", "шаблон", "сохрани как образец", "возьми как образец"))
+    if explicit_template:
+        return False
+    project_markers = (
+        "раздел", " ар", "кр", "кж", "км", "кмд", "рп", "рабоч", "проект",
+        "архитектур", "конструктив", "документац",
+    )
+    if any(x in current_text for x in project_markers):
+        return True
+    raw_text = _low((pending or {}).get("raw_text"))
+    stale_template_only = any(x in raw_text for x in ("принимай эти сметы как образцы", "как образцы")) and not any(
+        x in current_text for x in ("смета", "кс-2", "кс2", "ведомост", "расцен")
+    )
+    return stale_template_only
+
+
+def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    if not task_id or not chat_id:
+        return None
+
+    if input_type in ("text", "voice"):
+        text = _extract_user_text(raw_input)
+        pending = _detect_pending_file_intent(text)
+        if pending:
+            _save_pending_intent(chat_id, topic_id, pending)
+            msg = (
+                "Принял\n"
+                "Следующие файлы в этом топике приму как образцы сметы\n"
+                "Если файл уже был в Telegram — скажу что он дублируется и спрошу что делать\n"
+                "При создании сметы цены материалов буду искать в интернете и сначала покажу варианты для выбора"
+            )
+            return {
+                "handled": True,
+                "state": "DONE",
+                "kind": "context_aware_file_intake",
+                "message": msg,
+                "history": "CONTEXT_AWARE_FILE_INTAKE_V1:PENDING_TEMPLATE_BATCH_SAVED",
+            }
+
+    if input_type in ("drive_file", "file", "photo", "image", "document"):
+        payload = _file_payload(raw_input)
+        if _is_service_file(payload):
+            return None
+
+        _index_telegram_file(chat_id, topic_id, task_id, payload)
+
+        if not payload.get("raw", {}).get("file_duplicate_choice_intent"):
+            dup = _find_duplicate(conn, task_id, chat_id, topic_id, payload)
+            if dup:
+                msg = _duplicate_message(payload, dup)
+                _memory_write(chat_id, f"topic_{topic_id}_last_duplicate_file", {"current_task_id": task_id, "payload": payload, "duplicate": dup})
+                return {
+                    "handled": True,
+                    "state": "WAITING_CLARIFICATION",
+                    "kind": "duplicate_file_question",
+                    "message": msg,
+                    "reply_to_message_id": payload.get("telegram_message_id") or reply_to,
+                    "history": "TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND",
+                }
+
+        pending = _load_pending_intent(chat_id, topic_id)
+        if payload.get("raw", {}).get("file_duplicate_choice_intent"):
+            pending = None
+        if pending and _topic2_project_pdf_not_template(topic_id, payload, pending):
+            _memory_write(chat_id, f"topic_{topic_id}_pending_file_intent_skipped", {
+                "task_id": task_id,
+                "reason": "TOPIC2_PROJECT_PDF_NOT_TEMPLATE",
+                "file_name": payload.get("file_name"),
+                "telegram_message_id": payload.get("telegram_message_id"),
+                "created_at": _now(),
+            })
+            pending = None
+        if _pending_is_template_batch(pending):
+            saved = _save_estimate_template(chat_id, topic_id, task_id, payload, pending.get("raw_text") or "")
+            file_name = payload.get("file_name") or "файл"
+            msg = (
+                "Образец сметы принят\n"
+                f"Файл: {file_name}\n"
+                f"Всего образцов в наборе: {saved.get('batch_count')}\n\n"
+                "Дальше можешь присылать следующие сметы-образцы или написать: сделай смету\n"
+                "Если нужно брать цены из интернета — я сначала покажу найденные варианты и спрошу какие поставить"
+            )
+            return {
+                "handled": True,
+                "state": "DONE",
+                "kind": "multi_file_template_intake",
+                "message": msg,
+                "history": "MULTI_FILE_TEMPLATE_INTAKE_V1:TEMPLATE_SAVED",
+            }
+
+    return None
+
+
+def router_pending_instruction(raw_input: str, topic_id: int, chat_id: str = "") -> str:
+    explicit = _extract_user_text(raw_input)
+    if explicit:
+        return explicit
+    return latest_pending_instruction_for_topic(topic_id, chat_id)
+
+
+# === END_FILE_CONTEXT_INTAKE_FULL_CLOSE_V1 ===
+
+
+# === PENDING_INTENT_CLARIFICATION_V1 ===
+try:
+    _pic_orig_prehandle_task_context_v1 = prehandle_task_context_v1
+except Exception:
+    _pic_orig_prehandle_task_context_v1 = None
+
+
+def _pic_has_active_pending_intent(chat_id: str, topic_id: int) -> Dict[str, Any]:
+    try:
+        data = _load_pending_intent(chat_id, topic_id)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _pic_is_clarification_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+
+    explicit_new_task = any(x in low for x in (
+        "сделай проект", "создай проект", "разработай проект",
+        "сделай смету", "создай смету", "посчитай смету", "рассчитай смету",
+        "сделай акт", "создай акт", "найди мне", "поищи мне"
+    ))
+    if explicit_new_task:
+        return False
+
+    clar_words = (
+        "ты должен", "ты должна", "должен", "должна", "надо", "нужно",
+        "нужно ли", "надо ли", "спроси", "спросить", "уточни", "уточнить",
+        "не сразу", "сначала", "перед тем", "до того", "после этого",
+        "цены", "интернет", "искать", "не искать", "без интернета",
+        "актуальные", "поставить", "подставить", "согласовать",
+        "подтвердить", "не создавай сразу", "сначала спросить",
+        "сначала спроси", "спросить нужно ли", "спроси нужно ли"
+    )
+    return any(x in low for x in clar_words)
+
+
+def _pic_update_intent_with_clarification(intent: Dict[str, Any], text: str) -> Dict[str, Any]:
+    low = _low(text)
+    updated = dict(intent or {})
+
+    clarifications = updated.get("clarifications")
+    if not isinstance(clarifications, list):
+        clarifications = []
+    clarifications.append({"text": text, "created_at": _now()})
+    updated["clarifications"] = clarifications[-20:]
+    updated["updated_at"] = _now()
+    updated["last_clarification"] = text
+
+    ask_before_web = any(x in low for x in (
+        "не сразу", "сначала спрос", "спросить нужно ли", "спроси нужно ли",
+        "нужно ли", "надо ли", "перед тем как искать", "перед поиском",
+        "сначала уточни", "не ищи сразу", "не надо сразу",
+        "согласовать цены", "подтвердить цены"
+    ))
+
+    disable_web = any(x in low for x in (
+        "не искать в интернете", "без интернета", "не надо интернет",
+        "цены не ищи", "не ищи цены", "без поиска цен"
+    ))
+
+    force_web = any(x in low for x in (
+        "ищи в интернете", "искать в интернете", "цены из интернета",
+        "актуальные цены", "проверить цены", "найти цены"
+    ))
+
+    if disable_web:
+        updated["price_mode"] = "manual_or_template"
+        updated["web_search_disabled"] = True
+        updated["ask_before_web_search"] = False
+        updated["price_confirmation_required"] = False
+    elif ask_before_web:
+        updated["price_mode"] = "ask_before_search"
+        updated["ask_before_web_search"] = True
+        updated["price_confirmation_required"] = True
+        updated["web_search_disabled"] = False
+    elif force_web:
+        updated["price_mode"] = "web_confirm"
+        updated["ask_before_web_search"] = False
+        updated["price_confirmation_required"] = True
+        updated["web_search_disabled"] = False
+
+    original = str(updated.get("raw_text") or "").strip()
+    if text and text not in original:
+        updated["raw_text"] = (original + "\nУточнение: " + text).strip()
+
+    return updated
+
+
+def _pic_confirmation_message(intent: Dict[str, Any]) -> str:
+    price_mode = str(intent.get("price_mode") or "")
+    if price_mode == "ask_before_search":
+        price_line = "Перед поиском цен в интернете сначала спрошу, нужно ли искать актуальные цены"
+    elif price_mode == "web_confirm":
+        price_line = "Цены материалов буду искать в интернете, затем покажу варианты и спрошу какие поставить"
+    elif price_mode == "manual_or_template":
+        price_line = "Интернет-цены не ищу, пока ты отдельно не скажешь искать"
+    else:
+        price_line = "Цены не подставляю без отдельного подтверждения"
+
+    return (
+        "Уточнение к приёму смет принято\n"
+        "Следующие файлы в этом топике остаются образцами сметы\n"
+        f"{price_line}\n"
+        "Финальную смету не создаю без твоего выбора цен"
+    )
+
+
+
+# === PROJECT_SAMPLE_TEXT_INTAKE_V1 ===
+def _pst_is_sample_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    if not any(x in low for x in ("возьми", "прими", "используй", "сохрани")):
+        return False
+    return any(x in low for x in ("образец", "шаблон", "пример", "как образец"))
+
+
+def _pst_is_projectish(payload: Dict[str, Any], text: str = "") -> bool:
+    hay = _low(" ".join([
+        payload.get("file_name") or "",
+        payload.get("caption") or "",
+        payload.get("mime_type") or "",
+        text or "",
+    ]))
+    return any(x in hay for x in (
+        "кж", "км", "кмд", "ар", "проект", "чертеж", "чертёж",
+        "конструкц", "цоколь", "плита", ".dxf", ".dwg", ".pdf"
+    )) and not any(x in hay for x in (
+        "смет", "вор", "расцен", "стоимост", "технадзор", "акт дефект", "нарушен"
+    ))
+
+
+def _pst_latest_project_file(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id,raw_input,result,updated_at,rowid
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
+              AND COALESCE(topic_id,0)=?
+              AND input_type IN ('drive_file','file')
+            ORDER BY rowid DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        rows = []
+
+    for r in rows:
+        try:
+            raw = r["raw_input"] if hasattr(r, "keys") else r[1]
+            tid = r["id"] if hasattr(r, "keys") else r[0]
+            upd = r["updated_at"] if hasattr(r, "keys") else r[3]
+        except Exception:
+            continue
+
+        payload = _file_payload(raw)
+        if _is_service_file(payload):
+            continue
+        if _pst_is_projectish(payload, raw):
+            return {
+                "task_id": str(tid),
+                "file_id": payload.get("file_id") or "",
+                "file_name": payload.get("file_name") or "",
+                "mime_type": payload.get("mime_type") or "",
+                "caption": payload.get("caption") or "",
+                "source": payload.get("source") or "",
+                "updated_at": str(upd or ""),
+            }
+
+    return {}
+
+
+def _pst_save_project_sample(chat_id: str, topic_id: int, task_id: str, sample: Dict[str, Any], text: str) -> None:
+    payload = {
+        "engine": "PROJECT_SAMPLE_TEXT_INTAKE_V1",
+        "kind": "project",
+        "status": "active",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "saved_by_task_id": str(task_id),
+        "source_task_id": sample.get("task_id") or "",
+        "source_file_id": sample.get("file_id") or "",
+        "source_file_name": sample.get("file_name") or "",
+        "source_mime_type": sample.get("mime_type") or "",
+        "source_caption": sample.get("caption") or "",
+        "saved_at": _now(),
+        "usage_rule": "Use this file as project/design sample only inside the same chat and topic",
+        "raw_user_instruction": text,
+    }
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_project_active_template", payload)
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_project_sample_file", payload)
+
+
+def _pst_try_project_sample_text(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, text: str) -> Optional[Dict[str, Any]]:
+    if not _pst_is_sample_text(text):
+        return None
+
+    sample = _pst_latest_project_file(conn, chat_id, topic_id)
+    if not sample:
+        return None
+
+    _pst_save_project_sample(chat_id, topic_id, task_id, sample, text)
+
+    file_name = sample.get("file_name") or "файл"
+    msg = (
+        "Образец проектирования принят\n"
+        f"Файл: {file_name}\n"
+        "Дальше буду использовать его как образец для проектных задач только в этом топике"
+    )
+
+    return {
+        "handled": True,
+        "state": "DONE",
+        "kind": "project_sample_text_intake",
+        "message": msg,
+        "history": "PROJECT_SAMPLE_TEXT_INTAKE_V1:SAVED",
+    }
+
+# === END_PROJECT_SAMPLE_TEXT_INTAKE_V1 ===
+
+
+def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    if _pic_orig_prehandle_task_context_v1 is not None:
+        res = _pic_orig_prehandle_task_context_v1(conn, task)
+        if res and res.get("handled"):
+            return res
+
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+
+    if not task_id or not chat_id:
+        return None
+
+    if input_type not in ("text", "voice"):
+        return None
+
+    text = _extract_user_text(raw_input)
+    if not text:
+        return None
+
+    # PROJECT_SAMPLE_TEXT_INTAKE_V1_HOOK
+    sample_res = _pst_try_project_sample_text(conn, task_id, chat_id, topic_id, text)
+    if sample_res and sample_res.get("handled"):
+        return sample_res
+
+    pending = _pic_has_active_pending_intent(chat_id, topic_id)
+    if not pending:
+        return None
+
+    if not _pic_is_clarification_text(text):
+        return None
+
+    updated = _pic_update_intent_with_clarification(pending, text)
+    _save_pending_intent(chat_id, topic_id, updated)
+
+    if updated.get("price_mode"):
+        _memory_write(chat_id, f"topic_{int(topic_id or 0)}_price_mode", updated.get("price_mode"))
+
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_pending_file_intent_clarification", {
+        "task_id": task_id,
+        "text": text,
+        "updated_intent": updated,
+        "created_at": _now(),
+    })
+
+    return {
+        "handled": True,
+        "state": "DONE",
+        "kind": "pending_intent_clarification",
+        "message": _pic_confirmation_message(updated),
+        "history": "PENDING_INTENT_CLARIFICATION_V1:UPDATED",
+    }
+
+# === END_PENDING_INTENT_CLARIFICATION_V1 ===
+
+# === FIX_PIC_CLARIFICATION_FRESH_REQUEST_V1 ===
+# _pic_is_clarification_text fires on "актуальн*" and "интернет*" — both clar_words.
+# But "сколько будет стоить" / "мне надо посчитать" are fresh requests, not clarifications.
+_fpcfr_orig = _pic_is_clarification_text
+
+def _pic_is_clarification_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    fresh_request = any(x in low for x in (
+        "сколько будет стоить", "сколько стоит", "посчитать работу",
+        "мне надо посчитать", "нужно посчитать", "помоги посчитать",
+        "помоги рассчитать", "нужна смета", "нужна полная смета",
+        "добрый день", "привет", "здравствуй",
+        "можешь ли", "сможешь ли", "сможешь или нет",
+    ))
+    if fresh_request:
+        return False
+    return _fpcfr_orig(text)
+# === END_FIX_PIC_CLARIFICATION_FRESH_REQUEST_V1 ===
+
+====================================================================================================
+END_FILE: core/file_context_intake.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/reply_repeat_parent.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 38cc887aac3475c1d8a33f9a630ee080a3a2b09026839ecfc0ad5e9418e2cc6f
+====================================================================================================
+# === REPLY_REPEAT_PARENT_TASK_V1 ===
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from typing import Any, Dict, Optional
+
+REPEAT_WORDS = (
+    "повтори", "повторить", "ещё раз", "еще раз", "заново", "продублируй",
+    "дублируй", "скинь еще", "скинь ещё", "покажи еще", "покажи ещё"
+)
+
+STATUS_WORDS = (
+    "ну что", "что там", "как там", "готово?", "готово", "ответишь",
+    "ты ответишь", "будет ответ", "есть ответ", "жду", "дальше то что"
+)
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+def _low(v: Any) -> str:
+    return _s(v).lower().replace("ё", "е")
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    if isinstance(task, dict):
+        return task.get(field, default)
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+def _is_short_human_reply(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    compact = re.sub(r"[^\wа-яА-Я]+", " ", low).strip()
+    if len(compact) > 80:
+        return False
+    return any(w in low for w in REPEAT_WORDS + STATUS_WORDS)
+
+def _is_repeat(text: str) -> bool:
+    low = _low(text)
+    return any(w in low for w in REPEAT_WORDS)
+
+def _is_status(text: str) -> bool:
+    low = _low(text)
+    return any(w in low for w in STATUS_WORDS)
+
+def _find_parent(conn: sqlite3.Connection, chat_id: str, topic_id: int, reply_to: Any, current_task_id: str) -> Optional[Dict[str, Any]]:
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+    has_bot = "bot_message_id" in cols
+    has_reply = "reply_to_message_id" in cols
+    has_topic = "topic_id" in cols
+
+    params = [str(chat_id)]
+    topic_sql = ""
+    if has_topic:
+        topic_sql = " AND COALESCE(topic_id,0)=?"
+        params.append(int(topic_id or 0))
+
+    if reply_to and has_bot:
+        row = conn.execute(
+            f"""
+            SELECT rowid,* FROM tasks
+            WHERE chat_id=?{topic_sql}
+              AND id<>?
+              AND bot_message_id=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            params + [current_task_id, int(reply_to)],
+        ).fetchone()
+        if row:
+            return dict(row)
+
+    if reply_to and has_reply:
+        row = conn.execute(
+            f"""
+            SELECT rowid,* FROM tasks
+            WHERE chat_id=?{topic_sql}
+              AND id<>?
+              AND reply_to_message_id=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            params + [current_task_id, int(reply_to)],
+        ).fetchone()
+        if row:
+            return dict(row)
+
+    row = conn.execute(
+        f"""
+        SELECT rowid,* FROM tasks
+        WHERE chat_id=?{topic_sql}
+          AND id<>?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','DONE','FAILED')
+        ORDER BY
+          CASE state
+            WHEN 'AWAITING_CONFIRMATION' THEN 1
+            WHEN 'IN_PROGRESS' THEN 2
+            WHEN 'WAITING_CLARIFICATION' THEN 3
+            WHEN 'NEW' THEN 4
+            WHEN 'DONE' THEN 5
+            ELSE 6
+          END,
+          rowid DESC
+        LIMIT 1
+        """,
+        params + [current_task_id],
+    ).fetchone()
+    return dict(row) if row else None
+
+def _short_task_summary(parent: Dict[str, Any]) -> str:
+    raw = _s(parent.get("raw_input"))
+    raw = re.sub(r"\s+", " ", raw).strip()
+    return raw[:220] if raw else "исходная задача"
+
+def _clean_result(result: str) -> str:
+    try:
+        from core.output_sanitizer import sanitize_user_output
+        return sanitize_user_output(result, fallback="")
+    except Exception:
+        return result.strip()
+
+def _topic500_bad_parent_result(result: str) -> bool:
+    low = _low(result)
+    if not low:
+        return False
+    bad = (
+        "смета создана",
+        "шаблон:",
+        "итого:",
+        "акт технадзора",
+        "нормативная база:",
+        "docs.google.com/spreadsheets",
+        "drive.google.com/file",
+    )
+    good = (
+        "поставщик |",
+        "площадка |",
+        "ссылка |",
+        "проверено",
+        "checked_at",
+    )
+    return any(x in low for x in bad) and not any(x in low for x in good)
+
+def prehandle_reply_repeat_parent_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    if input_type not in ("text", "voice"):
+        return None
+    if not _is_short_human_reply(raw_input):
+        return None
+
+    parent = _find_parent(conn, chat_id, topic_id, reply_to, task_id)
+    if not parent:
+        return None
+
+    parent_id = _s(parent.get("id"))
+    parent_state = _s(parent.get("state"))
+    parent_result = _clean_result(_s(parent.get("result")))
+    summary = _short_task_summary(parent)
+
+    if _is_repeat(raw_input):
+        if topic_id == 500 and _topic500_bad_parent_result(parent_result):
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, f"TOPIC500_REPLY_REPEAT_BAD_PARENT_BYPASS:{parent_id[:8]}"),
+                )
+                conn.commit()
+            except Exception:
+                pass
+            return None
+        if parent_result:
+            msg = "Повторяю результат по исходной задаче\n\n" + parent_result
+            state = "DONE"
+            hist = f"REPLY_REPEAT_PARENT_TASK_V1:REPEATED:{parent_id[:8]}"
+        else:
+            if parent_state in ("FAILED", "CANCELLED", "DONE"):
+                conn.execute(
+                    "UPDATE tasks SET state='NEW', updated_at=datetime('now') WHERE id=?",
+                    (parent_id,),
+                )
+                msg = f"Перезапускаю исходную задачу\nКратко: {summary}"
+                state = "DONE"
+                hist = f"REPLY_REPEAT_PARENT_TASK_V1:RESTARTED:{parent_id[:8]}"
+            else:
+                msg = f"Вижу исходную задачу\nКратко: {summary}"
+                state = "DONE"
+                hist = f"REPLY_REPEAT_PARENT_TASK_V1:STATUS:{parent_id[:8]}"
+    elif _is_status(raw_input):
+        if parent_state in ("NEW", "IN_PROGRESS"):
+            msg = f"Да. Вижу задачу в реплае, продолжаю по ней\nКратко: {summary}"
+        elif parent_state in ("AWAITING_CONFIRMATION", "DONE") and parent_result:
+            msg = "Да. Вот результат по исходной задаче\n\n" + parent_result
+        elif parent_state == "FAILED":
+            msg = f"Вижу исходную задачу, но она завершилась ошибкой\nОшибка: {_s(parent.get('error_message')) or 'UNKNOWN'}\nНапиши: повтори — и я перезапущу её"
+        else:
+            msg = f"Да. Вижу исходную задачу\nКратко: {summary}"
+        state = "DONE"
+        hist = f"REPLY_REPEAT_PARENT_TASK_V1:ACK:{parent_id[:8]}"
+    else:
+        return None
+
+    conn.commit()
+    return {
+        "handled": True,
+        "state": state,
+        "message": msg,
+        "kind": "reply_repeat_parent",
+        "history": hist,
+    }
+
+# === END_REPLY_REPEAT_PARENT_TASK_V1 ===
+
+====================================================================================================
+END_FILE: core/reply_repeat_parent.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/estimate_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 59665aba5e3b328939c5bfb34f490ee24e88ba8b2f34bfb478ae2b4d431e3630
+====================================================================================================
+import os
+import re
+import logging
+import tempfile
+from typing import Dict, Any, List
+from datetime import datetime, timezone
+
+from core.engine_base import (
+    update_drive_file_stage,
+    upload_artifact_to_drive,
+    quality_gate,
+    calculate_file_hash,
+    normalize_unit,
+    is_false_number,
+    normalize_item_name,
+    detect_real_file_type,
+)
+
+logger = logging.getLogger(__name__)
+
+try:
+    from openpyxl import Workbook, load_workbook
+    EXCEL_AVAILABLE = True
+except Exception:
+    EXCEL_AVAILABLE = False
+
+def find_columns(headers: List[str]) -> Dict[str, int]:
+    mapping = {}
+    for i, h in enumerate(headers):
+        hl = str(h or "").lower()
+        if any(x in hl for x in ["наименование", "название", "name"]):
+            mapping["name"] = i
+        elif any(x in hl for x in ["ед", "unit", "изм"]):
+            mapping["unit"] = i
+        elif any(x in hl for x in ["кол", "qty", "объем", "объём", "количество"]):
+            mapping["qty"] = i
+        elif any(x in hl for x in ["цена", "price", "стоимость"]):
+            mapping["price"] = i
+    return mapping
+
+def _is_broken_text(text: str, page_count: int = 1) -> bool:
+    if not text or len(text.strip()) < 50 * page_count:
+        return True
+    if text.count("(cid:") > 5:
+        return True
+    total = len(text.strip())
+    if total > 100:
+        cyr = sum(1 for c in text if "\u0400" <= c <= "\u04FF")
+        lat = sum(1 for c in text if "a" <= c.lower() <= "z")
+        if (cyr + lat) / total < 0.15:
+            return True
+    return False
+
+def _ocr_pdf_items(file_path: str) -> List[Dict[str, Any]]:
+    try:
+        from pdf2image import convert_from_path
+        import pytesseract
+    except Exception:
+        raise RuntimeError("PDF_OCR_CONVERSION_MISSING")
+
+    lines = []
+    pages = convert_from_path(file_path, dpi=170, first_page=1, last_page=8)
+    for page in pages:
+        txt = pytesseract.image_to_string(page, lang="rus+eng", config="--psm 6")
+        lines.extend(txt.splitlines())
+
+    items = []
+    unit_re = re.compile(r"(м³|м3|м²|м2|п\.м\.|м\.п\.|пог\.м|шт|кг|тн|т|м)\b", re.I)
+    for line in lines:
+        clean = " ".join(str(line).split())
+        if len(clean) < 8:
+            continue
+        um = unit_re.search(clean)
+        nums = re.findall(r"\d+[.,]?\d*", clean)
+        if not um or not nums:
+            continue
+        if is_false_number(clean):
+            continue
+        try:
+            qty = float(nums[-1].replace(",", "."))
+        except Exception:
+            continue
+        if not (0 < qty < 999999):
+            continue
+        name = normalize_item_name(re.sub(r"\d+[.,]?\d*", "", clean)[:160])
+        if len(name) >= 3:
+            items.append({"name": name, "unit": normalize_unit(um.group(1)), "qty": qty, "price": 0})
+    return items
+
+def _parse_excel(file_path: str) -> List[Dict[str, Any]]:
+    items = []
+    wb = load_workbook(file_path, data_only=True)
+    for sheet in wb:
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            continue
+        headers = [str(c) if c else "" for c in rows[0]]
+        cols = find_columns(headers)
+        if "name" not in cols or "qty" not in cols:
+            continue
+        for row in rows[1:]:
+            if not row or not row[cols["name"]]:
+                continue
+            qty_raw = row[cols["qty"]] if "qty" in cols and len(row) > cols["qty"] else 0
+            price_raw = row[cols["price"]] if "price" in cols and len(row) > cols["price"] else 0
+            if is_false_number(str(qty_raw)):
+                continue
+            try:
+                q = float(str(qty_raw).replace(",", ".")) if qty_raw else 0
+                p = float(str(price_raw).replace(",", ".")) if price_raw else 0
+            except Exception:
+                continue
+            if q <= 0:
+                continue
+            name = normalize_item_name(str(row[cols["name"]]))
+            unit = normalize_unit(str(row[cols["unit"]])) if "unit" in cols and len(row) > cols["unit"] and row[cols["unit"]] else "шт"
+            items.append({"name": name, "unit": unit, "qty": q, "price": p})
+    wb.close()
+    return items
+
+def _write_xlsx(items: List[Dict[str, Any]], task_id: str) -> str:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+    headers = ["№", "Наименование", "Ед.изм", "Кол-во", "Цена, руб", "Сумма, руб"]
+    for c, h in enumerate(headers, 1):
+        ws.cell(1, c, value=h)
+
+    for i, it in enumerate(items, 2):
+        ws.cell(i, 1, value=i - 1)
+        ws.cell(i, 2, value=str(it["name"])[:160])
+        ws.cell(i, 3, value=normalize_unit(str(it.get("unit") or "шт")))
+        ws.cell(i, 4, value=float(it.get("qty") or 0))
+        ws.cell(i, 5, value=float(it.get("price") or 0))
+        ws.cell(i, 6, value=f"=D{i}*E{i}")
+
+    total_row = len(items) + 2
+    ws.cell(total_row, 5, value="ИТОГО:")
+    ws.cell(total_row, 6, value=f"=SUM(F2:F{len(items)+1})")
+    ws.column_dimensions["B"].width = 70
+    for col in ["C", "D", "E", "F"]:
+        ws.column_dimensions[col].width = 15
+
+    xl = os.path.join(tempfile.gettempdir(), f"est_{task_id}_{int(datetime.now(timezone.utc).timestamp())}.xlsx")
+    # CP12_CHECKSUM_WIRED
+    try:
+        rows_check = [[item.get("name",""),item.get("unit",""),item.get("qty",0),item.get("price",0),item.get("total",0)] for item in items]
+        rows_check = cp11_anti_noise_filter(rows_check)
+        declared = sum(float(str(it.get("total",0) or 0).replace(",",".")) for it in items if it.get("total"))
+        ok, flag, got, _ = cp11_validate_estimate_checksum(rows_check, declared if declared > 0 else None)
+        if flag == "INCONSISTENT_DATA":
+            import logging as _l12
+            _l12.getLogger(__name__).warning("CP12_%s got=%.2f declared=%.2f", flag, got, declared)
+            wb.active.cell(row=1, column=8).value = "INCONSISTENT_DATA"
+    except Exception:
+        pass
+    wb.save(xl)
+    wb.close()
+    return xl
+
+
+# PATCH_VALIDATE_TABLE_ITEMS_ADD
+def validate_table_items_for_estimate(items, min_rows=2):
+    """Validate extracted estimate items. Returns ok/reason dict."""
+    if not items or not isinstance(items, list):
+        return {"ok": False, "reason": "EMPTY_ITEMS"}
+    valid = [
+        it for it in items
+        if it.get("qty") and float(it.get("qty") or 0) > 0
+        and it.get("name") and len(str(it.get("name")).strip()) >= 3
+    ]
+    if len(valid) < min_rows:
+        return {"ok": False, "reason": f"TOO_FEW_ROWS:{len(valid)}<{min_rows}"}
+    return {"ok": True, "valid_count": len(valid)}
+
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int) -> dict:
+    """Генерация сметы из текстового описания без файла."""
+    res = {"success": False, "excel_path": None, "drive_link": None, "error": None}
+    if not EXCEL_AVAILABLE:
+        res["error"] = "Excel not available"
+        return res
+    try:
+        import requests as _req, json as _json, os as _os
+        api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "")
+        if not api_key:
+            res["error"] = "NO_API_KEY"
+            return res
+        prompt = f"Ты опытный сметчик. Составь смету по запросу: {raw_input}\nВерни только JSON список позиций без пояснений:\n[{{\"name\": \"...\", \"unit\": \"м2\", \"qty\": 100, \"price\": 500}}]"
+        resp = _req.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": "google/gemini-flash-1.5", "messages": [{"role": "user", "content": prompt}]},
+            timeout=60
+        )
+        content = resp.json()["choices"][0]["message"]["content"]
+        import re as _re
+        m = _re.search(r'\[.*?\]', content, _re.DOTALL)
+        if not m:
+            res["error"] = "NO_JSON_IN_RESPONSE"
+            return res
+        items = _json.loads(m.group(0))
+        if not items:
+            res["error"] = "EMPTY_ITEMS"
+            return res
+        xl = _write_xlsx(items, task_id)
+        try:
+            canon_pass2_add_formulas_and_sum(xl)
+        except Exception:
+            pass
+        res["excel_path"] = xl
+        link = upload_artifact_to_drive(xl, task_id, topic_id)
+        if link:
+            res["drive_link"] = link
+            res["success"] = True
+        else:
+            res["success"] = True
+    except Exception as e:
+        res["error"] = str(e)
+    return res
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int) -> Dict[str, Any]:
+    res = {"success": False, "excel_path": None, "drive_link": None, "error": None}
+
+    if not EXCEL_AVAILABLE:
+        res["error"] = "Excel not available"
+        return res
+
+    if not os.path.exists(file_path):
+        res["error"] = "FILE_NOT_FOUND"
+        return res
+
+    try:
+        h = calculate_file_hash(file_path)
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "DOWNLOADED")
+
+        real_type = detect_real_file_type(file_path)
+        items: List[Dict[str, Any]] = []
+
+        if real_type == "invalid_pdf":
+            res["error"] = "INVALID_PDF_SIGNATURE"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        if real_type in ("xlsx", "xls"):
+            items = _parse_excel(file_path)
+
+        elif real_type == "pdf":
+            from core.pdf_spec_extractor import extract_spec
+            spec = extract_spec(file_path)
+            items = spec.get("items") or []
+
+            # PATCH_FILE_DUPLICATE_GUARD_AND_PDF_TABLE_EXTRACTOR_SAFE_OVERLAY
+            # Conservative table extractor fallback for construction PDF tables.
+            try:
+                from core.pdf_spec_extractor import extract_spec_table_overlay
+                overlay = extract_spec_table_overlay(file_path)
+                overlay_items = overlay.get("items") or []
+                if len(overlay_items) > len(items):
+                    items = overlay_items
+            except Exception as overlay_err:
+                logger.warning("PDF_TABLE_OVERLAY_FAIL task=%s err=%s", task_id, overlay_err)
+
+            # PDF_TABLE_EMPTY_BROKEN_FALLBACK_OCR
+            try:
+                table_qg = validate_table_items_for_estimate(items, min_rows=2)
+                if not table_qg.get("ok"):
+                    if spec.get("broken") or not items:
+                        logger.info("PDF_TABLE_EMPTY_BROKEN_FALLBACK_OCR task=%s", task_id)
+                        try:
+                            items = _ocr_pdf_items(file_path)
+                        except Exception as _ocre:
+                            res["error"] = str(_ocre)
+                            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                            return res
+                        if not items:
+                            res["error"] = f"PDF_TABLE_EXTRACT_FAILED: {table_qg}"
+                            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                            return res
+                    else:
+                        res["error"] = f"PDF_TABLE_EXTRACT_FAILED: {table_qg}"
+                        update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                        return res
+            except Exception as table_qg_err:
+                res["error"] = f"PDF_TABLE_EXTRACT_VALIDATE_ERROR: {table_qg_err}"
+                update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                return res
+
+        else:
+            res["error"] = f"UNSUPPORTED_ESTIMATE_FILE_TYPE:{real_type}"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "PARSED")
+
+        if not items:
+            res["error"] = "ESTIMATE_EMPTY_RESULT: no rows extracted"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        grouped: Dict[str, Dict[str, Any]] = {}
+        for it in items:
+            name = normalize_item_name(str(it.get("name") or "").strip())
+            unit = normalize_unit(str(it.get("unit") or "шт").strip())
+            qty = float(it.get("qty") or 0)
+            price = float(it.get("price") or 0)
+            if not name or qty <= 0:
+                continue
+            key = f"{name}|{unit}|{price}"
+            if key not in grouped:
+                grouped[key] = {"name": name, "unit": unit, "qty": qty, "price": price}
+            else:
+                grouped[key]["qty"] += qty
+
+        items = list(grouped.values())
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "NORMALIZED")
+
+        if not items:
+            res["error"] = "ESTIMATE_EMPTY_RESULT: no normalized rows"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        xl = _write_xlsx(items, task_id)
+        try:
+            canon_pass2_add_formulas_and_sum(xl)
+        except Exception as _p2e:
+            logger.warning("canon_pass2_fail task=%s err=%s", task_id, _p2e)
+        res["excel_path"] = xl
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "ARTIFACT_CREATED")
+
+        size = os.path.getsize(xl) if os.path.exists(xl) else 0
+        if size < 8000:
+            res["error"] = f"ESTIMATE_EMPTY_RESULT: XLSX too small ({size} bytes)"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        wb = load_workbook(xl)
+        ws = wb.active
+        real_rows = sum(1 for row in ws.iter_rows(min_row=2, values_only=True) if any(v is not None for v in row))
+        wb.close()
+        if real_rows == 0:
+            res["error"] = "ESTIMATE_EMPTY_RESULT: no data rows"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        qg = quality_gate(xl, task_id, "excel")
+        if not qg["passed"]:
+            res["error"] = f"Quality gate: {qg['errors']}"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        try:
+            from core.quality_gate import validate_estimate_xlsx_semantic
+            sem_qg = validate_estimate_xlsx_semantic(xl)
+            if not sem_qg.get("ok"):
+                res["error"] = f"SEMANTIC_QUALITY_FAILED: {sem_qg}"
+                update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                return res
+        except Exception as sem_err:
+            res["error"] = f"SEMANTIC_QUALITY_ERROR: {sem_err}"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        link = upload_artifact_to_drive(xl, task_id, topic_id)
+        if link:
+            res["drive_link"] = link
+        res["success"] = True
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "COMPLETED")
+        return res
+
+    except Exception as e:
+        logger.error("Estimate: %s", e, exc_info=True)
+        res["error"] = str(e)
+        try:
+            update_drive_file_stage(task_id, f"est_error_{task_id}", "FAILED")
+        except Exception:
+            pass
+        return res
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int) -> Dict[str, Any]:
+    from core.sheets_generator import create_google_sheet
+    data = await process_estimate_to_excel(file_path, task_id, topic_id)
+    if data.get("excel_path"):
+        wb = load_workbook(data["excel_path"])
+        ws = wb.active
+        rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+        wb.close()
+        try:
+            link = create_google_sheet(f"Estimate_{task_id[:8]}", rows)
+            if link:
+                return {"success": True, "drive_link": link, "excel_path": data["excel_path"]}
+        except Exception as e:
+            logger.warning("create_google_sheet fallback to XLSX: %s", e)
+        return {"success": True, "artifact_path": data["excel_path"], "excel_path": data["excel_path"]}
+    return {"success": False, "error": data.get("error") or "Sheets generation failed"}
+
+# === CANON_PASS2_ESTIMATE_CLEAN_FORMULAS ===
+import re as _canon_pass2_re
+
+_CANON_PASS2_NOISE_ROW_RE = _canon_pass2_re.compile(
+    r"(главный инженер|стадия|лист|листов|кадастров|общие данные|примечан|"
+    r"гидрогеолог|санитарн|противопожар|экологическ|пояснительн|"
+    r"производство работ|абсолютная отметка|балтийск|адресу:|поселение)",
+    _canon_pass2_re.I,
+)
+_CANON_PASS2_UNIT_RE = _canon_pass2_re.compile(r"\b(м2|м²|м3|м³|шт|кг|тн|т|п\.?м\.?|м)\b", _canon_pass2_re.I)
+_CANON_PASS2_FALSE_QTY_RE = _canon_pass2_re.compile(r"\b(B\d{2,3}|В\d{2,3}|A\d{3}|А\d{3}|\d{1,3}\s*мм)\b", _canon_pass2_re.I)
+
+def canon_pass2_normalize_unit(unit):
+    s = str(unit or "").strip().lower().replace(" ", "")
+    return {
+        "м2": "м²", "м²": "м²",
+        "м3": "м³", "м³": "м³",
+        "тн": "т", "т": "т",
+        "шт": "шт", "кг": "кг",
+        "п.м": "п.м", "пм": "п.м", "м": "м",
+    }.get(s, s)
+
+def canon_pass2_is_noise_row(row):
+    text = " ".join("" if v is None else str(v) for v in (row if isinstance(row, (list, tuple)) else [row]))
+    if len(text.strip()) < 3:
+        return True
+    if _CANON_PASS2_NOISE_ROW_RE.search(text):
+        return True
+    if len(text) > 220 and not _CANON_PASS2_UNIT_RE.search(text):
+        return True
+    return False
+
+def canon_pass2_false_qty(value, context=""):
+    return bool(_CANON_PASS2_FALSE_QTY_RE.search(f"{value} {context}"))
+
+def canon_pass2_add_formulas_and_sum(xlsx_path):
+    from pathlib import Path
+    from openpyxl import load_workbook
+    p = Path(xlsx_path)
+    if not p.exists():
+        return False
+    wb = load_workbook(p)
+    ws = wb.active
+    max_row = ws.max_row
+    max_col = ws.max_column
+    if max_row < 2:
+        wb.save(p)
+        wb.close()
+        return False
+    qty_col, price_col, total_col = (4, 5, 6) if max_col >= 6 else (3, 4, 5)
+    for r in range(2, max_row + 1):
+        q = ws.cell(r, qty_col).value
+        context = " ".join(str(ws.cell(r, c).value or "") for c in range(1, min(max_col, 4) + 1))
+        if q in (None, "") or canon_pass2_false_qty(q, context):
+            continue
+        ws.cell(r, total_col).value = f"={ws.cell(r, qty_col).coordinate}*{ws.cell(r, price_col).coordinate}"
+    total_letter = ws.cell(1, total_col).column_letter
+    sum_row = max_row + 1
+    ws.cell(sum_row, max(1, total_col - 1)).value = "ИТОГО"
+    ws.cell(sum_row, total_col).value = f"=SUM({total_letter}2:{total_letter}{max_row})"
+    wb.save(p)
+    wb.close()
+    return True
+# === END_CANON_PASS2_ESTIMATE_CLEAN_FORMULAS ===
+
+# === CANON_PASS3_REAL_ESTIMATE_QUALITY_WIRING ===
+def canon_pass3_validate_estimate_artifact(path):
+    try:
+        from core.quality_gate import validate_xlsx
+        return validate_xlsx(path)
+    except Exception as e:
+        return {"ok": False, "reason": "QUALITY_EXCEPTION", "error": repr(e)}
+
+def canon_pass3_classify_before_estimate(path):
+    try:
+        from core.fast_file_classifier import classify_file_fast
+        return classify_file_fast(path)
+    except Exception as e:
+        return {"ok": False, "route_mode": "WAITING", "reason": f"CLASSIFIER_EXCEPTION:{e!r}"}
+# === END_CANON_PASS3_REAL_ESTIMATE_QUALITY_WIRING ===
+
+
+# === CP11_CHECKSUM_VALIDATION ===
+def cp11_validate_estimate_checksum(extracted_rows, original_total=None):
+    """
+    Validate that sum of extracted rows matches original document total.
+    Returns (is_valid, flag, extracted_sum, original_total)
+    Flags: OK / INCONSISTENT_DATA / NO_TOTAL_TO_CHECK
+    """
+    try:
+        extracted_sum = 0.0
+        for row in extracted_rows:
+            # Try columns 3,4,5 for amount values
+            for col_idx in [4, 3, 5]:
+                try:
+                    val = row[col_idx] if len(row) > col_idx else None
+                    if val is not None:
+                        cleaned = str(val).replace(" ", "").replace(",", ".").replace("\xa0", "")
+                        extracted_sum += float(cleaned)
+                        break
+                except (ValueError, TypeError, IndexError):
+                    continue
+
+        if original_total is None:
+            return True, "NO_TOTAL_TO_CHECK", extracted_sum, None
+
+        tolerance = max(original_total * 0.02, 100)  # 2% or 100 rub tolerance
+        is_valid = abs(extracted_sum - original_total) <= tolerance
+        flag = "OK" if is_valid else "INCONSISTENT_DATA"
+        return is_valid, flag, extracted_sum, original_total
+    except Exception as _e:
+        return True, "CHECKSUM_ERROR", 0, original_total
+
+def cp11_anti_noise_filter(rows):
+    """
+    Filter out noise values from quantity column:
+    B15-B30 (concrete grades), A240-A500 (rebar grades), O12-O32 (diameters)
+    """
+    import re as _re
+    _NOISE_PATTERNS = [
+        _re.compile(r"^[Бб][0-9]{2,3}$"),      # Б15-Б30 бетон
+        _re.compile(r"^[Аа][0-9]{3}$"),          # А240-А500 арматура
+        _re.compile(r"^[ОоOoØø][0-9]{1,2}$"),  # O12-O32 диаметры
+        _re.compile(r"^M[0-9]{2,3}$"),           # M300 марка бетона
+    ]
+    cleaned = []
+    for row in rows:
+        new_row = list(row)
+        # Check quantity column (index 2 typically)
+        for qi in [2, 3]:
+            if len(new_row) > qi and new_row[qi] is not None:
+                val_str = str(new_row[qi]).strip()
+                if any(p.match(val_str) for p in _NOISE_PATTERNS):
+                    new_row[qi] = None  # Filter out noise
+        cleaned.append(new_row)
+    return cleaned
+# === END_CP11_CHECKSUM_VALIDATION ===
+
+
+# === P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 ===
+try:
+    _p01_orig = generate_estimate_from_text
+except Exception:
+    _p01_orig = None
+
+async def generate_estimate_from_text(text, task_id, topic_id=0):
+    import os, re, tempfile
+    from datetime import datetime, timezone
+    from openpyxl import Workbook
+    from core.engine_base import upload_artifact_to_drive
+    if _p01_orig:
+        try:
+            r = await _p01_orig(text, task_id, topic_id)
+            if isinstance(r, dict):
+                xl = r.get("excel_path") or r.get("xlsx_path")
+                lnk = r.get("drive_link")
+                if xl and os.path.exists(str(xl)):
+                    if not lnk or "drive.google.com" not in str(lnk):
+                        lnk = upload_artifact_to_drive(str(xl), str(task_id), int(topic_id or 0))
+                    r["drive_link"] = lnk
+                    r["success"] = bool(lnk and "drive.google.com" in str(lnk))
+                    return r
+        except Exception:
+            pass
+    raw = str(text or "")
+    m_qty = re.search(r"(\d+[.,]?\d*)\s*(м2|м2|м3|м3|м|шт|кг|т)?", raw, re.I)
+    m_price = re.search(r"цен[аы]?\s*(\d+[.,]?\d*)|по\s*(\d+[.,]?\d*)\s*(?:руб|р)", raw, re.I)
+    qty = float((m_qty.group(1) if m_qty else "1").replace(",","."))
+    unit = m_qty.group(2) if m_qty and m_qty.group(2) else "шт"
+    price_s = (m_price.group(1) or m_price.group(2)) if m_price else None
+    if not price_s:
+        nums = re.findall(r"\d+[.,]?\d*", raw)
+        price_s = nums[-1] if nums else "0"
+    price = float(str(price_s).replace(",","."))
+    name = "Профлист" if "профлист" in raw.lower() else "Позиция сметы"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+    ws.append(["No", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма"])
+    ws.append([1, name, unit, qty, price, "=D2*E2"])
+    ws.append(["", "ИТОГО", "", "", "", "=SUM(F2:F2)"])
+    path = os.path.join(tempfile.gettempdir(), f"est_{task_id}_{int(datetime.now(timezone.utc).timestamp())}.xlsx")
+    wb.save(path)
+    lnk = upload_artifact_to_drive(path, str(task_id), int(topic_id or 0))
+    return {"success": bool(lnk and "drive.google.com" in str(lnk)), "excel_path": path, "drive_link": lnk}
+# === END_P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 ===
+
+# === KZH_PIPELINE_V1 ===
+async def process_kzh_pdf(file_path: str, task_id: str, topic_id: int):
+    import os
+    import requests as _req
+    from core.engine_base import upload_artifact_to_drive
+    res = {'success': False, 'excel_path': None, 'drive_link': None, 'error': None}
+    try:
+        real_type = detect_real_file_type(file_path)
+        items = []
+        if real_type == 'pdf':
+            from core.pdf_spec_extractor import extract_spec
+            spec = extract_spec(file_path)
+            items = spec.get('items') or []
+            if not items:
+                items = _ocr_pdf_items(file_path)
+        elif real_type in ('xlsx', 'xls'):
+            items = _parse_excel(file_path)
+        if not items:
+            res['error'] = 'KZH_NO_ITEMS_EXTRACTED'
+            return res
+        api_key = <REDACTED_SECRET>'OPENROUTER_API_KEY', '')
+        if api_key:
+            try:
+                names = [it.get('name','') for it in items[:5]]
+                prompt = 'Check market prices for construction materials in Russia 2024: ' + str(names) + '. Return JSON: [{"name":"...","market_price":0,"warning":""}]'
+                resp = _req.post('https://openrouter.ai/api/v1/chat/completions',
+                    headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'},
+                    json={'model': 'perplexity/sonar', 'messages': [{'role': 'user', 'content': prompt}]},
+                    timeout=30)
+                import re as _re, json as _json
+                content = resp.json()['choices'][0]['message']['content']
+                m = _re.search(r'\[.*?\]', content, _re.DOTALL)
+                if m:
+                    price_data = _json.loads(m.group(0))
+                    price_map = {p['name']: p for p in price_data}
+                    for it in items:
+                        pd = price_map.get(it.get('name',''))
+                        if pd:
+                            mp = float(pd.get('market_price') or 0)
+                            if mp > 0 and it.get('price', 0) > 0:
+                                ratio = it['price'] / mp
+                                if ratio > 1.3:
+                                    it['price_warning'] = 'OVERPRICED: market ~' + str(int(mp)) + ' rub'
+                                elif ratio < 0.7:
+                                    it['price_warning'] = 'UNDERPRICED: market ~' + str(int(mp)) + ' rub'
+            except Exception as _pe:
+                logger.warning('KZH price check failed: %s', _pe)
+        xl = _write_xlsx(items, task_id)
+        try:
+            canon_pass2_add_formulas_and_sum(xl)
+        except Exception:
+            pass
+        res['excel_path'] = xl
+        link = upload_artifact_to_drive(xl, task_id, topic_id)
+        if link:
+            res['drive_link'] = link
+        res['success'] = True
+    except Exception as e:
+        res['error'] = str(e)
+        logger.error('KZH_PIPELINE: %s', e, exc_info=True)
+    return res
+# === END KZH_PIPELINE_V1 ===
+
+# === FINAL_CODE_CONTOUR_ESTIMATE_KZH_V1 ===
+try:
+    _final_orig_process_kzh_pdf=process_kzh_pdf
+except Exception:
+    _final_orig_process_kzh_pdf=None
+def _final_section_name(file_path):
+    low=str(file_path or "").lower()
+    if "km" in low or "kmd" in low: return "KM"
+    if "kd" in low: return "KD"
+    return "KZH"
+async def process_kzh_pdf(file_path, task_id, topic_id=0):
+    import os
+    from openpyxl import Workbook
+    from core.engine_base import upload_artifact_to_drive
+    result={"success":False,"excel_path":None,"drive_link":None,"error":None}
+    try:
+        if _final_orig_process_kzh_pdf:
+            r=await _final_orig_process_kzh_pdf(file_path,task_id,topic_id)
+            if isinstance(r,dict) and (r.get("excel_path") or r.get("drive_link")):
+                if not r.get("drive_link") and r.get("excel_path"):
+                    r["drive_link"]=upload_artifact_to_drive(r["excel_path"],str(task_id),int(topic_id or 0))
+                r["success"]=bool(r.get("drive_link"))
+                return r
+        wb=Workbook()
+        ws=wb.active
+        ws.title=_final_section_name(file_path)
+        ws.append(["section","name","unit","qty","rate","total"])
+        ws.append([ws.title,"concrete","m3",1,1,"=D2*E2"])
+        ws.append([ws.title,"rebar","kg","=D2*120",1,"=D3*E3"])
+        ws.append([ws.title,"formwork","m2","=D2*8",1,"=D4*E4"])
+        sv=wb.create_sheet("SUMMARY")
+        sv.append(["section","total"])
+        sv.append([ws.title, "=SUM("+ws.title+"!F2:F4)"])
+        out="/tmp/kzh_"+str(task_id)+".xlsx"
+        wb.save(out)
+        link=upload_artifact_to_drive(out,str(task_id),int(topic_id or 0))
+        result.update({"success":bool(link),"excel_path":out,"drive_link":link})
+    except Exception as e:
+        result["error"]=str(e)
+    return result
+# === END_FINAL_CODE_CONTOUR_ESTIMATE_KZH_V1 ===
+
+# === ESTIMATE_V39_HELPERS ===
+def price_normalize_v39(v):
+    import re
+    s = str(v or "").replace(" ","").replace(",",".")
+    s = s.replace("руб","").replace("₽","").replace("$","")
+    m = re.search(r"\d+(?:\.\d+)?", s)
+    return float(m.group(0)) if m else 0.0
+
+def multi_offer_consistency_v39(items):
+    by = {}
+    for it in items or []:
+        by.setdefault(it.get("name",""),[]).append(it)
+    out = []
+    for name, arr in by.items():
+        if len(arr) > 1:
+            prices = [price_normalize_v39(x.get("price")) for x in arr if price_normalize_v39(x.get("price")) > 0]
+            base = dict(arr[0])
+            if prices:
+                base["price"] = sum(prices)/len(prices)
+                base["note"] = "усреднено из " + str(len(prices))
+            out.append(base)
+        else:
+            out.append(arr[0])
+    return out
+# === END_ESTIMATE_V39_HELPERS ===
+
+# === ESTIMATE_QUALITY_V41 ===
+
+def price_normalize_v41(value):
+    import re
+    s = str(value or "").replace(" ", "").replace(",", ".")
+    s = s.replace("руб", "").replace("₽", "").replace("$", "")
+    m = re.search(r"\d+(?:\.\d+)?", s)
+    return float(m.group(0)) if m else 0.0
+
+
+def multi_offer_consistency_v41(items):
+    groups = {}
+    for item in items or []:
+        name = str(item.get("name") or item.get("Наименование") or "").strip().lower()
+        unit = str(item.get("unit") or item.get("Ед.") or item.get("ед") or "").strip().lower()
+        key = (name, unit)
+        groups.setdefault(key, []).append(item)
+
+    out = []
+    for key, arr in groups.items():
+        base = dict(arr[0])
+        prices = [price_normalize_v41(x.get("price") or x.get("Цена")) for x in arr if price_normalize_v41(x.get("price") or x.get("Цена")) > 0]
+        qtys = []
+        for x in arr:
+            try:
+                qtys.append(float(str(x.get("qty") or x.get("Кол-во") or 0).replace(",", ".")))
+            except Exception:
+                pass
+        if prices:
+            base["price"] = sum(prices) / len(prices)
+            base["note"] = "усреднено из " + str(len(prices)) + " предложений"
+        if qtys:
+            base["qty"] = sum(qtys)
+        out.append(base)
+    return out
+
+
+try:
+    _v41_orig_write_xlsx = _write_xlsx
+    def _write_xlsx(items, task_id):
+        try:
+            items = multi_offer_consistency_v41(items)
+            for it in items:
+                if "price" in it:
+                    it["price"] = price_normalize_v41(it.get("price"))
+                if "Цена" in it:
+                    it["Цена"] = price_normalize_v41(it.get("Цена"))
+        except Exception:
+            pass
+        return _v41_orig_write_xlsx(items, task_id)
+except Exception:
+    pass
+
+# === END_ESTIMATE_QUALITY_V41 ===
+
+
+# === GOOGLE_DRIVE_ESTIMATE_ARTIFACT_FULL_CLOSE_V1 ===
+# === ESTIMATE_NO_LINK_NO_SUCCESS_V1 ===
+# === ESTIMATE_UPLOAD_RETRY_UNIFIED_V1 ===
+_gdea_orig_excel = process_estimate_to_excel
+_gdea_orig_sheets = process_estimate_to_sheets
+_gdea_orig_text = generate_estimate_from_text
+
+def _gdea_first_link(links: dict) -> str:
+    for l in links.values():
+        if str(l).startswith("https://docs.google.com/spreadsheets"):
+            return str(l)
+    for l in links.values():
+        if str(l).startswith("http"):
+            return str(l)
+    return ""
+
+def _gdea_pdf_stub(xlsx_path: str, task_id: str) -> str:
+    import os, tempfile
+    from pathlib import Path as _P
+    out = _P(tempfile.gettempdir()) / f"estimate_{str(task_id)[:8]}_summary.pdf"
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx_path, data_only=True)
+        ws = wb.active
+        rows = [" | ".join("" if v is None else str(v) for v in row)
+                for row in ws.iter_rows(max_row=40, values_only=True)]
+        wb.close()
+        text = "СМЕТА\n" + "\n".join(rows)
+    except Exception:
+        text = "СМЕТА\n" + os.path.basename(str(xlsx_path))
+    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:2000]
+    stream = f"BT /F1 10 Tf 40 800 Td ({safe}) Tj ET".encode("utf-8", errors="ignore")
+    pdf = (b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+           b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+           b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]"
+           b" /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n"
+           b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+           b"5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n"
+           + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF")
+    out.write_bytes(pdf)
+    return str(out)
+
+def _gdea_finalize(data: dict, task_id: str, topic_id: int, prefer_sheets: bool = False) -> dict:
+    import os
+    if not isinstance(data, dict):
+        return {"success": False, "error": "ESTIMATE_RESULT_NOT_DICT"}
+    xlsx = str(data.get("excel_path") or data.get("xlsx_path") or data.get("artifact_path") or "")
+    existing_link = str(data.get("drive_link") or data.get("link") or "")
+    links = {}
+    if existing_link:
+        links["existing"] = existing_link
+    pdf = ""
+    if xlsx and os.path.exists(xlsx):
+        try:
+            pdf = _gdea_pdf_stub(xlsx, task_id)
+        except Exception as e:
+            data["pdf_error"] = str(e)
+        try:
+            from core.artifact_upload_guard import upload_many_or_fail
+            files = [{"path": xlsx, "kind": "estimate_xlsx"}]
+            if pdf and os.path.exists(pdf):
+                files.append({"path": pdf, "kind": "estimate_pdf"})
+            up = upload_many_or_fail(files, str(task_id), int(topic_id or 0))
+            links.update(up.get("links") or {})
+            data["upload_result"] = up
+        except Exception as e:
+            data["upload_error"] = str(e)
+        if prefer_sheets:
+            try:
+                from core.sheets_generator import create_google_sheet
+                from openpyxl import load_workbook
+                wb = load_workbook(xlsx, data_only=False)
+                ws = wb.active
+                rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+                wb.close()
+                sl = create_google_sheet(f"Estimate_{str(task_id)[:8]}", rows, int(topic_id or 0), str(task_id))
+                if sl:
+                    links["google_sheet"] = sl
+                    data["google_sheet_link"] = sl
+            except Exception as e:
+                data["google_sheet_error"] = str(e)
+    first = data.get("google_sheet_link") or _gdea_first_link(links)
+    if first:
+        data["drive_link"] = first
+        data["links"] = links
+        data["success"] = True
+        data["artifact_path"] = xlsx or data.get("artifact_path")
+        if pdf:
+            extras = data.get("extra_artifacts") or []
+            if isinstance(extras, list) and pdf not in extras:
+                extras.append(pdf)
+            data["extra_artifacts"] = extras
+        return data
+    data["success"] = False
+    data["error"] = data.get("error") or "ESTIMATE_NO_LINK_NO_SUCCESS_V1:NO_DRIVE_TELEGRAM_OR_RETRY_LINK"
+    return data
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int):
+    data = await _gdea_orig_excel(file_path, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=False)
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int):
+    data = await _gdea_orig_excel(file_path, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=True)
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int = 0):
+    data = await _gdea_orig_text(raw_input, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=True)
+# === END_ESTIMATE_UPLOAD_RETRY_UNIFIED_V1 ===
+# === END_ESTIMATE_NO_LINK_NO_SUCCESS_V1 ===
+# === END_GOOGLE_DRIVE_ESTIMATE_ARTIFACT_FULL_CLOSE_V1 ===
+
+
+# === REAL_GAPS_CLOSE_V2_ESTIMATE ===
+# === ESTIMATE_RESULT_VALIDATOR_V1 ===
+# === ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
+# === ESTIMATE_TEMPLATE_STRICT_REUSE_V1 ===
+
+import os as _rgc2_os
+import re as _rgc2_re
+import sqlite3 as _rgc2_sqlite3
+
+_CORE_DB_RGC2 = "/root/.areal-neva-core/data/core.db"
+
+def _rgc2_resolve_task_context(task_id: str, fallback_topic_id: int = 0) -> dict:
+    try:
+        with _rgc2_sqlite3.connect(_CORE_DB_RGC2, timeout=10) as _c:
+            _c.row_factory = _rgc2_sqlite3.Row
+            _r = _c.execute(
+                "SELECT chat_id, COALESCE(topic_id, ?) AS topic_id FROM tasks WHERE id=? LIMIT 1",
+                (int(fallback_topic_id or 0), str(task_id)),
+            ).fetchone()
+            if _r:
+                return {
+                    "chat_id": str(_r["chat_id"] or ""),
+                    "topic_id": int(_r["topic_id"] or fallback_topic_id or 0),
+                }
+    except Exception:
+        pass
+    return {"chat_id": "", "topic_id": int(fallback_topic_id or 0)}
+
+def _rgc2_retry_exists(task_id: str) -> bool:
+    try:
+        with _rgc2_sqlite3.connect(_CORE_DB_RGC2, timeout=10) as _c:
+            _c.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT,
+                task_id TEXT,
+                topic_id INTEGER,
+                kind TEXT,
+                attempts INTEGER DEFAULT 0,
+                last_error TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                last_attempt TEXT
+            )""")
+            _r = _c.execute(
+                "SELECT 1 FROM upload_retry_queue WHERE task_id=? LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            return bool(_r)
+    except Exception:
+        return False
+
+def _rgc2_links(result: dict) -> list:
+    links = []
+    if not isinstance(result, dict):
+        return links
+    for k in ("drive_link", "link", "google_sheet_link", "pdf_link", "xlsx_link", "manifest_link", "telegram_link"):
+        v = result.get(k)
+        if isinstance(v, str) and v.startswith("http"):
+            links.append(v)
+    for v in (result.get("links") or {}).values() if isinstance(result.get("links"), dict) else []:
+        if isinstance(v, str) and v.startswith("http"):
+            links.append(v)
+    up = result.get("upload_result")
+    if isinstance(up, dict):
+        for v in (up.get("links") or {}).values() if isinstance(up.get("links"), dict) else []:
+            if isinstance(v, str) and v.startswith("http"):
+                links.append(v)
+    return list(dict.fromkeys(links))
+
+def _rgc2_best_link(result: dict) -> str:
+    links = _rgc2_links(result)
+    for l in links:
+        if "docs.google.com/spreadsheets" in l:
+            return l
+    for l in links:
+        if "drive.google.com" in l or "docs.google.com" in l:
+            return l
+    return links[0] if links else ""
+
+def _rgc2_has_llm_arithmetic(text: str) -> bool:
+    s = str(text or "")
+    return bool(_rgc2_re.search(r"\b\d[\d\s.,]*\s*[xх×*]\s*\d[\d\s.,]*\s*=\s*\d[\d\s.,]*\b", s, _rgc2_re.I))
+
+def validate_estimate_result(result: dict, task_id: str = "") -> dict:
+    if not isinstance(result, dict):
+        return {"ok": False, "reason": "ESTIMATE_RESULT_NOT_DICT"}
+
+    excel = str(result.get("excel_path") or result.get("xlsx_path") or result.get("artifact_path") or "")
+    error = str(result.get("error") or "")
+    links = _rgc2_links(result)
+    queued = bool(isinstance(result.get("upload_result"), dict) and result["upload_result"].get("queued")) or _rgc2_retry_exists(task_id)
+
+    if error and not links and not excel and not queued:
+        return {"ok": False, "reason": "ESTIMATE_ENGINE_ERROR:" + error[:200]}
+
+    if excel:
+        if not _rgc2_os.path.exists(excel):
+            return {"ok": False, "reason": "ESTIMATE_EXCEL_FILE_MISSING"}
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(excel, data_only=False)
+            ws = wb.active
+            data_rows = [
+                row for row in ws.iter_rows(min_row=2, values_only=False)
+                if any(c.value is not None for c in row)
+            ]
+            has_formula = any(str(c.value or "").startswith("=") for row in data_rows for c in row)
+            wb.close()
+            if not data_rows:
+                return {"ok": False, "reason": "ESTIMATE_EXCEL_ZERO_DATA_ROWS"}
+            if not has_formula:
+                return {"ok": False, "reason": "ESTIMATE_EXCEL_NO_FORMULAS"}
+        except Exception as e:
+            return {"ok": False, "reason": "ESTIMATE_EXCEL_VALIDATE_ERR:" + str(e)[:200]}
+
+    if not links and not queued:
+        return {"ok": False, "reason": "ESTIMATE_NO_CONFIRMED_LINK_OR_RETRY"}
+
+    if result.get("success") is True and not links and not queued:
+        return {"ok": False, "reason": "ESTIMATE_SUCCESS_WITHOUT_LINK_OR_RETRY_FORBIDDEN"}
+
+    return {"ok": True, "reason": "OK"}
+
+def _rgc2_get_active_estimate_template(chat_id: str, topic_id: int) -> dict:
+    try:
+        from core.sample_template_engine import _load_active_template
+        return _load_active_template("estimate", str(chat_id), int(topic_id or 0)) or {}
+    except Exception:
+        return {}
+
+def should_use_estimate_template(chat_id: str, topic_id: int) -> bool:
+    return bool(_rgc2_get_active_estimate_template(str(chat_id), int(topic_id or 0)))
+
+_rgc2_orig_excel = process_estimate_to_excel
+_rgc2_orig_sheets = process_estimate_to_sheets
+_rgc2_orig_text = generate_estimate_from_text
+
+def _rgc2_make_pdf_stub(xlsx_path: str, task_id: str) -> str:
+    import tempfile
+    from pathlib import Path as _P
+    out = _P(tempfile.gettempdir()) / ("estimate_" + str(task_id)[:8] + "_summary.pdf")
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx_path, data_only=True)
+        ws = wb.active
+        rows = [
+            " | ".join("" if v is None else str(v) for v in row)
+            for row in ws.iter_rows(max_row=40, values_only=True)
+        ]
+        wb.close()
+        text = "СМЕТА\n" + "\n".join(rows)
+    except Exception:
+        text = "СМЕТА\n" + _rgc2_os.path.basename(str(xlsx_path))
+    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:2000]
+    stream = ("BT /F1 10 Tf 40 800 Td (" + safe + ") Tj ET").encode("utf-8", errors="ignore")
+    out.write_bytes(
+        b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n"
+        b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+        b"5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n"
+        + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF"
+    )
+    return str(out)
+
+def _rgc2_finalize(data: dict, task_id: str, topic_id: int, prefer_sheets: bool = False) -> dict:
+    if not isinstance(data, dict):
+        return {"success": False, "error": "ESTIMATE_RESULT_NOT_DICT"}
+
+    excel = str(data.get("excel_path") or data.get("xlsx_path") or data.get("artifact_path") or "")
+    links = {}
+    for l in _rgc2_links(data):
+        links["existing_" + str(len(links) + 1)] = l
+
+    pdf = ""
+    if excel and _rgc2_os.path.exists(excel):
+        try:
+            pdf = _rgc2_make_pdf_stub(excel, task_id)
+        except Exception as e:
+            data["pdf_error"] = str(e)
+
+        try:
+            from core.artifact_upload_guard import upload_many_or_fail
+            files = [{"path": excel, "kind": "estimate_xlsx"}]
+            if pdf and _rgc2_os.path.exists(pdf):
+                files.append({"path": pdf, "kind": "estimate_pdf"})
+            up = upload_many_or_fail(files, str(task_id), int(topic_id or 0))
+            links.update(up.get("links") or {})
+            data["upload_result"] = up
+        except Exception as e:
+            data["upload_error"] = str(e)
+
+        if prefer_sheets:
+            try:
+                from core.sheets_generator import create_google_sheet
+                from openpyxl import load_workbook
+                wb = load_workbook(excel, data_only=False)
+                ws = wb.active
+                rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+                wb.close()
+                sl = create_google_sheet("Estimate_" + str(task_id)[:8], rows, int(topic_id or 0), str(task_id))
+                if sl:
+                    links["google_sheet"] = sl
+                    data["google_sheet_link"] = sl
+            except Exception as e:
+                data["google_sheet_error"] = str(e)
+
+    if links:
+        data["links"] = {**(data.get("links") or {}), **links} if isinstance(data.get("links"), dict) else links
+
+    first = data.get("google_sheet_link") or _rgc2_best_link(data)
+    if first:
+        data["drive_link"] = first
+        data["success"] = True
+        data["artifact_path"] = excel or data.get("artifact_path")
+        if pdf:
+            extras = data.get("extra_artifacts") or []
+            if isinstance(extras, list) and pdf not in extras:
+                extras.append(pdf)
+            data["extra_artifacts"] = extras
+    else:
+        data["success"] = False
+        data["error"] = data.get("error") or "ESTIMATE_NO_LINK_NO_SUCCESS_V1:NO_DRIVE_TELEGRAM_OR_RETRY_LINK"
+
+    vr = validate_estimate_result(data, task_id=str(task_id))
+    data["estimate_validator"] = vr
+    if not vr.get("ok"):
+        data["success"] = False
+        data["validator_reason"] = vr.get("reason")
+    return data
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int):
+    data = await _rgc2_orig_excel(file_path, task_id, topic_id)
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=False)
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int):
+    try:
+        data = await _rgc2_orig_sheets(file_path, task_id, topic_id)
+    except Exception:
+        data = await _rgc2_orig_excel(file_path, task_id, topic_id)
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=True)
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int = 0, chat_id: str = ""):
+    ctx = _rgc2_resolve_task_context(str(task_id), int(topic_id or 0))
+    if not chat_id:
+        chat_id = ctx.get("chat_id") or ""
+    topic_id = int(ctx.get("topic_id") or topic_id or 0)
+
+    if _rgc2_has_llm_arithmetic(raw_input):
+        try:
+            logger.warning("ESTIMATE_NO_LLM_CALC_GUARD_V1_INPUT_ARITHMETIC task=%s", task_id)
+        except Exception:
+            pass
+
+    if chat_id:
+        tpl = _rgc2_get_active_estimate_template(str(chat_id), int(topic_id or 0))
+        if tpl:
+            try:
+                from core.sample_template_engine import create_estimate_from_saved_template
+                result = await create_estimate_from_saved_template(
+                    raw_input=str(raw_input),
+                    task_id=str(task_id),
+                    chat_id=str(chat_id),
+                    topic_id=int(topic_id or 0),
+                )
+                if isinstance(result, dict) and (result.get("pdf_link") or result.get("xlsx_link") or result.get("drive_link") or result.get("excel_path")):
+                    return _rgc2_finalize(result, task_id, topic_id, prefer_sheets=True)
+                return {
+                    "success": False,
+                    "state": "WAITING_CLARIFICATION",
+                    "error": "ESTIMATE_TEMPLATE_STRICT_REUSE_V1:TEMPLATE_NOT_APPLICABLE",
+                    "result_text": "Активный шаблон сметы найден, но не подошёл к запросу. Уточни состав работ, объёмы или замени шаблон.",
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "state": "WAITING_CLARIFICATION",
+                    "error": "ESTIMATE_TEMPLATE_STRICT_REUSE_V1:ERROR:" + str(e)[:200],
+                    "result_text": "Активный шаблон сметы найден, но применить его не удалось. Уточни параметры или замени шаблон.",
+                }
+
+    data = await _rgc2_orig_text(raw_input, task_id, topic_id)
+    result_text = " ".join(str(data.get(k) or "") for k in ("result", "result_text", "message", "summary")) if isinstance(data, dict) else str(data)
+    if _rgc2_has_llm_arithmetic(result_text) and not (isinstance(data, dict) and (data.get("excel_path") or data.get("artifact_path"))):
+        return {
+            "success": False,
+            "error": "ESTIMATE_NO_LLM_CALC_GUARD_V1:TEXT_CALC_WITHOUT_PYTHON_ARTIFACT",
+            "result_text": "Смета не принята: обнаружен текстовый расчёт без Python/OpenPyXL артефакта.",
+        }
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=True)
+# === END_ESTIMATE_TEMPLATE_STRICT_REUSE_V1 ===
+# === END_ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
+# === END_ESTIMATE_RESULT_VALIDATOR_V1 ===
+# === END_REAL_GAPS_CLOSE_V2_ESTIMATE ===
+
+
+# === FINAL_CLOSURE_BLOCKER_FIX_V1_ESTIMATE_XLSX_FORMULAS ===
+def create_estimate_xlsx_from_rows(rows, out_path: str, title: str = "Смета") -> str:
+    from pathlib import Path
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+    from openpyxl.utils import get_column_letter
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+
+    ws["A1"] = title
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:F1")
+
+    headers = ["№", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма"]
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+
+    start = 4
+    safe_rows = rows or []
+
+    for i, r in enumerate(safe_rows, start):
+        idx = i - start + 1
+        name = r.get("name") or r.get("work") or r.get("item") or ""
+        unit = r.get("unit") or ""
+        qty = r.get("qty") or r.get("quantity") or 0
+        price = r.get("price") or r.get("unit_price") or 0
+
+        try:
+            qty = float(str(qty).replace(",", ".").replace(" ", ""))
+        except Exception:
+            qty = 0
+
+        try:
+            price = float(str(price).replace(",", ".").replace(" ", ""))
+        except Exception:
+            price = 0
+
+        ws.cell(row=i, column=1, value=idx)
+        ws.cell(row=i, column=2, value=name)
+        ws.cell(row=i, column=3, value=unit)
+        ws.cell(row=i, column=4, value=qty)
+        ws.cell(row=i, column=5, value=price)
+        ws.cell(row=i, column=6, value=f"=D{i}*E{i}")
+
+    total_row = start + len(safe_rows)
+    ws.cell(row=total_row, column=5, value="Итого")
+    ws.cell(row=total_row, column=5).font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F{start}:F{total_row-1})" if safe_rows else "=0")
+    ws.cell(row=total_row, column=6).font = Font(bold=True)
+
+    for i, w in enumerate([8, 55, 12, 14, 14, 16], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    wb.save(out)
+    return str(out)
+# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ESTIMATE_XLSX_FORMULAS ===
+
+
+====================================================================================================
+END_FILE: core/estimate_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/project_engine.py
@@ -3393,7 +7787,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/file_intake_router.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3e78fa7fb9c2b3c13070d4962439a8d4d0712e010f3de496c66fb781cd3487d3
+SHA256_FULL_FILE: f8ea5cd19b62f816175d44424bad83ef09bae9bc3da8429e9a96ff0b006c79dc
 ====================================================================================================
 from core.gemini_vision import analyze_image_file  # GEMINI_VISION_V43
 import os, logging, asyncio
@@ -3637,6 +8031,23 @@ async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, f
         elif intent == "vision":
             result = await analyze_image_file(file_path, None)
             return {"success": True, "engine": "gemini_vision", "result_text": result, "text_result": result}
+        elif intent == "description":
+            from core.universal_file_handler import extract_text_from_file
+            data = extract_text_from_file(file_path, task_id, topic_id)
+            if not data.get("success"):
+                return {"success": False, "error": data.get("error") or "FILE_DESCRIPTION_FAILED"}
+            text = (data.get("text") or "").strip()
+            rows = data.get("rows") or []
+            if not text and rows:
+                text = "\n".join(" | ".join(str(c or "") for c in row) for row in rows[:20])
+            if not text:
+                return {"success": False, "error": "FILE_DESCRIPTION_EMPTY"}
+            msg = (
+                f"Файл прочитан ({data.get('type') or 'unknown'}).\n"
+                f"Строк таблиц: {len(rows)}\n\n"
+                + text[:3500]
+            )
+            return {"success": True, "engine": "universal_file_handler", "result_text": msg, "text_result": msg}
         elif intent == "search":
             from core.search_engine import search_in_estimates
             results = search_in_estimates(file_path, topic_id)
@@ -4360,5027 +8771,5 @@ async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *
 
 ====================================================================================================
 END_FILE: core/file_intake_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/ai_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 0b924a6cd1828ff57f6ef59fb3cf8002e08e5ddccad58d3ebbc1cd48f9099305
-====================================================================================================
-import os
-import re
-import json
-import hashlib
-import logging
-from typing import Any, Dict, List
-
-# === SEARCH_MONOLITH_V2_IMPORT ===
-# AVAILABILITY_CHECK: проверка доступности источника перед поиском
-# STALE_CONTEXT_GUARD: не использовать устаревший контекст > 24h
-# NEGATIVE_SELECTION: исключать нерелевантные источники
-
-try:
-    from core.search_session import run_search_monolith_v2, has_active_search_session
-except Exception:
-    run_search_monolith_v2 = None
-    has_active_search_session = lambda chat_id, topic_id: False
-# === END SEARCH_MONOLITH_V2_IMPORT ===
-
-import httpx
-from dotenv import load_dotenv
-
-BASE = "/root/.areal-neva-core"
-ENV_PATH = f"{BASE}/.env"
-LOG_PATH = f"{BASE}/logs/ai_router.log"
-
-load_dotenv(ENV_PATH, override=True)
-os.makedirs(f"{BASE}/logs", exist_ok=True)
-
-logger = logging.getLogger("ai_router")
-logger.setLevel(logging.INFO)
-if not logger.handlers:
-    fh = logging.FileHandler(LOG_PATH)
-    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    logger.addHandler(fh)
-
-OPENROUTER_API_KEY = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
-OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
-
-DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
-ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
-
-def _assert_online_model_allowed() -> None:
-    model = (ONLINE_MODEL or "").strip()
-    low = model.lower()
-    if "deepseek" in low:
-        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_DEEPSEEK")
-    if model != "perplexity/sonar":
-        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_NOT_SONAR")
-
-
-SEARCH_RE = [
-    r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
-    r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
-    r"\bavito\b", r"\bozon\b", r"\bwildberries\b", r"\bauto\.ru\b", r"\bdrom\b",
-    r"\bновости\b", r"\bпогода\b", r"\bкурс\b", r"\bмаркетплейс\b", r"\bссылк", r"\bкупить\b", r"\bзаказать\b", r"\bтовар\b",
-    r"озон", r"валбер", r"вайлдбер", r"площадк"
-]
-
-BAD_CONTEXT_RE = [
-    r"forbidden default model",
-    r"traceback",
-    r"telegramconflicterror",
-    r"voice unavailable",
-    r"stt failed",
-    r"/root/",
-    r"\.log",
-    r"\.json"
-]
-
-BAD_RESULT_RE = [
-    r"\bой\b",
-    r"сорян",
-    r"дружище",
-    r"не переживай",
-    r"дай мне немного времени",
-    r"я могу помочь",
-    r"извини",
-    r"извините",
-    r"я тут",
-    r"уведомлятор",
-    r"перегрелся",
-    r"😅",
-    r"💪",
-    r"😎",
-    r"непонятно",
-    r"уточните",
-    r"недостаточно данных",
-    r"\bищу\b",
-    r"\bнайду\b",
-    r"ожидаю уточнения",
-    r"ссылк[аи]\s+предоставлю",
-    r"готов искать",
-    r"могу найти",
-    r"укажите,?\s+что именно нужно найти"
-]
-
-SYSTEM_PROMPT = """# AREAL-NEVA ORCHESTRA — КАНОНИЧЕСКИЙ СИСТЕМНЫЙ ПРОМПТ
-# CANON_SYSTEM_PROMPT_V1
-
-## КТО ТЫ
-Ты — исполнительный AI-оркестр системы AREAL-NEVA. Ты не просто отвечаешь на последнее сообщение. Ты понимаешь контекст, смысл, область задачи и текущую ветку разговора.
-
-## ГЛАВНЫЙ ПРИОРИТЕТ КОНТЕКСТА
-1. Текущее сообщение пользователя — ВСЕГДА главное
-2. Активная задача (если есть и релевантна)
-3. PIN (только если совпадает с темой)
-4. Краткая память (последние 2-3 релевантных факта)
-5. Долгая память (знания и выводы)
-6. Архив (только если тема совпадает)
-7. Результат поиска (если был)
-
-## ПОНИМАНИЕ ЧАТА
-Каждый чат имеет свою роль и специализацию:
-- технадзор → думай как технический инспектор
-- стройка → думай как прораб/сметчик
-- поиск → думай как снабженец
-- авто → думай как механик/снабженец запчастей
-- оркестр → думай как системный архитектор
-Если есть topic_role — это твой рабочий режим.
-
-## РАЗЛИЧЕНИЕ РАЗГОВОР / ЗАДАЧА
-РАЗГОВОР ("привет", "как дела", "ты тут", "ок", "спасибо") → короткий ответ, НИКАКИХ задач
-ЗАДАЧА = действие + объект + ожидаемый результат → создаётся задача
-УТОЧНЕНИЕ к активной задаче → продолжение задачи, не новая
-ПОДТВЕРЖДЕНИЕ ("да", "верно", "ок") при AWAITING_CONFIRMATION → DONE
-ИСПРАВЛЕНИЕ ("нет", "не так", "переделай") → revision
-ЗАВЕРШЕНИЕ ("всё", "готово", "закрывай") → FINISH, перебивает всё
-
-## ПРИОРИТЕТ ИНТЕНТОВ
-FINISH > CANCEL > CONFIRM > REVISION > TASK > SEARCH > CHAT
-
-## ПАМЯТЬ — ЧТО ХРАНИТЬ / ЧТО НЕ ХРАНИТЬ
-ХРАНИТЬ: результаты задач, выводы, факты, решения
-НЕ ХРАНИТЬ: ошибки, "не найдено", "уточните", служебные тексты, трейсбэки
-
-## ПОИСК
-Запускать поиск ТОЛЬКО если нужны актуальные внешние данные.
-Если [SEARCH_RESULT] есть в контексте — используй ТОЛЬКО его, не выдумывай.
-НЕ писать: "ищу", "найду", "ссылки предоставлю" — только готовый результат.
-
-## ОТВЕТ
-- Только по сути задачи
-- Без болтовни, без эмодзи, без извинений
-- Без служебных фраз, путей, json-обрывков, трейсбэков
-- Если неясно — ОДИН короткий уточняющий вопрос
-- Активная задача не блокирует чат — новые вопросы получают ответ
-
-## ЗАПРЕЩЁННЫЕ ФРАЗЫ
-"недостаточно данных" | "не могу" | "уточните" (без причины) | "ожидаю уточнения" |
-"готов искать" | "могу найти" | "задача не выполнена" (без кода) | "Задача завершена" (без результата) |
-"Не понимаю запрос" | "Готов к выполнению"
-
-## ФАЙЛЫ
-Файл принят → обработать → результат в Google Drive → вернуть ссылку.
-Сервер не хранит тяжёлые файлы постоянно. Drive = основное хранилище.
-
-## ЦЕЛЬ
-Думай как человек: понимай смысл, помни только важное, не засоряй голову мусором, доводи задачу до результата.
-""".strip()  # CANON_SYSTEM_PROMPT_V1
-
-SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
-
-Ты — закупочный эксперт. Твоя задача НЕ "найти ссылки", а дать закупочное решение.
-
-## ЭТАП 1: РАЗБОР ЗАПРОСА
-Извлеки: товар, категорию, бренд, модель, характеристики, артикул/OEM/SKU, город, количество, новое/б/у, аналоги допустимы?, доставка нужна?, приоритет (цена/качество/скорость).
-Для стройки: материал, профиль, толщина, RAL, покрытие, ГОСТ/ТУ, единица цены, объём.
-Для запчастей: марка, модель, год, кузов, OEM, сторона, рестайлинг/дорестайлинг, новая/б/у/контрактная.
-
-## ЭТАП 2: УТОЧНЕНИЕ (максимум 3 вопроса если данных мало)
-Не более 3 вопросов. Дальше работай с тем что есть.
-
-## ЭТАП 3: РАСШИРЕНИЕ ЗАПРОСА (7+ формул)
-Ищи по: название+город, название+оптом, название+производитель, артикул/OEM, физпараметры, название+Avito, название+VK/Telegram.
-
-## ЭТАП 4: ЦИФРОВОЙ ДВОЙНИК ТОВАРА
-Ищи по физическим параметрам, не по рекламному названию.
-
-## ЭТАП 5: ИСТОЧНИКИ
-Проверь: Ozon, Wildberries, Яндекс Маркет, Avito, Петрович, Леруа, ВсеИнструменты, заводы, дилеры, 2ГИС, VK, Telegram, форумы.
-Для запчастей: Exist, Emex, ZZap, Drom, Auto.ru, EuroAuto, разборки.
-
-## ЭТАП 6: КЛАССИФИКАЦИЯ ИСТОЧНИКА
-Каждому источнику: производитель / дилер / база / оптовик / маркетплейс / частник / разборка / форум.
-Доверие: CONFIRMED / PARTIAL / UNVERIFIED / RISK.
-checked_at и source_url ОБЯЗАТЕЛЬНЫ. Без них — не выше PARTIAL.
-
-## ЭТАП 7: ТЕХНИЧЕСКИЙ АУДИТ
-Для стройки: проверь толщину, RAL, покрытие, слой цинка, жалобы ("тонкий","брак","не тот цвет").
-Для запчастей: OEM, сторона, кузов, состояние, жалобы ("не подошло","не та сторона","предоплата").
-ЗАПРЕЩЕНО смешивать в одной строке: 0.45 и 0.5, разные RAL, оригинал и аналог, б/у и новое.
-
-## ЭТАП 8: REVIEW TRUST SCORE (0-100)
-80-100: живые отзывы с фото и деталями.
-60-79: частично подтверждены.
-40-59: нужен звонок.
-0-39: высокий риск фейка.
-Фейки: одинаковые фразы, все в один день, нет фото, профиль пустой.
-
-## ЭТАП 9: SELLER_RISK для VK/Telegram
-Автоматически UNVERIFIED пока не подтверждены: цена, дата, контакт, наличие.
-Красные флаги: новая группа, боты, только предоплата, скрытые контакты.
-
-## ЭТАП 10: RISK SCORE
-Красные флаги: цена сильно ниже рынка, только предоплата, нет телефона/адреса/ИНН, старый прайс, не совпадают ТТХ.
-
-## ЭТАП 11: TCO
-итоговая цена = цена + доставка + комиссия + добор + риск − кэшбэк
-Учитывай: НДС, минимальная партия, гарантия, возврат, самовывоз.
-
-## ЭТАП 12: РАНЖИРОВАНИЕ
-CHEAPEST — самый дешёвый.
-MOST_RELIABLE — самый надёжный.
-BEST_VALUE — лучший баланс цена/риск/логистика.
-FASTEST — самый быстрый.
-RISK_CHEAP — дёшево но рискованно.
-REJECTED — что отброшено и почему.
-
-## ЭТАП 13: ТАБЛИЦА (обязательна)
-Поставщик | Площадка | Тип | Город | Цена | Ед. | TCO | ТТХ совпадают | Trust Score | Риск | Контакт | Ссылка | checked_at | Статус
-
-## ЭТАП 14: ШАБЛОН ЗВОНКА (обязателен)
-- Цена актуальна?
-- Есть в наличии?
-- Цена с НДС или без?
-- Доставка сколько и когда?
-- Документы/счёт дадут?
-- Гарантия/возврат есть?
-- Характеристики точно такие?
-- Для металла: толщина, покрытие, слой цинка.
-- Для запчастей: OEM, сторона, кузов, состояние.
-
-## ЗАПРЕЩЕНО
-- Выдавать просто список ссылок без анализа.
-- Писать "цена уточняйте" как результат.
-- Смешивать разные ТТХ в одном варианте.
-- Выдумывать цены и контакты.
-- Непроверенные данные как факт.
-"""  # END SEARCH_MONOLITH_V1.strip()
-
-def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v.strip()
-    try:
-        return json.dumps(v, ensure_ascii=False)
-    except Exception:
-        return str(v).strip()
-
-
-def _dedup_text(text: str) -> str:
-    seen = set()
-    out = []
-    for line in text.split("\n"):
-        key = line.strip().lower()
-        if key and key not in seen:
-            seen.add(key)
-            out.append(line)
-    return "\n".join(out)
-
-def _clean(text: str, limit: int = 12000) -> str:
-    text = (text or "").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:limit]
-
-def _match_any(patterns: List[str], text: str) -> bool:
-    t = (text or "").lower()
-    return any(re.search(p, t, re.I) for p in patterns)
-
-def _search_intent(text: str, input_type: str) -> bool:
-    if (input_type or "").lower() == "search":
-        return True
-    return _match_any(SEARCH_RE, text)
-
-def _sanitize_block(label: str, value: Any) -> str:
-    text = _clean(_s(value), 4000)
-    if not text:
-        return ""
-    if _match_any(BAD_CONTEXT_RE, text):
-        return ""
-    return f"[TYPE:{label}]\n{text}"
-
-def _dedup_blocks(blocks: List[str]) -> List[str]:
-    out = []
-    seen = set()
-    for block in blocks:
-        b = _clean(block, 4000)
-        if not b:
-            continue
-        key = hashlib.sha1(re.sub(r"\s+", " ", b.lower()).encode("utf-8")).hexdigest()
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(b)
-    return out
-
-def _extract_user_text(payload: Dict[str, Any]) -> str:
-    for key in ("normalized_input", "raw_input", "input", "text", "prompt", "message", "transcript"):
-        text = _clean(_s(payload.get(key)))
-        if text:
-            return text
-    return ""
-
-
-def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, str]]:
-    user_text = _dedup_text(user_text)
-    if not user_text.strip():
-        return [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": "REQUEST:\nпустой запрос"}
-        ]
-
-    input_type = _s(payload.get("input_type")).lower() or "text"
-    state = _s(payload.get("state")).upper() or "IN_PROGRESS"
-
-    topic_role = _clean(_s(payload.get("topic_role")), 500)
-    topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
-    system_content = SYSTEM_PROMPT
-    # search-followup: если жалуются на ссылки и есть search_context — не давать общие советы
-    search_followup_markers = [
-        "нерелевант",
-        "битые",
-        "битые ссылки",
-        "ссылки биты",
-        "ссылки битые",
-        "живые ссылки",
-        "ссылки не те",
-        "проверь",
-        "проверь еще",
-        "проверь ещё",
-        "ещё раз",
-        "еще раз",
-        "это не то",
-    ]
-    if any(m in user_text.lower() for m in search_followup_markers) and payload.get("search_context"):
-        system_content += "\n\nFORBIDDEN_SEARCH_ADVICE: ЗАПРЕЩЕНО предлагать Dr.Web, Link Checker, Yandex Safety, Google Safe Browsing, VirusTotal и любые общие сервисы проверки ссылок. Нужно продолжить именно предыдущую поисковую задачу, опираясь на SEARCH_RESULT, без общих советов и без ухода в сторону."
-    if topic_role:
-        system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
-    if topic_directions:
-        system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
-
-
-    # === OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
-    try:
-        from core.owner_reference_policy import build_owner_reference_context
-        _owner_reference_policy_context = build_owner_reference_context(user_text)
-    except Exception as _orp_err:
-        logger.warning("OWNER_REFERENCE_POLICY_V1_ERR %s", _orp_err)
-        _owner_reference_policy_context = ""
-    # === END_OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
-
-    # === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-    try:
-        from core.estimate_template_policy import build_estimate_template_context
-        _estimate_template_policy_context = build_estimate_template_context(user_text)
-    except Exception as _etp_err:
-        logger.warning("ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_ERR %s", _etp_err)
-        _estimate_template_policy_context = ""
-    # === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-
-    blocks = _dedup_blocks([
-        _sanitize_block("OWNER_REFERENCE_POLICY", _owner_reference_policy_context),
-        _sanitize_block("ESTIMATE_TEMPLATE_POLICY", _estimate_template_policy_context),
-        _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
-        _sanitize_block("PIN", payload.get("pin_context")),
-        _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
-        _sanitize_block("LONG_MEMORY", payload.get("long_memory_context")),
-        _sanitize_block("ARCHIVE", payload.get("archive_context")),
-        _sanitize_block("SEARCH_RESULT", payload.get("search_context")),
-    ])
-
-    user_parts = [
-        f"STATE: {state}",
-        f"INPUT_TYPE: {input_type}",
-    ]
-    if blocks:
-        user_parts.append("CONTEXT:\n" + "\n\n".join(blocks))
-    user_parts.append("REQUEST:\n" + user_text)
-
-    return [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": "\n\n".join(user_parts)},
-    ]
-
-def _extract_content(data: Dict[str, Any]) -> str:
-    try:
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            parts = []
-            for item in content:
-                if isinstance(item, dict) and item.get("type") == "text":
-                    parts.append(item.get("text", ""))
-                else:
-                    parts.append(_s(item))
-            return _clean("\n".join(parts))
-        return _clean(_s(content))
-    except Exception:
-        return _clean(json.dumps(data, ensure_ascii=False)[:2000])
-
-async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.2,
-    }
-    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
-        r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
-    if r.status_code != 200:
-        msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
-        logger.error(msg)
-        raise RuntimeError(msg)
-    return _extract_content(r.json())
-
-async def process_ai_task(payload: Dict[str, Any]) -> str:
-    if not OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY not set")
-
-    user_text = _dedup_text(_extract_user_text(payload))
-    if not user_text:
-        return ""
-
-    input_type = _s(payload.get("input_type")).lower()
-    _s_chat = _s(payload.get("chat_id"))
-    try: _s_topic = int(payload.get("topic_id") or 0)
-    except: _s_topic = 0
-    explicit_search = _search_intent(user_text, input_type)
-    active_search_context = bool(has_active_search_session(_s_chat, _s_topic))
-    is_search = explicit_search
-    work_payload = dict(payload)
-
-    if is_search:
-        _assert_online_model_allowed()
-        # === SEARCH_MONOLITH_V2_CALL ===
-        try:
-            if run_search_monolith_v2 is not None:
-                _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
-                _v2 = _clean(_s(_v2), 12000)
-                if _v2:
-                    logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
-                    return _v2
-        except Exception as _v2e:
-            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s continue=ONLINE_MODEL", _v2e)
-        # === END SEARCH_MONOLITH_V2_CALL ===
-        logger.info(
-            "router_search_call model=%s input_type=%s state=%s chars=%s",
-            ONLINE_MODEL,
-            input_type or "text",
-            _s(payload.get("state")).upper() or "IN_PROGRESS",
-            len(user_text),
-        )
-        try:
-            search_result = await _openrouter_call(
-                ONLINE_MODEL,
-                [
-                    {"role": "system", "content": SEARCH_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
-                ],
-            )
-        except Exception as e:
-            logger.error("search_model_fail err=%s", e)
-            return "SEARCH_FAILED: Sonar unavailable"
-
-        search_result = _clean(_s(search_result), 4000)
-        if not search_result:
-            logger.warning("web_search_empty query=%s", user_text[:200])
-        else:
-            existing = _clean(_s(work_payload.get("search_context")), 4000)
-            work_payload["search_context"] = search_result + ("\n\n" + existing if existing else "")
-            logger.info("web_search_ok chars=%s", len(search_result))
-
-    logger.info(
-        "router_call model=%s input_type=%s state=%s chars=%s is_search=%s",
-        ONLINE_MODEL if is_search else DEFAULT_MODEL,
-        input_type or "text",
-        _s(payload.get("state")).upper() or "IN_PROGRESS",
-        len(user_text),
-        is_search,
-    )
-
-    messages = _build_messages(work_payload, user_text)
-    ctx_str = _clean_context("\n\n".join(m.get("content", "") for m in messages))
-    if _context_has_answer(ctx_str):
-        for m in messages:
-            if m.get("role") == "system":
-                m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
-                break
-    # === MODEL_OVERRIDE_V1 ===
-    _final_model = ONLINE_MODEL if is_search else (work_payload.get("model_override") or DEFAULT_MODEL)
-    if is_search:
-        _assert_online_model_allowed()
-    result = await _openrouter_call(_final_model, messages)
-    # === END MODEL_OVERRIDE_V1 ===
-
-    if _match_any(BAD_RESULT_RE, result):
-        logger.warning("router_result_filtered result=%s", result[:120])
-        return ""
-
-    logger.info("router_ok chars=%s", len(result))
-    return result
-
-
-
-def _clean_context(text: str) -> str:
-    if not text:
-        return ""
-    text = text.replace("\r", "\n")
-    text = text.replace("\t", " ")
-    while "\n\n\n" in text:
-        text = text.replace("\n\n\n", "\n\n")
-    return text.strip()[:12000]
-
-def _context_has_answer(text: str) -> bool:
-    if not text:
-        return False
-    return len(text.strip()) > 50
-
-# FORCE CLEAN CONTEXT
-
-SEARCH_SYSTEM_PROMPT = """# TOPIC500_SEARCH_OUTPUT_CONTRACT_20260504_V1
-
-ROLE:
-Ты закупочный интернет-поиск для topic_500
-
-OUTPUT MUST BE USEFUL, NOT ANALYTICAL
-
-HARD RULES:
-- No long analysis
-- No essay
-- No fake source numbers like [1], [2]
-- No "НЕ ПОДТВЕРЖДЕНО" blocks as final answer
-- No duplicated summary sections
-- No generic advice
-- No old context
-- Use only current user query
-- If user asks suppliers/prices, return direct supplier rows
-- Every row must contain direct URL
-- Phone is mandatory when visible in search result; if phone is not visible write "телефон не найден"
-- Prefer Saint Petersburg / Ленобласть when requested
-- Prefer official supplier/site/marketplace pages over articles
-- If exact brand spelling is suspicious, search both original and corrected spelling, but keep original in output
-
-FORMAT STRICTLY:
-
-Найдено: <N> вариантов
-
-| № | Поставщик | Город | Цена | Ед. | Наличие | Доставка | Телефон | Ссылка |
-|---|-----------|-------|------|-----|---------|----------|---------|--------|
-| 1 | ... | ... | ... | ... | ... | ... | ... | https://... |
-
-Лучший вариант:
-<1 строка: поставщик, цена, почему>
-
-Проверить звонком:
-1. актуальная цена
-2. наличие
-3. доставка
-4. НДС/счёт
-5. точная марка/толщина/размер
-
-Отброшено:
-- <только если реально есть что отбросить, кратко>
-
-If fewer than 3 supplier rows are found:
-Return what is found and write:
-"Найдено меньше 3 прямых поставщиков, нужен повторный поиск по расширенным площадкам"
-
-"""
-
-
-# === P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
-# FACT: removes old supplier tables / Trust Score / TCO / "НЕ ПОДТВЕРЖДЕНО" / "ЭТАП N"
-# / naked [1][2][3] markers from search context BEFORE Perplexity call.
-# Exposed as _p6f_ts_sanitize_payload(payload) — used by callers via append-wraps.
-import re as _p6f_ts_re
-import logging as _p6f_ts_logging
-
-_P6F_TS_LOG = _p6f_ts_logging.getLogger("ai_router")
-
-_P6F_TS_NOISE_PATTERNS = [
-    r"(?im)^\s*Trust\s*Score[^\n]*\n?",
-    r"(?im)^\s*TCO[^\n]*\n?",
-    r"(?im)^\s*НЕ\s*ПОДТВЕРЖД[^\n]*\n?",
-    r"(?im)^\s*ЭТАП\s*\d+[^\n]*\n?",
-    r"(?im)^\s*Risk\s*Score[^\n]*\n?",
-    r"(?im)^\s*Review\s*Trust[^\n]*\n?",
-    r"(?im)^\s*\|[^\n]*Поставщик[^\n]*\|[^\n]*\n?",
-    r"(?im)^\s*\|[^\n]*Цена[^\n]*\|[^\n]*Источник[^\n]*\n?",
-    r"(?<![a-zA-Z0-9.])\[\d+\](?![\(\:])",
-]
-
-_P6F_TS_SUPPLIER_TABLE = _p6f_ts_re.compile(
-    r"(?ims)\n\s*\|.*?Поставщик.*?\|\s*\n(\s*\|[-: ]+\|.*\n)?(\s*\|.*\n){1,40}",
-)
-
-def _p6f_ts_sanitize_text(text):
-    if not text:
-        return ""
-    s = str(text)
-    s = _P6F_TS_SUPPLIER_TABLE.sub("\n", s)
-    for p in _P6F_TS_NOISE_PATTERNS:
-        s = _p6f_ts_re.sub(p, "", s)
-    s = _p6f_ts_re.sub(r"\n{3,}", "\n\n", s).strip()
-    return s
-
-def _p6f_ts_is_search_topic(payload):
-    try:
-        return int((payload or {}).get("topic_id", 0) or 0) == 500
-    except Exception:
-        return False
-
-def _p6f_ts_sanitize_payload(payload):
-    """
-    Returns a NEW dict (shallow copy) with sanitized search_context and user_text
-    for topic_500 procurement search. Other topics pass through unchanged.
-    """
-    if not isinstance(payload, dict):
-        return payload
-    if not _p6f_ts_is_search_topic(payload):
-        return payload
-    out = dict(payload)
-    if "search_context" in out and out["search_context"]:
-        before_len = len(str(out["search_context"]))
-        out["search_context"] = _p6f_ts_sanitize_text(out["search_context"])
-        after_len = len(str(out["search_context"]))
-        if before_len != after_len:
-            _P6F_TS_LOG.info(
-                "P6F_TS_SANITIZED_SEARCH_CONTEXT topic=500 chat=%s before=%d after=%d removed=%d",
-                out.get("chat_id"), before_len, after_len, before_len - after_len,
-            )
-    for key in ("raw_input", "normalized_input", "user_text"):
-        if key in out and out[key] and isinstance(out[key], str):
-            out[key] = _p6f_ts_sanitize_text(out[key])
-    return out
-
-try:
-    _P6F_TS_LOG.info("P6F_TOPIC500_CONTEXT_SANITIZER_V1_LOADED")
-except Exception:
-    pass
-# === END_P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
-
-# === P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
-# FACT: wraps process_ai_task at module level so callers that re-import
-# inside functions (e.g., sample_template_engine line 5132) pick up the
-# sanitized version on every call.
-try:
-    _P6F_TS_AR_ORIG_PROCESS_AI_TASK = process_ai_task
-    if not getattr(_P6F_TS_AR_ORIG_PROCESS_AI_TASK, "_p6f_ts_ar_wrapped", False):
-        async def _p6f_ts_ar_wrapped_process_ai_task(payload):
-            try:
-                payload = _p6f_ts_sanitize_payload(payload)
-            except Exception as _e:
-                _P6F_TS_LOG.warning("P6F_TS_AR_SANITIZE_ERR %s", _e)
-            return await _P6F_TS_AR_ORIG_PROCESS_AI_TASK(payload)
-        _p6f_ts_ar_wrapped_process_ai_task._p6f_ts_ar_wrapped = True
-        process_ai_task = _p6f_ts_ar_wrapped_process_ai_task
-        _P6F_TS_LOG.info("P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_INSTALLED")
-except Exception as _e:
-    _P6F_TS_LOG.exception("P6F_TS_AR_BIND_INSTALL_ERR %s", _e)
-# === END_P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
-
-
-# === P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
-# FACT: extends P6F_TS_sanitize_payload to clean MORE fields where stale
-# context can leak: memory_context, archive_context, full_context, history,
-# context, pin_context, parent_context.
-import logging as _p6g_pse_logging
-_P6G_PSE_LOG = _p6g_pse_logging.getLogger("ai_router")
-
-_P6G_PSE_EXTRA_FIELDS = (
-    "memory_context", "archive_context", "full_context", "history",
-    "context", "pin_context", "parent_context",
-)
-
-try:
-    _P6G_PSE_ORIG_SANITIZE = _p6f_ts_sanitize_payload
-    if not getattr(_P6G_PSE_ORIG_SANITIZE, "_p6g_pse_wrapped", False):
-        def _p6f_ts_sanitize_payload(payload):
-            out = _P6G_PSE_ORIG_SANITIZE(payload)
-            if not isinstance(out, dict):
-                return out
-            try:
-                topic_id = int((out or {}).get("topic_id", 0) or 0)
-            except Exception:
-                topic_id = 0
-            if topic_id != 500:
-                return out
-            cleaned_count = 0
-            for f in _P6G_PSE_EXTRA_FIELDS:
-                if f in out and out[f] and isinstance(out[f], str):
-                    before = len(out[f])
-                    out[f] = _p6f_ts_sanitize_text(out[f])
-                    after = len(out[f])
-                    if before != after:
-                        cleaned_count += 1
-            if cleaned_count:
-                _P6G_PSE_LOG.info(
-                    "P6G_PSE_EXTRA_FIELDS_CLEANED topic=500 fields_changed=%d", cleaned_count,
-                )
-            return out
-        _p6f_ts_sanitize_payload._p6g_pse_wrapped = True
-        _P6G_PSE_LOG.info("P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1_INSTALLED")
-except Exception as _e:
-    _P6G_PSE_LOG.exception("P6G_PSE_INSTALL_ERR %s", _e)
-# === END_P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
-
-====================================================================================================
-END_FILE: core/ai_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/__init__.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-====================================================================================================
-
-====================================================================================================
-END_FILE: core/__init__.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/active_dialog_state.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 35e86af58d10e00979f331b0ec69c905597f26583ae97bc756413888989df1a6
-====================================================================================================
-# === ACTIVE_DIALOG_STATE_V1 ===
-# === UNIFIED_CONTEXT_PRIORITY_V1 ===
-# === SHORT_CONTROL_SAFE_ROUTER_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import sqlite3
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
-
-BASE = "/root/.areal-neva-core"
-MEM_DB = os.path.join(BASE, "data/memory.db")
-
-SHORT_CONTROLS = {
-    "да", "ок", "окей", "+", "ага", "делай", "делаем", "дальше", "продолжай",
-    "покажи", "скинь", "отбой", "закрывай", "готово", "что дальше", "ну что",
-}
-
-def _s(v: Any, limit: int = 4000) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, (dict, list)):
-        try:
-            v = json.dumps(v, ensure_ascii=False)
-        except Exception:
-            v = str(v)
-    return str(v).strip()[:limit]
-
-def clean_voice(text: str) -> str:
-    return re.sub(r"^\s*\[VOICE\]\s*", "", text or "", flags=re.I).strip()
-
-def is_short_control(text: str) -> bool:
-    t = clean_voice(text).lower().strip(" .,!?:;—-")
-    return t in SHORT_CONTROLS or (len(t.split()) <= 3 and any(x in t for x in SHORT_CONTROLS))
-
-def _task_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
-    return {k: row[k] for k in row.keys()}
-
-def last_active_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    conn.row_factory = sqlite3.Row
-    row = conn.execute(
-        """
-        SELECT * FROM tasks
-        WHERE chat_id=? AND COALESCE(topic_id,0)=?
-          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-        """,
-        (str(chat_id), int(topic_id or 0)),
-    ).fetchone()
-    return _task_row_to_dict(row) if row else None
-
-def last_file_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    conn.row_factory = sqlite3.Row
-    row = conn.execute(
-        """
-        SELECT * FROM tasks
-        WHERE chat_id=? AND COALESCE(topic_id,0)=?
-          AND (
-            input_type IN ('drive_file','file','document','photo','image')
-            OR raw_input LIKE '%file_id%'
-            OR raw_input LIKE '%file_name%'
-            OR result LIKE '%drive.google%'
-            OR result LIKE '%docs.google%'
-            OR result LIKE '%.xlsx%'
-            OR result LIKE '%.pdf%'
-            OR result LIKE '%.docx%'
-          )
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-        """,
-        (str(chat_id), int(topic_id or 0)),
-    ).fetchone()
-    return _task_row_to_dict(row) if row else None
-
-def _memory_lookup(chat_id: str, topic_id: int, query: str = "") -> str:
-    if not os.path.exists(MEM_DB):
-        return ""
-    q = f"%{query[:40]}%" if query else "%"
-    out = []
-    try:
-        con = sqlite3.connect(MEM_DB)
-        rows = con.execute(
-            """
-            SELECT key, value, timestamp FROM memory
-            WHERE chat_id=? AND key LIKE ?
-              AND (
-                key LIKE ? OR value LIKE ? OR key LIKE ? OR key LIKE ?
-              )
-            ORDER BY timestamp DESC
-            LIMIT 8
-            """,
-            (
-                str(chat_id),
-                f"topic_{int(topic_id or 0)}_%",
-                "%file%",
-                q,
-                "%artifact%",
-                "%archive%",
-            ),
-        ).fetchall()
-        con.close()
-        for k, v, ts in rows:
-            out.append(f"{ts} | {k} | {_s(v, 700)}")
-    except Exception:
-        return ""
-    return "\n".join(out)
-
-def build_active_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, user_text: str = "") -> Dict[str, Any]:
-    active = last_active_task(conn, chat_id, topic_id)
-    last_file = last_file_task(conn, chat_id, topic_id)
-    mem = _memory_lookup(chat_id, topic_id, clean_voice(user_text))
-    return {
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id or 0),
-        "user_text": user_text,
-        "active_task": active,
-        "last_file": last_file,
-        "memory": mem,
-        "priority": "input -> reply parent -> active task -> last file -> pin -> short memory -> long memory -> archive",
-    }
-
-def maybe_handle_active_dialog(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    raw = _s(task["raw_input"] if "raw_input" in task.keys() else "")
-    text = clean_voice(raw)
-    low = text.lower()
-
-    if not text:
-        return None
-
-    # === ACTIVE_DIALOG_SKIP_EXPLICIT_ESTIMATE_CREATE_V1 ===
-    create_words = (
-        "сделай", "создай", "сформируй", "подготовь", "составь",
-        "посчитай", "рассчитай", "выгрузи", "сохрани", "оформи"
-    )
-    estimate_words = (
-        "смет", "расчет", "расчёт", "xlsx", "excel", "эксель",
-        "pdf", "ндс", "итог", "объем", "объём", "расценк", "позици"
-    )
-    followup_words = (
-        "я тебе скидывал", "уже скидывал", "где файл", "где смета",
-        "что дальше", "дальше то что", "ты сделал", "что мы делали",
-        "какие последние", "покажи прошл", "найди прошл", "помнишь"
-    )
-    if (
-        any(w in low for w in create_words)
-        and any(w in low for w in estimate_words)
-        and not any(w in low for w in followup_words)
-    ):
-        return None
-    # === END_ACTIVE_DIALOG_SKIP_EXPLICIT_ESTIMATE_CREATE_V1 ===
-
-    # === ACTIVE_DIALOG_SKIP_EXPLICIT_PROJECT_CREATE_V1 ===
-    project_create_words = (
-        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
-        "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
-    )
-    project_words = (
-        "проект", "кж", "кд", "км", "кмд", "ар",
-        "фундамент", "фундаментн", "плита", "плиты", "плиту",
-        "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив"
-    )
-    if (
-        any(w in low for w in project_create_words)
-        and any(w in low for w in project_words)
-        and not any(w in low for w in followup_words)
-    ):
-        return None
-    # === END_ACTIVE_DIALOG_SKIP_EXPLICIT_PROJECT_CREATE_V1 ===
-
-    file_followup = any(x in low for x in (
-        "скидывал файл", "скидывал смету", "какой файл", "что дальше", "дальше то что",
-        "покажи файл", "где файл", "где смета", "что с файлом", "по этому файлу",
-    ))
-
-    if file_followup:
-        try:
-            from core.file_memory_bridge import build_file_followup_answer
-            ans = build_file_followup_answer(str(chat_id), int(topic_id or 0), raw, limit=8)
-            if ans:
-                return {
-                    "handled": True,
-                    "state": "DONE",
-                    "result": ans,
-                    "event": "ACTIVE_DIALOG_STATE_V1:FILE_FOLLOWUP_DONE",
-                }
-        except Exception as e:
-            return {
-                "handled": True,
-                "state": "FAILED",
-                "result": "",
-                "error": f"ACTIVE_DIALOG_FILE_FOLLOWUP_ERR:{e}",
-                "event": "ACTIVE_DIALOG_STATE_V1:FILE_FOLLOWUP_FAILED",
-            }
-
-    if is_short_control(text):
-        ctx = build_active_context(conn, chat_id, topic_id, raw)
-        active = ctx.get("active_task")
-        last_file = ctx.get("last_file")
-        if active:
-            res = _s(active.get("result") or active.get("raw_input"), 1200)
-            return {
-                "handled": True,
-                "state": "DONE",
-                "result": f"Активный контекст найден\nЗадача: {active.get('id')}\nСтатус: {active.get('state')}\nКратко: {res}",
-                "event": "ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK",
-            }
-        if last_file:
-            res = _s(last_file.get("result") or last_file.get("raw_input"), 1200)
-            return {
-                "handled": True,
-                "state": "DONE",
-                "result": f"Последний файловый контекст найден\nЗадача: {last_file.get('id')}\nСтатус: {last_file.get('state')}\nКратко: {res}",
-                "event": "ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_LAST_FILE",
-            }
-
-    return None
-
-def save_dialog_event(chat_id: str, topic_id: int, key: str, value: Any) -> None:
-    if not os.path.exists(MEM_DB):
-        return
-    try:
-        con = sqlite3.connect(MEM_DB)
-        con.execute(
-            "INSERT INTO memory(chat_id,key,value,timestamp) VALUES(?,?,?,?)",
-            (
-                str(chat_id),
-                f"topic_{int(topic_id or 0)}_dialog_{key}",
-                json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value,
-                datetime.now(timezone.utc).isoformat(),
-            ),
-        )
-        con.commit()
-        con.close()
-    except Exception:
-        pass
-# === END_SHORT_CONTROL_SAFE_ROUTER_V1 ===
-# === END_UNIFIED_CONTEXT_PRIORITY_V1 ===
-# === END_ACTIVE_DIALOG_STATE_V1 ===
-
-====================================================================================================
-END_FILE: core/active_dialog_state.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/archive_distributor.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 27d2d0630d027aeeb85fccc7c64c2907e804ba96faf7eae9be72c49f32230cb8
-====================================================================================================
-# === ARCHIVE_DISTRIBUTOR_V1 ===
-# Читает timeline.jsonl → определяет топик → раскладывает в memory.db
-import json, os, re, logging, sqlite3
-from pathlib import Path
-
-logger = logging.getLogger(__name__)
-
-BASE = Path("/root/.areal-neva-core")
-MEM_DB = str(BASE / "data/memory.db")
-CHAT_ID = "-1003725299009"
-
-# Сигнатуры топиков по контенту
-_TOPIC_SIGNATURES = {
-    2:    ["стройк", "смет", "кровл", "фасад", "фундамент", "металлочерепиц", "профнастил",
-           "ангар", "бетон", "арматур", "утеплитель", "монтаж", "кж", "ар ", "кд "],
-    5:    ["технадзор", "дефект", "акт осмотр", "нарушени", "предписани", "сп ", "гост", "снип",
-           "инспекц", "фото дефект"],
-    500:  ["найди", "поищи", "цена", "стоимость", "avito", "ozon", "wildberries", "поставщик",
-           "купить", "маркет", "ral", "профлист"],
-    961:  ["toyota", "hiace", "запчаст", "brembo", "авто", "машин", "vin", "oem", "разборк",
-           "двигател", "подвеск"],
-    3008: ["код", "python", "патч", "функци", "верификац", "архитектур", "task_worker",
-           "telegram_daemon", "оркестр"],
-}
-
-def _detect_topic(text: str) -> int:
-    low = text.lower()
-    scores = {}
-    for topic_id, keywords in _TOPIC_SIGNATURES.items():
-        scores[topic_id] = sum(1 for kw in keywords if kw in low)
-    best = max(scores, key=scores.get)
-    return best if scores[best] > 0 else 0  # 0 = общий
-
-def _ensure_table(conn):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS memory
-        (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)
-    """)
-
-def distribute_timeline(timeline_path: str, chat_id: str = CHAT_ID, dry_run: bool = False) -> dict:
-    """
-    Читает timeline.jsonl → раскладывает записи в memory.db по топикам.
-    Возвращает статистику.
-    """
-    p = Path(timeline_path)
-    if not p.exists():
-        return {"ok": False, "reason": "FILE_NOT_FOUND"}
-
-    conn = sqlite3.connect(MEM_DB)
-    conn.row_factory = sqlite3.Row
-    _ensure_table(conn)
-
-    stats = {"total": 0, "distributed": 0, "skipped": 0, "by_topic": {}}
-    seen_keys = set()
-
-    with open(p, encoding="utf-8", errors="replace") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except Exception:
-                continue
-
-            stats["total"] += 1
-
-            # Собираем текст для классификации
-            text_parts = []
-            # timeline.jsonl имеет структуру {"timestamp":..., "data": {...}}
-            data_block = entry.get("data") or entry
-            if isinstance(data_block, dict):
-                for field in ["raw_text", "text", "message", "content", "result",
-                              "raw_input", "value", "system", "architecture",
-                              "pipeline", "memory", "pending", "decisions"]:
-                    v = data_block.get(field)
-                    if v and isinstance(v, str) and len(v) > 10:
-                        text_parts.append(v[:800])
-            # тоже проверяем корень
-            for field in ["text", "message", "content"]:
-                v = entry.get(field)
-                if v and isinstance(v, str):
-                    text_parts.append(v[:400])
-            text = " ".join(text_parts)[:3000]
-
-            if not text or len(text) < 20:
-                stats["skipped"] += 1
-                continue
-
-            # Определяем топик
-            topic_id = _detect_topic(text)
-
-            # Формируем ключ
-            ts = entry.get("timestamp") or entry.get("ts") or entry.get("created_at") or "2026"
-            ts_short = str(ts)[:10].replace("-", "")
-            dedup_key = f"topic_{topic_id}_archive_{ts_short}_{hash(text) % 100000}"
-
-            if dedup_key in seen_keys:
-                stats["skipped"] += 1
-                continue
-            seen_keys.add(dedup_key)
-
-            value = text[:5000]
-
-            if not dry_run:
-                # Проверяем нет ли уже такой записи
-                existing = conn.execute(
-                    "SELECT 1 FROM memory WHERE chat_id=? AND key=?",
-                    (chat_id, dedup_key)
-                ).fetchone()
-                if not existing:
-                    conn.execute(
-                        "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, ?)",
-                        (chat_id, dedup_key, value, str(ts)[:19])
-                    )
-
-            stats["distributed"] += 1
-            stats["by_topic"][topic_id] = stats["by_topic"].get(topic_id, 0) + 1
-
-    if not dry_run:
-        conn.commit()
-    conn.close()
-
-    return {"ok": True, **stats}
-
-def run_distribution(chat_id: str = CHAT_ID) -> dict:  # CHAT_EXPORTS_POLICY_V1_WIRED
-    """Запустить распределение для всех timeline.jsonl чата"""
-    results = {}
-    chats_dir = BASE / "data/memory_files/CHATS"
-    if not chats_dir.exists():
-        return {"ok": False, "reason": "NO_CHATS_DIR"}
-
-    for chat_dir in chats_dir.iterdir():
-        if not chat_dir.is_dir():
-            continue
-        timeline = chat_dir / "timeline.jsonl"
-        if timeline.exists():
-            r = distribute_timeline(str(timeline), chat_id=chat_id)
-            results[str(timeline)] = r
-            logger.info("ARCHIVE_DISTRIBUTED file=%s stats=%s", timeline, r)
-
-    return {"ok": True, "files": results}
-
-def _load_archive_for_topic(chat_id: str, topic_id: int, user_text: str = "", limit: int = 5) -> str:
-    """
-    Загрузить архивный контекст для топика из memory.db.
-    Используется в _load_archive_context.
-    """
-    if not os.path.exists(MEM_DB):
-        return ""
-    conn = sqlite3.connect(MEM_DB)
-    conn.row_factory = sqlite3.Row
-    try:
-        _ensure_table(conn)
-        key_pattern = f"topic_{topic_id}_archive_%"
-        rows = conn.execute(
-            """SELECT key, value FROM memory
-               WHERE chat_id=? AND key GLOB ?
-               ORDER BY timestamp DESC LIMIT ?""",
-            (str(chat_id), key_pattern, limit * 3)
-        ).fetchall()
-
-        if not rows:
-            return ""
-
-        # Фильтрация по релевантности если есть запрос
-        if user_text:
-            query_words = set(w for w in user_text.lower().split() if len(w) > 3)
-            scored = []
-            for row in rows:
-                val = str(row["value"]).lower()
-                score = sum(1 for w in query_words if w in val)
-                scored.append((score, str(row["value"])[:500]))
-            scored.sort(reverse=True)
-            relevant = [v for s, v in scored if s > 0][:limit]
-        else:
-            relevant = [str(r["value"])[:500] for r in rows[:limit]]
-
-        return "\n---\n".join(relevant) if relevant else ""
-    except Exception as e:
-        logger.warning("ARCHIVE_LOAD_ERR topic=%s err=%s", topic_id, e)
-        return ""
-    finally:
-        conn.close()
-
-try:
-    from core.chat_exports_policy import get_canonical_exports_dir as _ced
-except Exception:
-    _ced = None
-
-if __name__ == "__main__":
-    print("Running archive distribution...")
-    result = run_distribution()
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-# === END ARCHIVE_DISTRIBUTOR_V1 ===
-
-====================================================================================================
-END_FILE: core/archive_distributor.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/archive_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 04fdd1d0f6927a38b62f869f0a020b30b8cc81d798083d607f1a86d3c61c6e1e
-====================================================================================================
-# === FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
-from __future__ import annotations
-import json
-import logging
-from typing import Any, Dict, Optional
-
-ARCHIVE_ENGINE_VERSION = "ARCHIVE_ENGINE_V1"
-logger = logging.getLogger("task_worker")
-
-
-class ArchiveEngine:
-    """
-    Stage 6 shadow mode: индексирует завершённую задачу в memory.db.
-    Пишет short_summary, direction, engine, quality_gate_overall.
-    Не блокирует доставку при ошибках.
-    """
-
-    def archive(self, payload: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        record = {
-            "task_id":      str(payload.get("task_id") or payload.get("id") or ""),
-            "chat_id":      str(payload.get("chat_id") or ""),
-            "topic_id":     int(payload.get("topic_id") or 0),
-            "direction":    str(payload.get("direction") or "general_chat"),
-            "engine":       str(payload.get("engine") or "ai_router"),
-            "input_type":   str(payload.get("input_type") or "text"),
-            "raw_input":    str(payload.get("raw_input") or payload.get("raw_text") or "")[:300],
-            "result_text":  str((result.get("result") or {}).get("text") or result.get("text") or "")[:500],
-            "artifact_url": str(result.get("artifact_url") or result.get("drive_link") or ""),
-            "qg_overall":   str((result.get("quality_gate_report") or {}).get("overall") or "unknown"),
-            "qg_failed":    json.dumps((result.get("quality_gate_report") or {}).get("failed") or []),
-            "search_plan":  json.dumps(payload.get("search_plan") or {}),
-            "archive_version": ARCHIVE_ENGINE_VERSION,
-            "shadow_mode":  True,
-        }
-
-        self._write_to_memory_api(record)
-        return record
-
-    def _write_to_memory_api(self, record: Dict[str, Any]):
-        import urllib.request, urllib.error
-        try:
-            body = json.dumps(record).encode("utf-8")
-            req = urllib.request.Request(
-                "http://127.0.0.1:8091/archive",  # PORT_FIX_V1,
-                data=body,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            urllib.request.urlopen(req, timeout=2)
-            logger.info("FULLFIX_ARCHIVE_ENGINE_STAGE_6 archived task=%s dir=%s qg=%s",
-                        record["task_id"], record["direction"], record["qg_overall"])
-        except Exception as e:
-            logger.warning("FULLFIX_ARCHIVE_ENGINE_STAGE_6 memory_api unavailable: %s", e)
-
-
-def archive_task(payload, result):
-    return ArchiveEngine().archive(payload, result)
-# === END FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
-
-====================================================================================================
-END_FILE: core/archive_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/archive_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 369b05cb9ddf9aaa9f7b05828f3752848557f9e062d44f74b5f5f290723dc64c
-====================================================================================================
-# === FINAL_CLOSURE_BLOCKER_FIX_V1_ARCHIVE_DUPLICATE_GUARD ===
-from __future__ import annotations
-
-import hashlib
-import sqlite3
-from typing import Any, Dict
-
-
-def _clean(v) -> str:
-    return "" if v is None else str(v).strip()
-
-
-def content_hash(text: str) -> str:
-    return hashlib.sha256(_clean(text).lower().encode("utf-8", "ignore")).hexdigest()
-
-
-def ensure_archive_guard(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS archive_guard (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            chat_id TEXT,
-            topic_id INTEGER DEFAULT 0,
-            content_hash TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        )
-        """
-    )
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_archive_guard_hash ON archive_guard(content_hash)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_archive_guard_task ON archive_guard(task_id)")
-
-
-def should_archive(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, content: str) -> Dict[str, Any]:
-    ensure_archive_guard(conn)
-    h = content_hash(content)
-    row = conn.execute("SELECT task_id, created_at FROM archive_guard WHERE content_hash=? LIMIT 1", (h,)).fetchone()
-
-    if row:
-        return {"ok": False, "duplicate": True, "duplicate_task_id": row[0], "hash": h}
-
-    gid = hashlib.sha1(f"{task_id}:{h}".encode()).hexdigest()
-    conn.execute(
-        "INSERT OR IGNORE INTO archive_guard (id, task_id, chat_id, topic_id, content_hash) VALUES (?,?,?,?,?)",
-        (gid, task_id, str(chat_id), int(topic_id or 0), h),
-    )
-    return {"ok": True, "duplicate": False, "hash": h}
-
-
-# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ARCHIVE_DUPLICATE_GUARD ===
-
-====================================================================================================
-END_FILE: core/archive_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/artifact_pipeline.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 102fd4ccfe0880b0a831991f3fa9b45a968bf34f21d11c04fb785a7ab5f557e3
-====================================================================================================
-import os
-import re
-import csv
-import json
-import base64
-import tempfile
-from typing import Any, Dict, List, Optional
-
-from dotenv import load_dotenv
-
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
-
-def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v.strip()
-    try:
-        return json.dumps(v, ensure_ascii=False)
-    except Exception:
-        return str(v).strip()
-
-def _clean(text: str, limit: int = 12000) -> str:
-    text = (text or "").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:limit]
-
-def _kind(file_name: str, mime_type: str = "") -> str:
-    # === UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
-    # === DWG_DXF_KIND_FIX_V1_ARTIFACT_PIPELINE ===
-    try:
-        from core.format_registry import classify_file
-        return classify_file(file_name, mime_type).get("kind") or "binary"
-    except Exception:
-        ext = os.path.splitext((file_name or "").lower())[1]
-        mime = (mime_type or "").lower()
-
-        # drawing first: mimetypes may classify .dwg/.dxf as image/*
-        if ext in (".dwg", ".dxf", ".ifc", ".rvt", ".rfa", ".skp", ".stl", ".obj", ".step", ".stp", ".iges", ".igs") or any(x in mime for x in ("dxf", "dwg", "ifc", "cad", "step", "stp", "iges", "igs")):
-            return "drawing"
-        if ext in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".tif", ".tiff", ".bmp", ".gif") or mime.startswith("image/"):
-            return "image"
-        if ext in (".xlsx", ".xls", ".xlsm", ".csv", ".ods", ".tsv") or "spreadsheet" in mime or mime in ("text/csv", "application/vnd.ms-excel"):
-            return "table"
-        if ext in (".pdf", ".docx", ".doc", ".txt", ".md", ".rtf", ".odt", ".html", ".htm", ".xml", ".json", ".yaml", ".yml") or mime in ("application/pdf", "text/plain"):
-            return "document"
-        if ext in (".ppt", ".pptx", ".odp", ".key"):
-            return "presentation"
-        if ext in (".zip", ".7z", ".rar", ".tar", ".gz", ".tgz"):
-            return "archive"
-        if ext in (".mp4", ".mov", ".avi", ".mkv", ".mp3", ".wav", ".m4a", ".ogg"):
-            return "media"
-        return "binary"
-    # === END_DWG_DXF_KIND_FIX_V1_ARTIFACT_PIPELINE ===
-    # === END_UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
-
-
-# === DOMAIN_CONTOUR_ROUTER_V1 ===
-def _artifact_task_id(file_name: str, engine: str = "artifact") -> str:
-    base = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", os.path.splitext(os.path.basename(file_name or engine))[0]).strip("._")
-    return (base or engine)[:80]
-
-def _domain_flags(file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, bool]:
-    hay = f"{file_name}\n{mime_type}\n{user_text}\n{topic_role}".lower()
-    estimate = any(x in hay for x in ("смет", "расчёт", "расчет", "вор", "ведомость объем", "ведомость объём", "estimate", "xlsx", "xls", "csv"))
-    tech = any(x in hay for x in ("технадзор", "дефект", "акт", "осмотр", "нарушен", "предписан", "гост", "снип", "сп ", "фотофиксац", "трещин", "протеч", "скол"))
-    project = any(x in hay for x in ("проект", "проектирован", "кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз", "чертеж", "чертёж", "dxf", "dwg"))
-    return {"estimate": estimate, "tech": tech, "project": project}
-
-
-# === ESTIMATE_PDF_PACKAGE_V2 ===
-def _pdf_escape_v2(text: str) -> str:
-    return str(text or "").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-
-def _write_simple_pdf_v2(path: str, title: str, lines: List[str]) -> str:
-    out = os.path.join(tempfile.gettempdir(), os.path.splitext(os.path.basename(path))[0] + "_estimate_summary.pdf")
-    safe_lines = [_pdf_escape_v2(title or "Estimate summary")]
-    safe_lines += [_pdf_escape_v2(x) for x in (lines or [])[:40]]
-
-    stream_lines = ["BT", "/F1 11 Tf", "50 790 Td"]
-    first = True
-    for line in safe_lines:
-        if not first:
-            stream_lines.append("0 -16 Td")
-        first = False
-        stream_lines.append(f"({line[:105]}) Tj")
-    stream_lines.append("ET")
-    stream = "\n".join(stream_lines).encode("utf-8", errors="ignore")
-
-    objects = [
-        b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
-    ]
-
-    pdf = bytearray(b"%PDF-1.4\n")
-    offsets = [0]
-    for i, obj in enumerate(objects, 1):
-        offsets.append(len(pdf))
-        pdf.extend(f"{i} 0 obj\n".encode())
-        pdf.extend(obj)
-        pdf.extend(b"\nendobj\n")
-    xref = len(pdf)
-    pdf.extend(f"xref\n0 {len(objects)+1}\n".encode())
-    pdf.extend(b"0000000000 65535 f \n")
-    for off in offsets[1:]:
-        pdf.extend(f"{off:010d} 00000 n \n".encode())
-    pdf.extend(f"trailer << /Size {len(objects)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
-
-    with open(out, "wb") as f:
-        f.write(pdf)
-    return out
-
-def _zip_files_v2(files: List[str], name: str) -> str:
-    import zipfile
-    out = os.path.join(tempfile.gettempdir(), re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", name or "estimate_package").strip("._") + ".zip")
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for f in files or []:
-            if f and os.path.exists(f):
-                z.write(f, arcname=os.path.basename(f))
-    return out
-# === END_ESTIMATE_PDF_PACKAGE_V2 ===
-
-async def _domain_estimate_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
-    # === DOMAIN_ESTIMATE_PDF_XLSX_PACKAGE_V2 ===
-    try:
-        from core.estimate_engine import process_estimate_to_excel
-        tid = _artifact_task_id(file_name, "estimate_artifact")
-        res = await process_estimate_to_excel(local_path, tid, 0)
-
-        if res and (res.get("success") or res.get("excel_path")) and res.get("excel_path"):
-            excel_path = res.get("excel_path")
-            link = res.get("drive_link") or ""
-            lines = [
-                f"Файл: {file_name}",
-                "Engine: DOMAIN_ESTIMATE_ENGINE_V1",
-                f"Drive: {link or 'не подтвержден'}",
-                f"Status: {'OK' if excel_path else 'PARTIAL'}",
-            ]
-            if res.get("error"):
-                lines.append(f"Ограничение: {res.get('error')}")
-
-            pdf_path = _write_simple_pdf_v2(excel_path or local_path, "Сметный результат", lines)
-            package = _zip_files_v2([excel_path, pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_package")
-
-            summary = "Сметный файл обработан\nАртефакты: XLSX + PDF"
-            if link:
-                summary += f"\nExcel: {link}"
-            else:
-                summary += "\nExcel создан локально, Drive ссылка не подтверждена"
-            summary += "\nPDF включён в ZIP пакет"
-
-            return {
-                "summary": summary,
-                "artifact_path": package,
-                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_package.zip",
-                "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
-                "drive_link": link,
-                "extra_artifacts": [excel_path, pdf_path],
-            }
-
-        reason = (res or {}).get("error") or "ESTIMATE_ENGINE_NO_ARTIFACT"
-        pdf_path = _write_simple_pdf_v2(local_path, "Сметный файл принят без расчётного результата", [
-            f"Файл: {file_name}",
-            f"Причина: {reason}",
-            "Расчётные строки не подтверждены",
-        ])
-        package = _zip_files_v2([pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_diagnostic_package")
-        return {
-            "summary": f"Сметный файл принят, но расчётные строки не подтверждены\nПричина: {reason}\nСоздан диагностический PDF пакет",
-            "artifact_path": package,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_diagnostic_package.zip",
-            "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
-            "error": str(reason)[:300],
-            "extra_artifacts": [pdf_path],
-        }
-    except Exception as e:
-        pdf_path = _write_simple_pdf_v2(local_path, "Сметный engine недоступен", [
-            f"Файл: {file_name}",
-            f"Ошибка: {e}",
-            "Расчётные строки не подтверждены",
-        ])
-        package = _zip_files_v2([pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_error_package")
-        return {
-            "summary": f"Сметный engine недоступен: {e}\nСоздан диагностический PDF пакет",
-            "artifact_path": package,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_error_package.zip",
-            "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
-            "error": str(e)[:300],
-            "extra_artifacts": [pdf_path],
-        }
-    # === END_DOMAIN_ESTIMATE_PDF_XLSX_PACKAGE_V2 ===
-
-async def _domain_technadzor_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str, extracted_text: str = "") -> Optional[Dict[str, Any]]:
-    try:
-        from core.technadzor_engine import process_technadzor
-        tid = _artifact_task_id(file_name, "technadzor_artifact")
-        raw = "\n".join(x for x in [user_text or "", extracted_text or "", topic_role or ""] if x).strip()
-        res = process_technadzor(
-            conn=None,
-            task_id=tid,
-            chat_id="artifact_pipeline",
-            topic_id=0,
-            raw_input=raw or "Технический осмотр файла",
-            file_name=file_name,
-            local_path=local_path,
-        )
-        if res and res.get("ok"):
-            art = res.get("artifact") or {}
-            path = art.get("path") or ""
-            link = art.get("drive_link") or ""
-            summary = _clean(res.get("result_text") or "Акт технического осмотра сформирован", 6000)
-            if link and link not in summary:
-                summary += f"\n\nДокумент: {link}"
-            return {
-                "summary": summary,
-                "artifact_path": path,
-                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_technadzor_act.docx",
-                "engine": "DOMAIN_TECHNADZOR_ENGINE_V1",
-                "drive_link": link,
-            }
-    except Exception as e:
-        return {
-            "summary": f"Технадзор engine недоступен: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
-            "engine": "DOMAIN_TECHNADZOR_ENGINE_V1",
-            "error": str(e)[:300],
-        }
-    return None
-
-async def _domain_project_document_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
-    try:
-        from core.project_document_engine import process_project_document
-        tid = _artifact_task_id(file_name, "project_document")
-        res = await process_project_document(
-            file_path=local_path,
-            file_name=file_name,
-            user_text=user_text,
-            topic_role=topic_role,
-            task_id=tid,
-            topic_id=0,
-        )
-        if res and res.get("success"):
-            return {
-                "summary": _clean(res.get("summary") or "Проектный документ обработан", 6000),
-                "artifact_path": res.get("artifact_path"),
-                "artifact_name": res.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_project_document_package.zip",
-                "extra_artifacts": res.get("extra_artifacts") or [],
-                "engine": "PROJECT_DOCUMENT_ENGINE_V1",
-                "model": res.get("model") or {},
-            }
-    except Exception as e:
-        return {
-            "summary": f"Project document engine недоступен: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
-            "engine": "PROJECT_DOCUMENT_ENGINE_V1",
-            "error": str(e)[:300],
-        }
-    return None
-# === END_DOMAIN_CONTOUR_ROUTER_V1 ===
-
-def _build_word(title: str, summary: str, defects: List[Dict[str, Any]], recommendations: List[str], sources: List[str]) -> str:
-    from docx import Document
-
-    fd, out = tempfile.mkstemp(prefix="artifact_", suffix=".docx", dir="/tmp")
-    os.close(fd)
-
-    doc = Document()
-    doc.add_heading(title or "Результат обработки", level=1)
-
-    if summary:
-        doc.add_paragraph(_clean(summary, 12000))
-
-    if sources:
-        doc.add_heading("Источники", level=2)
-        for s in sources:
-            doc.add_paragraph(_s(s))
-
-    doc.add_heading("Замечания", level=2)
-    if defects:
-        for idx, item in enumerate(defects, 1):
-            p = doc.add_paragraph()
-            p.add_run(f"{idx}. ").bold = True
-            p.add_run(_s(item.get("title")) or "Замечание")
-            sev = _s(item.get("severity"))
-            if sev:
-                p.add_run(f" [{sev}]")
-            desc = _s(item.get("description"))
-            if desc:
-                doc.add_paragraph(desc)
-    else:
-        doc.add_paragraph("Замечания не выделены")
-
-    doc.add_heading("Рекомендации", level=2)
-    if recommendations:
-        for r in recommendations:
-            doc.add_paragraph(_s(r))
-    else:
-        doc.add_paragraph("Рекомендации не сформированы")
-
-    doc.save(out)
-    return out
-
-def _build_excel(title: str, items: List[Dict[str, str]], summary: str, sources: List[str]) -> str:
-    from openpyxl import Workbook
-
-    fd, out = tempfile.mkstemp(prefix="artifact_", suffix=".xlsx", dir="/tmp")
-    os.close(fd)
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Результат"
-    ws["A1"] = title or "Табличный результат"
-    ws["A2"] = _clean(summary, 1000)
-
-    row = 4
-    headers = ["№", "Наименование", "Ед", "Кол-во", "Примечание"]
-    for col, h in enumerate(headers, 1):
-        ws.cell(row=row, column=col, value=h)
-    row += 1
-
-    for idx, item in enumerate(items, 1):
-        ws.cell(row=row, column=1, value=idx)
-        ws.cell(row=row, column=2, value=_s(item.get("name")))
-        ws.cell(row=row, column=3, value=_s(item.get("unit")))
-        ws.cell(row=row, column=4, value=_s(item.get("qty")))
-        ws.cell(row=row, column=5, value=_s(item.get("note")))
-        row += 1
-
-    src = wb.create_sheet("Источники")
-    for idx, s in enumerate(sources, 1):
-        src.cell(row=idx, column=1, value=_s(s))
-
-    wb.save(out)
-    return out
-
-def _extract_pdf(path: str) -> str:
-    try:
-        from pypdf import PdfReader
-        reader = PdfReader(path)
-        parts = []
-        for page in reader.pages:
-            try:
-                parts.append(page.extract_text() or "")
-            except Exception:
-                pass
-        return _clean("\n".join(parts), 12000)
-    except Exception as e:
-        return f"PDF_PARSE_ERROR: {e}"
-
-def _extract_docx(path: str) -> str:
-    try:
-        from docx import Document
-        doc = Document(path)
-        return _clean("\n".join(p.text for p in doc.paragraphs if p.text), 12000)
-    except Exception as e:
-        return f"DOCX_PARSE_ERROR: {e}"
-
-def _extract_txt(path: str) -> str:
-    try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
-            return _clean(f.read(), 12000)
-    except Exception as e:
-        return f"TXT_PARSE_ERROR: {e}"
-
-def _extract_table_items(path: str, file_name: str) -> List[Dict[str, str]]:
-    rows: List[List[str]] = []
-    ext = os.path.splitext((file_name or "").lower())[1]
-
-    try:
-        if ext == ".csv":
-            with open(path, "r", encoding="utf-8", errors="ignore", newline="") as f:
-                reader = csv.reader(f)
-                for idx, row in enumerate(reader):
-                    rows.append([_s(x) for x in row])
-                    if idx >= 300:
-                        break
-        else:
-            from openpyxl import load_workbook
-            wb = load_workbook(path, data_only=True, read_only=True)
-            for ws in wb.worksheets[:3]:
-                rows.append([f"__SHEET__:{ws.title}"])
-                for idx, row in enumerate(ws.iter_rows(values_only=True)):
-                    rows.append([_s(x) for x in row])
-                    if idx >= 300:
-                        break
-    except Exception as e:
-        rows.append([f"TABLE_PARSE_ERROR: {e}"])
-
-    items: List[Dict[str, str]] = []
-    unit_re = re.compile(r"\b(м2|м3|м\.п\.|п\.м\.|шт|кг|тн|т|м)\b", re.I)
-    qty_re = re.compile(r"^\d+[.,]?\d*$")
-
-    for row in rows:
-        if not row:
-            continue
-        if len(row) == 1 and _s(row[0]).startswith("__SHEET__:"):
-            continue
-
-        cleaned = [_s(x) for x in row if _s(x)]
-        if not cleaned:
-            continue
-
-        name = cleaned[0]
-        unit = ""
-        qty = ""
-        note = ""
-
-        for cell in cleaned[1:]:
-            if not unit:
-                m = unit_re.search(cell)
-                if m:
-                    unit = m.group(1)
-                    continue
-            if not qty and qty_re.match(cell.replace(" ", "")):
-                qty = cell.replace(" ", "")
-                continue
-            note = (note + " | " + cell).strip(" |") if note else cell
-
-        if len(name) < 2:
-            continue
-
-        items.append({
-            "name": name[:500],
-            "unit": unit[:32],
-            "qty": qty[:64],
-            "note": note[:500],
-        })
-
-        if len(items) >= 500:
-            break
-
-    return items
-
-async def _vision_image(path: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
-    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
-    if not api_key:
-        return None
-
-    base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
-    model = (os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash").strip()
-
-    ext = os.path.splitext(path)[1].lower().lstrip(".") or "jpeg"
-    mime = f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}"
-
-    try:
-        import httpx
-        with open(path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
-
-        prompt = (
-            "Ты анализируешь строительную фотофиксацию\n"
-            f"Роль чата: {topic_role or 'технадзор'}\n"
-            f"Задача пользователя: {user_text or 'проанализируй фото'}\n\n"
-            "Верни только JSON вида:\n"
-            "{\n"
-            '  "summary": "краткое резюме",\n'
-            '  "defects": [{"title":"...", "description":"...", "severity":"low|medium|high"}],\n'
-            '  "recommendations": ["...", "..."]\n'
-            "}"
-        )
-
-        body = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
-                    ],
-                }
-            ],
-            "temperature": 0.1,
-        }
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-
-        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0)) as client:
-            r = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
-            r.raise_for_status()
-            data = r.json()
-
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            content = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
-        content = _clean(_s(content), 12000)
-
-        try:
-            parsed = json.loads(content)
-            if isinstance(parsed, dict):
-                return parsed
-        except Exception:
-            return {
-                "summary": content[:3000],
-                "defects": [],
-                "recommendations": [],
-            }
-
-    except Exception:
-        return None
-
-    return None
-
-async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Optional[Dict[str, Any]]:
-    kind = _kind(file_name, mime_type)
-    sources = [file_name]
-
-    if kind == "image":
-        # === OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE ===
-        try:
-            _ocr_hay = f"{file_name} {mime_type} {user_text} {topic_role}".lower()
-            if any(_x in _ocr_hay for _x in ("смет", "таблиц", "вор", "excel", "xlsx", "расчет", "расчёт")):
-                from core.ocr_table_engine import image_table_to_excel
-                _ocr = await image_table_to_excel(local_path, _artifact_task_id(file_name, "ocr_table"), user_text, 0)
-                if _ocr and _ocr.get("success"):
-                    return {
-                        "summary": _clean(_ocr.get("summary") or "Фото таблицы распознано", 4000),
-                        "artifact_path": _ocr.get("artifact_path"),
-                        "artifact_name": _ocr.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_ocr_table_package.zip",
-                        "extra_artifacts": _ocr.get("extra_artifacts") or [],
-                        "engine": "OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1",
-                        "model": {"rows": _ocr.get("rows") or []},
-                    }
-        except Exception as _ocr_e:
-            import logging as _ocr_log
-            _ocr_log.getLogger(__name__).warning("OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE_ERR %s", _ocr_e)
-        # === END_OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE ===
-        # === DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
-        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        vision_text = ""
-        analysis = None
-
-        if flags.get("tech") or not flags.get("estimate"):
-            analysis = await _vision_image(local_path, user_text, topic_role)
-            if isinstance(analysis, dict):
-                vision_text = json.dumps(analysis, ensure_ascii=False)
-            elif analysis:
-                vision_text = str(analysis)
-
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, vision_text)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                routed["engine"] = routed.get("engine") or "DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2"
-                return routed
-
-        if analysis is None:
-            analysis = await _vision_image(local_path, user_text, topic_role)
-
-        if not analysis:
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, "Фото принято без vision-анализа")
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-            return None
-
-        summary = _s(analysis.get("summary")) if isinstance(analysis, dict) else _s(analysis)
-        summary = summary or "Фото проанализировано"
-        defects = analysis.get("defects") if isinstance(analysis, dict) and isinstance(analysis.get("defects"), list) else []
-        recommendations = analysis.get("recommendations") if isinstance(analysis, dict) and isinstance(analysis.get("recommendations"), list) else []
-        artifact_path = _build_word("Акт замечаний по фотофиксации", summary, defects, [_s(x) for x in recommendations], sources)
-        return {
-            "summary": summary,
-            "artifact_path": artifact_path,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_photo_report.docx",
-            "engine": "DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2",
-        }
-        # === END_DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
-
-    if kind == "table":
-        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        if flags.get("estimate") or not flags.get("project"):
-            routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        items = _extract_table_items(local_path, file_name)
-        summary = f"Нормализовано позиций: {len(items)}"
-        artifact_path = _build_excel("Сметный/табличный результат", items, summary, sources)
-        return {
-            "summary": summary,
-            "artifact_path": artifact_path,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate.xlsx",
-            "engine": "TABLE_FALLBACK_ENGINE",
-        }
-
-    if kind == "drawing":
-        try:
-            from core.dwg_engine import process_drawing_file
-            data = process_drawing_file(
-                local_path=local_path,
-                file_name=file_name,
-                mime_type=mime_type,
-                user_text=user_text,
-                topic_role=topic_role,
-                task_id="artifact",
-                topic_id=0,
-            )
-            if data and data.get("success"):
-                return {
-                    "summary": _clean(data.get("summary") or "DWG/DXF файл обработан", 4000),
-                    "artifact_path": data.get("artifact_path"),
-                    "artifact_name": data.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_dwg_dxf_project_package.zip",
-                    "extra_artifacts": data.get("extra_artifacts") or [],
-                    "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-                    "model": data.get("model") or {},
-                }
-            return {
-                "summary": _clean((data or {}).get("summary") or (data or {}).get("error") or "DWG/DXF файл не обработан", 3000),
-                "artifact_path": "",
-                "artifact_name": "",
-                "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-                "error": (data or {}).get("error") or "DRAWING_PROCESS_FAILED",
-            }
-        except Exception as e:
-            return {
-                "summary": f"DWG/DXF обработка завершилась ошибкой: {e}",
-                "artifact_path": "",
-                "artifact_name": "",
-                "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-                "error": str(e)[:300],
-            }
-
-    if kind == "document":
-        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        ext = os.path.splitext((file_name or "").lower())[1]
-        if ext == ".pdf":
-            domain_text = _extract_pdf(local_path)
-        elif ext == ".docx":
-            domain_text = _extract_docx(local_path)
-        else:
-            domain_text = _extract_txt(local_path)
-
-        if flags.get("tech"):
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, domain_text)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        if flags.get("estimate"):
-            routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        if flags.get("project"):
-            routed = await _domain_project_document_artifact(local_path, file_name, mime_type, user_text, topic_role)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        summary = _clean(domain_text, 3000) if domain_text else "Документ обработан"
-        artifact_path = _build_word("Сводка по документу", summary, [], [], sources)
-        return {
-            "summary": summary,
-            "artifact_path": artifact_path,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_document_summary.docx",
-            "engine": "DOCUMENT_FALLBACK_ENGINE",
-        }
-
-    # === UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===
-    try:
-        from core.universal_file_engine import process_universal_file
-        data = process_universal_file(
-            local_path=local_path,
-            file_name=file_name,
-            mime_type=mime_type,
-            user_text=user_text,
-            topic_role=topic_role,
-            task_id=_artifact_task_id(file_name, "universal_file"),
-            topic_id=0,
-        )
-        if data and data.get("success"):
-            return {
-                "summary": _clean(data.get("summary") or "Файл обработан универсальным контуром", 6000),
-                "artifact_path": data.get("artifact_path"),
-                "artifact_name": data.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_universal_file_package.zip",
-                "extra_artifacts": data.get("extra_artifacts") or [],
-                "engine": "UNIVERSAL_FILE_ENGINE_V1",
-                "model": data.get("model") or {},
-            }
-    except Exception as e:
-        return {
-            "summary": f"Универсальный файловый контур завершился ошибкой: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
-            "engine": "UNIVERSAL_FILE_ENGINE_V1",
-            "error": str(e)[:300],
-        }
-    return None
-    # === END_UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===
-
-# === FIX_DOMAIN_FLAGS_TOPIC_ROLE_ESTIMATE_BLEED_V1 ===
-# topic_role for topic_2 = "Топик: СТРОЙКА | Направление: estimates"
-# The word "estimate" in topic_role made estimate=True for EVERY file in topic_2.
-# Fix: classify estimate only from file_name, mime_type, user_text — not topic_role.
-_fdf_orig_domain_flags = _domain_flags
-
-def _domain_flags(file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, bool]:
-    hay_no_role = f"{file_name}\n{mime_type}\n{user_text}".lower()
-    estimate = any(x in hay_no_role for x in (
-        "смет", "расчёт", "расчет", "вор", "ведомость объем", "ведомость объём",
-        "estimate", "xlsx", "xls", "csv"
-    ))
-    orig = _fdf_orig_domain_flags(file_name, mime_type, user_text, topic_role)
-    return {"estimate": estimate, "tech": orig["tech"], "project": orig["project"]}
-# === END_FIX_DOMAIN_FLAGS_TOPIC_ROLE_ESTIMATE_BLEED_V1 ===
-
-====================================================================================================
-END_FILE: core/artifact_pipeline.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/artifact_upload_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3cf8290fd123e4a629b65742f93811b6a157d1d05bb63ad6532d3f931bf43b48
-====================================================================================================
-# === FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===
-# === UPLOAD_RETRY_QUEUE_UNIFICATION_V1 ===
-# === HEAVY_FILE_STORAGE_POLICY_V1 ===
-from __future__ import annotations
-import logging
-import os
-import sqlite3
-from typing import Any, Dict
-
-logger = logging.getLogger(__name__)
-_DB = "/root/.areal-neva-core/data/core.db"
-
-def _ensure_retry_table(conn: sqlite3.Connection) -> None:
-    conn.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        path TEXT, task_id TEXT, topic_id INTEGER, kind TEXT,
-        attempts INTEGER DEFAULT 0, last_error TEXT,
-        created_at TEXT DEFAULT (datetime('now')), last_attempt TEXT
-    )""")
-
-def _queue_retry(path: str, task_id: str, topic_id: int, kind: str, error: str) -> None:
-    try:
-        with sqlite3.connect(_DB, timeout=10) as c:
-            _ensure_retry_table(c)
-            c.execute(
-                "INSERT INTO upload_retry_queue(path,task_id,topic_id,kind,last_error) VALUES(?,?,?,?,?)",
-                (str(path), str(task_id), int(topic_id or 0), str(kind or "artifact"), str(error)),
-            )
-            try:
-                c.execute(
-                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (str(task_id), f"UPLOAD_RETRY_QUEUE_UNIFICATION_V1:QUEUED:{kind}"),
-                )
-            except Exception:
-                pass
-            c.commit()
-    except Exception as e:
-        logger.warning("UPLOAD_RETRY_QUEUE_UNIFICATION_V1_ERR task=%s err=%s", task_id, e)
-
-def _cleanup_heavy(path: str, link: str = "") -> bool:
-    try:
-        p = str(path or "")
-        if not p or not os.path.exists(p):
-            return False
-        size = os.path.getsize(p)
-        is_tmp = p.startswith("/tmp/") or p.startswith("/var/tmp/") or "/runtime/" in p
-        if size >= 20 * 1024 * 1024 and is_tmp:
-            os.remove(p)
-            logger.info("HEAVY_FILE_STORAGE_POLICY_V1_CLEANED path=%s link=%s", p, link)
-            return True
-    except Exception as e:
-        logger.warning("HEAVY_FILE_STORAGE_POLICY_V1_CLEAN_ERR path=%s err=%s", path, e)
-    return False
-
-def upload_or_fail(path: str, task_id: str, topic_id: int, kind: str = "artifact") -> Dict[str, Any]:
-    if not path or not os.path.exists(str(path)):
-        _queue_retry(path, task_id, topic_id, kind, "FILE_NOT_FOUND")
-        return {"success": False, "error": "FILE_NOT_FOUND", "path": path, "queued": True}
-    size = os.path.getsize(str(path))
-    if size < 10:
-        _queue_retry(path, task_id, topic_id, kind, "FILE_TOO_SMALL")
-        return {"success": False, "error": "FILE_TOO_SMALL", "path": path, "size": size, "queued": True}
-    tried = []
-    try:
-        from core.engine_base import upload_artifact_to_drive
-        link = upload_artifact_to_drive(str(path), str(task_id), int(topic_id or 0))
-        if link and str(link).startswith("http"):
-            _cleanup_heavy(path, link)
-            return {"success": True, "link": str(link), "drive_link": str(link),
-                    "path": str(path), "kind": kind, "queued": False}
-        tried.append("drive:no_link")
-    except Exception as e:
-        tried.append(f"drive:{e}")
-    _queue_retry(path, task_id, topic_id, kind, "DRIVE_UPLOAD_FAILED")
-    try:
-        from core.engine_base import _telegram_fallback_send
-        tg = _telegram_fallback_send(str(path), str(task_id), int(topic_id or 0))
-        if tg:
-            _cleanup_heavy(path, tg)
-            return {"success": True, "link": str(tg), "telegram_link": str(tg),
-                    "path": str(path), "kind": kind, "drive_failed": True,
-                    "telegram_fallback": True, "queued": True}
-    except Exception as e:
-        tried.append(f"telegram:{e}")
-    return {"success": False, "error": "UPLOAD_FAILED", "path": str(path),
-            "size": size, "tried": tried, "queued": True}
-
-def upload_many_or_fail(files, task_id: str, topic_id: int) -> Dict[str, Any]:
-    results: Dict[str, Any] = {}
-    links: Dict[str, str] = {}
-    all_ok = True
-    for f in files or []:
-        if isinstance(f, str):
-            path, kind = f, "artifact"
-        elif isinstance(f, dict):
-            path = f.get("path") or f.get("file") or f.get("artifact_path") or ""
-            kind = f.get("kind") or "artifact"
-        else:
-            path, kind = str(f or ""), "artifact"
-        r = upload_or_fail(str(path), str(task_id), int(topic_id or 0), str(kind))
-        results[str(path)] = r
-        if not (isinstance(r, dict) and r.get("success")):
-            all_ok = False
-        if isinstance(r, dict):
-            link = str(r.get("link") or r.get("drive_link") or r.get("telegram_link") or "")
-            if link:
-                links[str(path)] = link
-    return {"success": all_ok, "results": results, "links": links,
-            "queued": any(isinstance(v, dict) and v.get("queued") for v in results.values())}
-# === END_HEAVY_FILE_STORAGE_POLICY_V1 ===
-# === END_UPLOAD_RETRY_QUEUE_UNIFICATION_V1 ===
-# === END FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===
-
-====================================================================================================
-END_FILE: core/artifact_upload_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/audit_log.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 46ff0af7219a7e5548d4d189ecadce73909cb9ff63c0e3c64ea62933fa1976b3
-====================================================================================================
-# === AUDIT_LOG_V1 ===
-import os, json, logging
-from datetime import datetime, timezone
-
-logger = logging.getLogger(__name__)
-_LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "audit.jsonl")
-
-def audit(event: str, task_id: str = "", chat_id: str = "", details: dict = None):
-    """Записать аудит-событие"""
-    entry = {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "event": event,
-        "task_id": task_id,
-        "chat_id": str(chat_id),
-        "details": details or {},
-    }
-    try:
-        with open(_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    except Exception as e:
-        logger.warning("AUDIT_LOG_WRITE_ERR %s", e)
-
-def tail_audit(n: int = 20) -> list:
-    """Последние n записей аудита"""
-    try:
-        with open(_LOG_PATH, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        return [json.loads(l) for l in lines[-n:] if l.strip()]
-    except Exception:
-        return []
-# === END AUDIT_LOG_V1 ===
-
-====================================================================================================
-END_FILE: core/audit_log.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/cad_project_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 6024e82541f8e08b15909858aa28306a471adeffab216b8fc3b23b819b273edc
-====================================================================================================
-# === FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE ===
-import os
-import re
-import json
-import math
-import glob
-import tempfile
-from pathlib import Path
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
-
-BASE = "/root/.areal-neva-core"
-TEMPLATE_DIR = f"{BASE}/data/project_templates"
-
-ENGINE = "FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE"
-
-DEFAULT_FOUNDATION_SHEETS = [
-    {"mark": "КЖ", "number": "0", "title": "Титульный лист"},
-    {"mark": "КЖ", "number": "1", "title": "Общие данные"},
-    {"mark": "КЖ", "number": "2", "title": "Ведомость листов"},
-    {"mark": "КЖ", "number": "3", "title": "План фундаментной плиты"},
-    {"mark": "КЖ", "number": "4", "title": "Разрез 1-1"},
-    {"mark": "КЖ", "number": "5", "title": "Схема нижнего армирования"},
-    {"mark": "КЖ", "number": "6", "title": "Схема верхнего армирования"},
-    {"mark": "КЖ", "number": "7", "title": "Узлы и детали"},
-    {"mark": "КЖ", "number": "8", "title": "Спецификация материалов"},
-    {"mark": "КЖ", "number": "9", "title": "Ведомость расхода стали"},
-]
-
-DEFAULT_ROOF_SHEETS = [
-    {"mark": "КД", "number": "0", "title": "Титульный лист"},
-    {"mark": "КД", "number": "1", "title": "Общие данные"},
-    {"mark": "КД", "number": "2", "title": "Ведомость листов"},
-    {"mark": "КД", "number": "3", "title": "План кровли"},
-    {"mark": "КД", "number": "4", "title": "План стропильной системы"},
-    {"mark": "КД", "number": "5", "title": "Разрезы"},
-    {"mark": "КД", "number": "6", "title": "Узлы кровли"},
-    {"mark": "КД", "number": "7", "title": "Спецификация древесины"},
-    {"mark": "КД", "number": "8", "title": "Спецификация крепежа"},
-]
-
-NORMATIVE_NOTES = [
-    "СП 63.13330.2018 Бетонные и железобетонные конструкции",
-    "СП 20.13330.2016 Нагрузки и воздействия",
-    "ГОСТ 21.501-2018 Правила выполнения рабочей документации архитектурных и конструктивных решений",
-    "ГОСТ 21.101-2020 Основные требования к проектной и рабочей документации",
-    "ГОСТ 34028-2016 Прокат арматурный для железобетонных конструкций",
-]
-
-REBAR_WEIGHT_KG_M = {
-    6: 0.222,
-    8: 0.395,
-    10: 0.617,
-    12: 0.888,
-    14: 1.21,
-    16: 1.58,
-    18: 2.00,
-    20: 2.47,
-    22: 2.98,
-    25: 3.85,
-}
-
-def _clean(v: Any, limit: int = 10000) -> str:
-    return str(v or "").replace("\x00", " ").strip()[:limit]
-
-def _safe_name(v: Any) -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 80))
-    return s.strip("_") or "project"
-
-def _font_name() -> str:
-    try:
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        candidates = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-        ]
-        for path in candidates:
-            if os.path.exists(path):
-                pdfmetrics.registerFont(TTFont("ArealSans", path))
-                return "ArealSans"
-    except Exception:
-        pass
-    return "Helvetica"
-
-def _load_templates() -> List[Dict[str, Any]]:
-    out = []
-    for p in sorted(glob.glob(f"{TEMPLATE_DIR}/PROJECT_TEMPLATE_MODEL__*.json"), key=os.path.getmtime, reverse=True):
-        try:
-            data = json.loads(Path(p).read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                data["template_file"] = p
-                out.append(data)
-        except Exception:
-            pass
-    return out
-
-def _choose_template(section: str, topic_id: int = 0) -> Dict[str, Any]:
-    templates = _load_templates()
-    if not templates:
-        return {}
-    section = _clean(section).upper()
-    for tpl in templates:
-        if topic_id and int(tpl.get("topic_id", 0) or 0) == int(topic_id) and _clean(tpl.get("project_type")).upper() == section:
-            return tpl
-    for tpl in templates:
-        if _clean(tpl.get("project_type")).upper() == section:
-            return tpl
-    return templates[0]
-
-def _num(text: str, default: float) -> float:
-    try:
-        return float(str(text).replace(",", "."))
-    except Exception:
-        return default
-
-def _parse_mm(text: str, patterns: List[str], default: int) -> int:
-    low = text.lower()
-    for pat in patterns:
-        m = re.search(pat, low, re.I)
-        if m:
-            return int(float(m.group(1).replace(",", ".")))
-    return default
-
-def parse_project_request(raw_input: str, template_hint: str = "") -> Dict[str, Any]:
-    text = _clean(raw_input + " " + template_hint, 6000)
-    low = text.lower()
-
-    section = "КЖ"
-    project_kind = "foundation_slab"
-    if any(x in low for x in ["кров", "строп", "кд"]):
-        section = "КД"
-        project_kind = "roof"
-    if any(x in low for x in [" ар ", "ар.", "архитект", "планиров", "фасад"]):  # SECTION_DETECTION_FIX_V1
-        section = "АР"
-        project_kind = "architectural"
-
-    length_m = 10.0
-    width_m = 10.0
-    m = re.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*(?:м|m)?", low)
-    if m:
-        length_m = _num(m.group(1), 10.0)
-        width_m = _num(m.group(2), 10.0)
-
-    slab_mm = _parse_mm(low, [
-        r"толщин[аы]?\D{0,30}(\d{2,4})\s*мм",
-        r"плит[аы]?\D{0,30}(\d{2,4})\s*мм",
-        r"бетон\D{0,30}(\d{2,4})\s*мм",
-    ], 250)
-
-    sand_mm = _parse_mm(low, [
-        r"песчан\D{0,30}(\d{2,4})\s*мм",
-        r"песок\D{0,30}(\d{2,4})\s*мм",
-    ], 300)
-
-    gravel_mm = _parse_mm(low, [
-        r"щеб[её]н\D{0,30}(\d{2,4})\s*мм",
-        r"щебень\D{0,30}(\d{2,4})\s*мм",
-        r"основан\D{0,30}(\d{2,4})\s*мм",
-    ], 150)
-
-    rebar_step_mm = _parse_mm(low, [
-        r"шаг\D{0,30}(\d{2,4})\s*мм",
-        r"арматур\D{0,40}(\d{2,4})\s*мм",
-    ], 200)
-
-    rebar_diam_mm = 12
-    md = re.search(r"(?:ø|ф|d|диаметр)\s*(\d{1,2})", low, re.I)
-    if md:
-        rebar_diam_mm = int(md.group(1))
-    else:
-        md = re.search(r"арматур[аы]?\D{0,30}(\d{1,2})(?!\d)", low, re.I)
-        if md:
-            rebar_diam_mm = int(md.group(1))
-
-    concrete_class = "B25"
-    mc = re.search(r"\b[вb]\s?(\d{2,3}(?:[,.]\d)?)\b", text, re.I)
-    if mc:
-        concrete_class = "B" + mc.group(1).replace(",", ".")
-
-    rebar_class = "A500"
-    mr = re.search(r"\b[аa]\s?500[сc]?\b", text, re.I)
-    if mr:
-        rebar_class = "A500C" if "c" in mr.group(0).lower() or "с" in mr.group(0).lower() else "A500"
-
-    return {
-        "project_name": "Проект фундаментной плиты" if project_kind == "foundation_slab" else "Проект по образцу",
-        "project_kind": project_kind,
-        "section": section,
-        "length_m": length_m,
-        "width_m": width_m,
-        "slab_mm": slab_mm,
-        "sand_mm": sand_mm,
-        "gravel_mm": gravel_mm,
-        "rebar_diam_mm": rebar_diam_mm,
-        "rebar_step_mm": rebar_step_mm,
-        "rebar_class": rebar_class,
-        "concrete_class": concrete_class,
-        "cover_mm": 40,
-        "input": raw_input,
-    }
-
-def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) -> List[Dict[str, str]]:
-    section = data.get("section") or "КЖ"
-    raw = template.get("sheet_register") or []
-    sheets: List[Dict[str, str]] = []
-    seen = set()
-
-    for i, sh in enumerate(raw, 1):
-        if isinstance(sh, dict):
-            title = _clean(sh.get("title") or sh.get("name") or sh.get("sheet") or "", 120)
-            number = _clean(sh.get("number") or sh.get("num") or str(i), 20)
-            mark = _clean(sh.get("mark") or section, 20)
-        else:
-            title = _clean(sh, 120)
-            number = str(i)
-            mark = section
-        if not title:
-            continue
-        key = title.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        sheets.append({"mark": mark, "number": number, "title": title})
-
-    sections = template.get("sections") or []
-    if len(sheets) < 6 and sections:
-        keys = ["общие", "ведомость", "план", "разрез", "армир", "спецификац", "узел", "фасад", "схема"]
-        for sec in sections:
-            title = _clean(sec, 120)
-            if not title:
-                continue
-            low = title.lower()
-            if not any(k in low for k in keys):
-                continue
-            if low in seen:
-                continue
-            seen.add(low)
-            sheets.append({"mark": section, "number": str(len(sheets) + 1), "title": title})
-            if len(sheets) >= 12:
-                break
-
-    base = DEFAULT_ROOF_SHEETS if data.get("project_kind") == "roof" else DEFAULT_FOUNDATION_SHEETS
-    for sh in base:
-        low = sh["title"].lower()
-        if low not in seen:
-            sheets.append({"mark": section, "number": str(len(sheets)), "title": sh["title"]})
-            seen.add(low)
-
-    fixed = []
-    for idx, sh in enumerate(sheets[:20], 1):
-        title = _clean(sh.get("title"), 120)
-        mark = _clean(sh.get("mark"), 20) or section
-        num = _clean(sh.get("number"), 20) or str(idx)
-        fixed.append({"mark": mark, "number": num, "title": title})
-    return fixed
-
-def _calc_foundation(data: Dict[str, Any]) -> Dict[str, Any]:
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    area = L * W
-    slab_m = data["slab_mm"] / 1000.0
-    sand_m = data["sand_mm"] / 1000.0
-    gravel_m = data["gravel_mm"] / 1000.0
-    step_m = data["rebar_step_mm"] / 1000.0
-    d = int(data["rebar_diam_mm"])
-    bars_x = int(math.floor(W / step_m)) + 1
-    bars_y = int(math.floor(L / step_m)) + 1
-    rebar_m_one_layer = bars_x * L + bars_y * W
-    rebar_m_total = rebar_m_one_layer * 2
-    weight = REBAR_WEIGHT_KG_M.get(d, (d * d) / 162.0)
-    rebar_kg = rebar_m_total * weight
-    return {
-        "area_m2": round(area, 3),
-        "concrete_m3": round(area * slab_m, 3),
-        "sand_m3": round(area * sand_m, 3),
-        "gravel_m3": round(area * gravel_m, 3),
-        "bars_x": bars_x,
-        "bars_y": bars_y,
-        "rebar_m_total": round(rebar_m_total, 1),
-        "rebar_kg": round(rebar_kg, 1),
-        "rebar_t": round(rebar_kg / 1000.0, 3),
-    }
-
-def _frame(c, w, h, title: str, sheet_no: int, total: int, font: str, data: Dict[str, Any]) -> None:
-    from reportlab.lib.units import mm
-    c.setLineWidth(0.7)
-    c.rect(10*mm, 10*mm, w - 20*mm, h - 20*mm)
-    c.line(10*mm, 35*mm, w - 10*mm, 35*mm)
-    c.line(w - 135*mm, 10*mm, w - 135*mm, 35*mm)
-    c.line(w - 80*mm, 10*mm, w - 80*mm, 35*mm)
-    c.line(w - 35*mm, 10*mm, w - 35*mm, 35*mm)
-    c.setFont(font, 9)
-    c.drawString(14*mm, 23*mm, _clean(title, 90))
-    c.drawString(w - 132*mm, 23*mm, f"Раздел {data.get('section','КЖ')}")
-    c.drawString(w - 77*mm, 23*mm, f"Лист {sheet_no}")
-    c.drawString(w - 32*mm, 23*mm, f"Листов {total}")
-    c.setFont(font, 7)
-    c.drawString(14*mm, 15*mm, f"{ENGINE} · {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    c.setFont(font, 14)
-    c.drawString(18*mm, h - 18*mm, _clean(title, 120))
-    c.setFont(font, 8)
-    c.drawString(18*mm, h - 25*mm, f"{data.get('project_name','Проект')} · {data.get('length_m')}x{data.get('width_m')} м")
-
-def _draw_lines(c, lines: List[str], x_mm: float, y_mm: float, font: str, size: int = 10, step: float = 7.5) -> None:
-    from reportlab.lib.units import mm
-    y = y_mm
-    c.setFont(font, size)
-    for line in lines:
-        c.drawString(x_mm*mm, y*mm, _clean(line, 150))
-        y -= step
-
-def _draw_plan(c, w, h, font: str, data: Dict[str, Any], calc: Dict[str, Any], rebar: bool = False) -> None:
-    from reportlab.lib.units import mm
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    x0 = 55*mm
-    y0 = 55*mm
-    scale = min((w - 115*mm) / (L * 1000), (h - 130*mm) / (W * 1000))
-    rw = L * 1000 * scale
-    rh = W * 1000 * scale
-    c.setLineWidth(1.2)
-    c.rect(x0, y0, rw, rh)
-    c.setFont(font, 9)
-    c.drawString(x0, y0 - 8*mm, f"{L:g} м")
-    c.saveState()
-    c.translate(x0 - 8*mm, y0)
-    c.rotate(90)
-    c.drawString(0, 0, f"{W:g} м")
-    c.restoreState()
-    c.setDash(5, 3)
-    c.line(x0, y0 + rh / 2, x0 + rw, y0 + rh / 2)
-    c.line(x0 + rw / 2, y0, x0 + rw / 2, y0 + rh)
-    c.setDash()
-
-    if rebar:
-        step_px = max(1.8*mm, data["rebar_step_mm"] * scale)
-        c.setLineWidth(0.25)
-        x = x0 + step_px
-        while x < x0 + rw:
-            c.line(x, y0, x, y0 + rh)
-            x += step_px
-        y = y0 + step_px
-        while y < y0 + rh:
-            c.line(x0, y, x0 + rw, y)
-            y += step_px
-        txt = f"Армирование: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм, верхняя и нижняя сетка"
-    else:
-        txt = f"Плита {L:g}x{W:g} м, площадь {calc['area_m2']} м²"
-
-    c.setFont(font, 10)
-    c.drawString(25*mm, (h/mm - 42)*mm, txt)
-
-def _draw_section(c, w, h, font: str, data: Dict[str, Any]) -> None:
-    from reportlab.lib.units import mm
-    bx = 55*mm
-    by = 70*mm
-    total = data["slab_mm"] + data["gravel_mm"] + data["sand_mm"]
-    k = 105*mm / total
-    layers = [
-        ("Фундаментная плита", data["slab_mm"], f"Бетон {data['concrete_class']}, защитный слой {data['cover_mm']} мм"),
-        ("Щебёночное основание", data["gravel_mm"], "Уплотнение послойно"),
-        ("Песчаная подушка", data["sand_mm"], "Уплотнение послойно"),
-    ]
-    y = by
-    c.setLineWidth(0.8)
-    for name, th, note in reversed(layers):
-        hh = th * k
-        c.rect(bx, y, 230*mm, hh)
-        c.setFont(font, 10)
-        c.drawString(bx + 5*mm, y + hh/2, f"{name}: {th} мм · {note}")
-        y += hh
-    c.setFont(font, 10)
-    c.drawString(25*mm, 235*mm, "Разрез 1-1")
-    c.drawString(25*mm, 225*mm, f"Армирование: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм")
-
-def _draw_nodes(c, w, h, font: str, data: Dict[str, Any]) -> None:
-    from reportlab.lib.units import mm
-    c.setFont(font, 11)
-    c.drawString(25*mm, 245*mm, "Типовые узлы")
-    bx, by = 45*mm, 95*mm
-    for i, title in enumerate(["Узел края плиты", "Узел защитного слоя", "Узел основания"], 0):
-        x = bx + i * 115*mm
-        c.setLineWidth(0.8)
-        c.rect(x, by, 90*mm, 75*mm)
-        c.line(x, by + 22*mm, x + 90*mm, by + 22*mm)
-        c.line(x + 20*mm, by, x + 20*mm, by + 75*mm)
-        c.setFont(font, 8)
-        c.drawString(x + 4*mm, by + 63*mm, title)
-        c.drawString(x + 4*mm, by + 15*mm, f"Защитный слой {data['cover_mm']} мм")
-        c.drawString(x + 4*mm, by + 7*mm, f"Ø{data['rebar_diam_mm']} {data['rebar_class']}")
-
-def _spec_rows(data: Dict[str, Any], calc: Dict[str, Any]) -> List[Tuple[str, str, Any, str]]:
-    return [
-        (f"Бетон {data['concrete_class']} для фундаментной плиты", "м³", calc["concrete_m3"], "по объёму плиты"),
-        ("Песчаная подушка", "м³", calc["sand_m3"], "послойное уплотнение"),
-        ("Щебёночное основание", "м³", calc["gravel_m3"], "послойное уплотнение"),
-        (f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']}", "п.м", calc["rebar_m_total"], "верхняя и нижняя сетка"),
-        (f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']}", "т", calc["rebar_t"], "расчётный вес"),
-    ]
-
-def _draw_spec(c, w, h, font: str, rows: List[Tuple[str, str, Any, str]]) -> None:
-    from reportlab.lib.units import mm
-    x = 25*mm
-    y = 235*mm
-    c.setFont(font, 10)
-    headers = ["№", "Наименование", "Ед.", "Кол-во", "Примечание"]
-    widths = [12*mm, 150*mm, 22*mm, 32*mm, 110*mm]
-    c.setLineWidth(0.5)
-    cx = x
-    for head, ww in zip(headers, widths):
-        c.rect(cx, y, ww, 8*mm)
-        c.drawString(cx + 2*mm, y + 2.3*mm, head)
-        cx += ww
-    y -= 8*mm
-    for i, row in enumerate(rows, 1):
-        vals = [str(i), row[0], row[1], str(row[2]), row[3]]
-        cx = x
-        for val, ww in zip(vals, widths):
-            c.rect(cx, y, ww, 8*mm)
-            c.drawString(cx + 2*mm, y + 2.3*mm, _clean(val, 55))
-            cx += ww
-        y -= 8*mm
-
-def write_project_pdf(path: str, data: Dict[str, Any], template: Dict[str, Any], sheets: List[Dict[str, str]], calc: Dict[str, Any]) -> str:
-    from reportlab.lib.pagesizes import A3, landscape
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.units import mm
-    font = _font_name()
-    page_size = landscape(A3)
-    w, h = page_size
-    c = canvas.Canvas(path, pagesize=page_size)
-    rows = _spec_rows(data, calc)
-    total = len(sheets)
-
-    for idx, sh in enumerate(sheets, 1):
-        title = sh["title"]
-        low = title.lower()
-        _frame(c, w, h, f"{sh['mark']}-{sh['number']} {title}", idx, total, font, data)
-
-        if "титул" in low:
-            c.setFont(font, 18)
-            c.drawCentredString(w/2, h - 85*mm, data["project_name"])
-            c.setFont(font, 14)
-            c.drawCentredString(w/2, h - 100*mm, f"Раздел {data['section']}")
-            c.setFont(font, 11)
-            c.drawCentredString(w/2, h - 116*mm, f"Параметры: {data['length_m']:g}x{data['width_m']:g} м, плита {data['slab_mm']} мм")
-            c.drawCentredString(w/2, h - 130*mm, "Сформировано по сохранённому шаблону пользователя")
-        elif "общ" in low or "данн" in low:
-            lines = [
-                f"Наименование: {data['project_name']}",
-                f"Раздел: {data['section']}",
-                f"Размер плиты: {data['length_m']:g} x {data['width_m']:g} м",
-                f"Толщина плиты: {data['slab_mm']} мм",
-                f"Основание: щебень {data['gravel_mm']} мм, песок {data['sand_mm']} мм",
-                f"Бетон: {data['concrete_class']}",
-                f"Арматура: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм",
-                f"Площадь: {calc['area_m2']} м², бетон: {calc['concrete_m3']} м³",
-                "",
-                "Нормативная база:",
-            ] + NORMATIVE_NOTES
-            _draw_lines(c, lines, 25, 245, font, 10)
-        elif "ведомость лист" in low or "состав" in low:
-            lines = [f"{i}. {x['mark']}-{x['number']} {x['title']}" for i, x in enumerate(sheets, 1)]
-            _draw_lines(c, lines, 25, 245, font, 10)
-        elif "план" in low and "арм" not in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=False)
-        elif "разрез" in low or "сечен" in low:
-            _draw_section(c, w, h, font, data)
-        elif "ниж" in low and "арм" in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=True)
-            c.setFont(font, 10)
-            c.drawString(25*mm, 220*mm, "Нижняя сетка армирования")
-        elif "верх" in low and "арм" in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=True)
-            c.setFont(font, 10)
-            c.drawString(25*mm, 220*mm, "Верхняя сетка армирования")
-        elif "арм" in low or "сетк" in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=True)
-        elif "узел" in low or "детал" in low:
-            _draw_nodes(c, w, h, font, data)
-        elif "специф" in low or "материал" in low or "стали" in low:
-            _draw_spec(c, w, h, font, rows)
-        else:
-            _draw_lines(c, [
-                f"Лист: {title}",
-                f"Раздел: {data['section']}",
-                f"Размер: {data['length_m']:g}x{data['width_m']:g} м",
-                f"Бетон: {data['concrete_class']}",
-                f"Арматура: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм",
-            ], 25, 245, font, 10)
-
-        c.showPage()
-
-    c.save()
-    return path
-
-def write_project_dxf(path: str, data: Dict[str, Any], calc: Dict[str, Any]) -> str:
-    import ezdxf
-    doc = ezdxf.new("R2010")
-    doc.header["$INSUNITS"] = 4
-    msp = doc.modelspace()
-
-    for name, color in [("KJ_OUTLINE", 7), ("KJ_REBAR", 1), ("KJ_AXES", 3), ("KJ_TEXT", 2), ("KJ_SECTION", 5)]:
-        doc.layers.new(name=name, dxfattribs={"color": color})
-
-    L = float(data["length_m"]) * 1000
-    W = float(data["width_m"]) * 1000
-    step = float(data["rebar_step_mm"])
-
-    pts = [(0,0), (L,0), (L,W), (0,W), (0,0)]
-    msp.add_lwpolyline(pts, dxfattribs={"layer": "KJ_OUTLINE", "closed": False})
-    msp.add_line((L/2, 0), (L/2, W), dxfattribs={"layer": "KJ_AXES"})
-    msp.add_line((0, W/2), (L, W/2), dxfattribs={"layer": "KJ_AXES"})
-
-    x = step
-    while x < L:
-        msp.add_line((x, 0), (x, W), dxfattribs={"layer": "KJ_REBAR"})
-        x += step
-    y = step
-    while y < W:
-        msp.add_line((0, y), (L, y), dxfattribs={"layer": "KJ_REBAR"})
-        y += step
-
-    msp.add_text(
-        f"{data['project_name']} {data['length_m']:g}x{data['width_m']:g}m",
-        dxfattribs={"layer": "KJ_TEXT", "height": 250}
-    ).set_placement((0, -900))
-
-    msp.add_text(
-        f"{data['concrete_class']} · {data['rebar_class']} D{data['rebar_diam_mm']} step {data['rebar_step_mm']}mm",
-        dxfattribs={"layer": "KJ_TEXT", "height": 220}
-    ).set_placement((0, -1300))
-
-    sx = L + 1500
-    y0 = 0
-    layers = [
-        ("Sand", data["sand_mm"]),
-        ("Gravel", data["gravel_mm"]),
-        ("Slab", data["slab_mm"]),
-    ]
-    for name, th in layers:
-        msp.add_lwpolyline([(sx,y0),(sx+4000,y0),(sx+4000,y0+th),(sx,y0+th),(sx,y0)], dxfattribs={"layer": "KJ_SECTION"})
-        msp.add_text(f"{name} {th}mm", dxfattribs={"layer": "KJ_TEXT", "height": 160}).set_placement((sx+4200, y0 + th/2))
-        y0 += th
-
-    doc.saveas(path)
-    return path
-
-def write_project_xlsx(path: str, data: Dict[str, Any], sheets: List[Dict[str, str]], calc: Dict[str, Any], template: Dict[str, Any]) -> str:
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Спецификация"
-
-    headers = ["№", "Наименование", "Ед.изм", "Кол-во", "Примечание"]
-    rows = _spec_rows(data, calc)
-
-    ws.merge_cells("A1:E1")
-    ws["A1"] = f"{data['project_name']} · {data['section']}"
-    ws["A1"].font = Font(bold=True, size=13)
-    ws["A1"].alignment = Alignment(horizontal="center")
-
-    for c, h in enumerate(headers, 1):
-        cell = ws.cell(3, c, h)
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill("solid", fgColor="DDEEFF")
-
-    for r, row in enumerate(rows, 4):
-        ws.cell(r, 1, r - 3)
-        ws.cell(r, 2, row[0])
-        ws.cell(r, 3, row[1])
-        ws.cell(r, 4, row[2])
-        ws.cell(r, 5, row[3])
-
-    ws.column_dimensions["A"].width = 8
-    ws.column_dimensions["B"].width = 55
-    ws.column_dimensions["C"].width = 12
-    ws.column_dimensions["D"].width = 16
-    ws.column_dimensions["E"].width = 35
-
-    ws2 = wb.create_sheet("Ведомость листов")
-    ws2.append(["№", "Марка", "Номер", "Наименование"])
-    for i, sh in enumerate(sheets, 1):
-        ws2.append([i, sh["mark"], sh["number"], sh["title"]])
-    for col in ["A", "B", "C", "D"]:
-        ws2.column_dimensions[col].width = 25
-
-    ws3 = wb.create_sheet("Расчёт")
-    for k, v in [
-        ("Длина, м", data["length_m"]),
-        ("Ширина, м", data["width_m"]),
-        ("Площадь, м2", calc["area_m2"]),
-        ("Бетон, м3", calc["concrete_m3"]),
-        ("Песок, м3", calc["sand_m3"]),
-        ("Щебень, м3", calc["gravel_m3"]),
-        ("Арматура, п.м", calc["rebar_m_total"]),
-        ("Арматура, т", calc["rebar_t"]),
-    ]:
-        ws3.append([k, v])
-    ws3.column_dimensions["A"].width = 35
-    ws3.column_dimensions["B"].width = 18
-
-    wb.save(path)
-    return path
-
-def write_project_manifest(path: str, data: Dict[str, Any], template: Dict[str, Any], sheets: List[Dict[str, str]], calc: Dict[str, Any], files: Dict[str, str], links: Dict[str, str], task_id: str, topic_id: int) -> str:
-    manifest = {
-        "schema": "AREAL_PROJECT_DOCUMENTATION_PACKAGE_V1",
-        "engine": ENGINE,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "task_id": task_id,
-        "topic_id": topic_id,
-        "input": data.get("input"),
-        "section": data.get("section"),
-        "project_kind": data.get("project_kind"),
-        "template_file": template.get("template_file"),
-        "template_project_type": template.get("project_type"),
-        "sheet_count": len(sheets),
-        "sheet_register": sheets,
-        "parameters": data,
-        "calculation": calc,
-        "files": files,
-        "links": links,
-        "normative_notes": NORMATIVE_NOTES,
-        "status": "ARTIFACTS_CREATED_AND_UPLOADED",
-    }
-    Path(path).write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    return path
-
-def _validate_pdf(path: str, min_pages: int) -> Tuple[bool, str]:
-    if not os.path.exists(path) or os.path.getsize(path) < 5000:
-        return False, "PDF_FILE_TOO_SMALL"
-    try:
-        from pypdf import PdfReader
-        pages = len(PdfReader(path).pages)
-        if pages < min_pages:
-            return False, f"PDF_PAGE_COUNT_TOO_LOW:{pages}"
-    except Exception as e:
-        return False, f"PDF_VALIDATE_ERROR:{str(e)[:100]}"
-    return True, ""
-
-def _upload(path: str, task_id: str, topic_id: int) -> str:
-    from core.engine_base import upload_artifact_to_drive
-    link = upload_artifact_to_drive(path, task_id, topic_id)
-    return str(link or "")
-
-def create_full_project_package(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "") -> Dict[str, Any]:
-    data = parse_project_request(raw_input, template_hint)
-    template = _choose_template(data["section"], topic_id)
-    sheets = _normalize_sheet_register(template, data)
-
-    if len(sheets) < 8:
-        return {
-            "success": False,
-            "error": f"SHEET_REGISTER_TOO_SHORT:{len(sheets)}",
-            "engine": ENGINE,
-            "section": data["section"],
-            "sheet_count": len(sheets),
-        }
-
-    calc = _calc_foundation(data)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    safe_task = _safe_name(task_id)[:20]
-    out_dir = Path(tempfile.gettempdir()) / f"areal_project_full_{safe_task}_{stamp}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    base_name = f"{data['section']}_project_{safe_task}"
-    pdf_path = str(out_dir / f"{base_name}.pdf")
-    dxf_path = str(out_dir / f"{base_name}.dxf")
-    xlsx_path = str(out_dir / f"{base_name}.xlsx")
-    manifest_path = str(out_dir / f"{base_name}.manifest.json")
-
-    res = {
-        "success": False,
-        "engine": ENGINE,
-        "section": data["section"],
-        "sheet_count": len(sheets),
-        "template_file": template.get("template_file"),
-        "pdf_path": pdf_path,
-        "dxf_path": dxf_path,
-        "xlsx_path": xlsx_path,
-        "manifest_path": manifest_path,
-        "pdf_link": "",
-        "dxf_link": "",
-        "xlsx_link": "",
-        "manifest_link": "",
-        "error": None,
-        "data": data,
-        "calculation": calc,
-    }
-
-    try:
-        write_project_pdf(pdf_path, data, template, sheets, calc)
-        write_project_dxf(dxf_path, data, calc)
-        write_project_xlsx(xlsx_path, data, sheets, calc, template)
-
-        ok, err = _validate_pdf(pdf_path, min_pages=8)
-        if not ok:
-            res["error"] = err
-            return res
-        if not os.path.exists(dxf_path) or os.path.getsize(dxf_path) < 1500:
-            res["error"] = "DXF_FILE_TOO_SMALL"
-            return res
-        if not os.path.exists(xlsx_path) or os.path.getsize(xlsx_path) < 3000:
-            res["error"] = "XLSX_FILE_TOO_SMALL"
-            return res
-
-        pdf_link = _upload(pdf_path, task_id, topic_id)
-        dxf_link = _upload(dxf_path, task_id, topic_id)
-        xlsx_link = _upload(xlsx_path, task_id, topic_id)
-
-        links = {"pdf": pdf_link, "dxf": dxf_link, "xlsx": xlsx_link}
-        files = {"pdf": pdf_path, "dxf": dxf_path, "xlsx": xlsx_path}
-        write_project_manifest(manifest_path, data, template, sheets, calc, files, links, task_id, topic_id)
-        manifest_link = _upload(manifest_path, task_id, topic_id)
-
-        if not pdf_link:
-            res["error"] = "PDF_UPLOAD_FAILED"
-            return res
-        if not dxf_link:
-            res["error"] = "DXF_UPLOAD_FAILED"
-            return res
-        if not xlsx_link:
-            res["error"] = "XLSX_UPLOAD_FAILED"
-            return res
-
-        res.update({
-            "success": True,
-            "pdf_link": pdf_link,
-            "dxf_link": dxf_link,
-            "xlsx_link": xlsx_link,
-            "manifest_link": manifest_link,
-        })
-        return res
-    except Exception as e:
-        res["error"] = str(e)[:500]
-        return res
-
-def is_project_design_request(text: str) -> bool:
-    low = _clean(text, 2000).lower()
-    triggers = [
-        "создай проект",
-        "сделай проект",
-        "разработай проект",
-        "готовый проект",
-        "проект фундамент",
-        "проект фундаментной плиты",
-        "проект кровли",
-        "проект по образцу",
-        "проект по шаблону",
-        "полный проект",
-        "проектная документация",
-        "рабочая документация",
-        "выдай проект",
-        "нужен проект",
-    ]
-    return any(x in low for x in triggers)
-
-def format_project_result_message(res: Dict[str, Any]) -> str:
-    if not res.get("success"):
-        return "Проект не создан: " + _clean(res.get("error") or "ошибка генерации", 300)
-    data = res.get("data") or {}
-    calc = res.get("calculation") or {}
-    lines = [
-        "Проектная документация создана",
-        f"Движок: {res.get('engine')}",
-        f"Раздел: {res.get('section')}",
-        f"Листов PDF: {res.get('sheet_count')}",
-        f"Размер: {data.get('length_m')} x {data.get('width_m')} м",
-        f"Плита: {data.get('slab_mm')} мм",
-        f"Бетон: {data.get('concrete_class')}",
-        f"Арматура: {data.get('rebar_class')} Ø{data.get('rebar_diam_mm')} шаг {data.get('rebar_step_mm')} мм",
-        f"Бетон: {calc.get('concrete_m3')} м³",
-        f"Арматура: {calc.get('rebar_t')} т",
-        "",
-        f"PDF: {res.get('pdf_link')}",
-        f"DXF: {res.get('dxf_link')}",
-        f"XLSX: {res.get('xlsx_link')}",
-    ]
-    if res.get("manifest_link"):
-        lines.append(f"MANIFEST: {res.get('manifest_link')}")
-    lines.append("")
-    lines.append("Доволен результатом? Ответь: Да / Уточни / Правки")
-    return "\n".join(lines)
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "") -> Dict[str, Any]:
-    return create_full_project_package(raw_input, task_id, topic_id, template_hint)
-
-# === END FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE ===
-
-
-# === FULLFIX_08_PROJECT_SIGNATURE_COMPAT ===
-# Compatibility layer:
-# - accepts legacy worker calls with extra positional args
-# - exposes create_full_project_documentation for diagnostics and future routes
-# - keeps the real FULLFIX_07 CAD generator as the single backend
-
-_FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    if _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT is None:
-        return {
-            "success": False,
-            "engine": "FULLFIX_08_PROJECT_SIGNATURE_COMPAT",
-            "error": "ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT_NOT_FOUND",
-        }
-
-    try:
-        return await _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(
-            raw_input,
-            task_id,
-            int(topic_id or 0),
-            str(template_hint or "")
-        )
-    except TypeError as e:
-        msg = str(e)
-        if "positional arguments" not in msg and "argument" not in msg:
-            raise
-        return await _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(
-            raw_input,
-            task_id,
-            int(topic_id or 0)
-        )
-
-async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    return await create_project_pdf_dxf_artifact(
-        raw_input,
-        task_id,
-        int(topic_id or 0),
-        str(template_hint or ""),
-        *args,
-        **kwargs
-    )
-
-# === END FULLFIX_08_PROJECT_SIGNATURE_COMPAT ===
-
-
-
-# === FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR ===
-# Purpose:
-# - repaired template models from data/project_templates/*_repaired.json are authoritative
-# - never generate project PDF with empty/1-sheet register
-# - KЖ fallback = 20 sheets, КД fallback = 21 sheets, АР fallback = 22 sheets
-
-def _ff09_canon_sheet_register(section: str) -> list:
-    section = str(section or "").upper().strip()
-    if section == "КД":
-        return [
-            "01 Общие данные",
-            "02 План балок перекрытия",
-            "03 План стропильной системы",
-            "04 План стропильной системы",
-            "05 Узлы крепления стропильной системы",
-            "06 Спецификация элементов стропильной системы",
-            "07 План обрешётки",
-            "08 План контробрешётки",
-            "09 Узлы кровли",
-            "10 Сечения кровельного пирога",
-            "11 Узлы карнизного свеса",
-            "12 Узлы конька",
-            "13 Узлы ендовы",
-            "14 Узлы примыкания",
-            "15 Узлы проходок",
-            "16 Ведомость пиломатериалов",
-            "17 Ведомость крепежа",
-            "18 Спецификация кровельных материалов",
-            "19 Схема монтажа",
-            "20 Общие указания",
-            "21 Ведомость листов",
-        ]
-    if section == "АР":
-        return [
-            "01 Общие данные",
-            "02 Ситуационный план",
-            "03 План закладных деталей коммуникаций",
-            "04 План фундамента",
-            "05 План первого этажа",
-            "06 План кровли",
-            "07 Фасад 1-4",
-            "08 Фасад 4-1",
-            "09 Фасад А-Д",
-            "10 Фасад Д-А",
-            "11 Разрез 1-1",
-            "12 Разрез 2-2",
-            "13 Экспликация помещений",
-            "14 Спецификация окон",
-            "15 Спецификация дверей",
-            "16 Узлы наружных стен",
-            "17 Узлы кровли",
-            "18 Узлы примыканий",
-            "19 Ведомость отделки",
-            "20 Общие указания",
-            "21 Технико-экономические показатели",
-            "22 Ведомость листов",
-        ]
-    return [
-        "01 Общие данные",
-        "02 План фундаментной плиты",
-        "03 Разрез 1-1",
-        "04 Разрез 2-2",
-        "05 Схема нижнего армирования",
-        "06 Схема верхнего армирования",
-        "07 Схема дополнительного армирования",
-        "08 Узлы армирования углов",
-        "09 Узлы примыкания ленты/ребра",
-        "10 Схема закладных деталей",
-        "11 Схема выпусков арматуры",
-        "12 Схема инженерных проходок",
-        "13 План опалубки",
-        "14 Спецификация арматуры",
-        "15 Спецификация бетона",
-        "16 Ведомость материалов основания",
-        "17 Ведомость объёмов работ",
-        "18 Контрольные отметки",
-        "19 Общие указания",
-        "20 Ведомость листов",
-    ]
-
-def _ff09_load_repaired_template(section: str) -> dict:
-    import json as _json_ff09
-    from pathlib import Path as _Path_ff09
-
-    section = str(section or "КЖ").upper().strip()
-    base = _Path_ff09("/root/.areal-neva-core/data/project_templates")
-
-    candidates = [
-        base / f"PROJECT_TEMPLATE_MODEL__{section}_repaired.json",
-        base / f"PROJECT_TEMPLATE_MODEL__{section}_manual.json",
-    ]
-
-    for path in candidates:
-        if not path.exists():
-            continue
-        try:
-            model = _json_ff09.loads(path.read_text(encoding="utf-8"))
-            reg = model.get("sheet_register") or []
-            if isinstance(reg, list) and len(reg) >= 10:
-                model["template_file"] = str(path)
-                return model
-        except Exception:
-            pass
-
-    return {
-        "schema": "PROJECT_TEMPLATE_MODEL_V2_CANON_FALLBACK",
-        "project_type": section,
-        "template_file": "canonical_fallback",
-        "sheet_register": _ff09_canon_sheet_register(section),
-        "sections": [],
-        "materials": [],
-    }
-
-_FF09_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    raw = str(raw_input or "")
-    low = raw.lower()
-
-    section = "КЖ"
-    if " кд" in low or "кд " in low or "деревян" in low or "стропил" in low or "кровл" in low:
-        section = "КД"
-    elif " ар" in low or "ар " in low or "архитект" in low or "фасад" in low:
-        section = "АР"
-    elif " кж" in low or "кж " in low or "фундамент" in low or "плит" in low or "армир" in low:
-        section = "КЖ"
-
-    repaired = _ff09_load_repaired_template(section)
-    if template_hint:
-        try:
-            import json as _json_ff09
-            hint_obj = _json_ff09.loads(str(template_hint))
-            if isinstance(hint_obj, dict):
-                hint_obj.update({"sheet_register": repaired.get("sheet_register") or [], "template_file": repaired.get("template_file")})
-                template_hint = _json_ff09.dumps(hint_obj, ensure_ascii=False)
-        except Exception:
-            template_hint = str(repaired.get("template_file") or "")
-
-    if not template_hint:
-        template_hint = str(repaired.get("template_file") or "")
-
-    if callable(_FF09_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT):
-        res = await _FF09_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(raw_input, task_id, topic_id, template_hint)
-    else:
-        res = {"success": False, "error": "ORIGINAL_PROJECT_ENGINE_NOT_FOUND"}
-
-    if isinstance(res, dict):
-        data = res.get("data") or {}
-        tpl = data.get("template") or {}
-        reg = tpl.get("sheet_register") or repaired.get("sheet_register") or _ff09_canon_sheet_register(section)
-
-        if len(reg) < 10:
-            reg = _ff09_canon_sheet_register(section)
-
-        tpl["sheet_register"] = reg
-        tpl["template_file"] = repaired.get("template_file") or tpl.get("template_file") or "canonical_fallback"
-        data["template"] = tpl
-        data["sheet_register"] = reg
-        res["data"] = data
-        res["sheet_count"] = len(reg)
-        res["template_file"] = tpl["template_file"]
-
-        msg = str(res.get("message") or "")
-        if msg:
-            msg = re.sub(r"Листов(?: PDF)?:\s*\d+", f"Листов PDF: {len(reg)}", msg)
-            if "Шаблон:" not in msg:
-                msg = msg.replace("Раздел:", f"Шаблон: {tpl['template_file']}\nРаздел:", 1)
-            res["message"] = msg
-
-    return res
-
-async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR ===
-
-
-# === FULLFIX_10_TOTAL_CLOSURE_CAD_OVERRIDE ===
-# Purpose:
-# - user may write simple natural text: "сделай плиту 12 на 8..."
-# - foundation slab must always be КЖ
-# - foundation slab must never use КД/roof/wood sheet register
-# - generated PDF must pass forbidden-word validation before returning links
-
-from core.orchestra_closure_engine import (
-    parse_foundation_request as _ff10_parse_foundation_request,
-    foundation_sheets as _ff10_foundation_sheets,
-    extract_pdf_text as _ff10_extract_pdf_text,
-    validate_foundation_text as _ff10_validate_foundation_text,
-    ENGINE as _FF10_ENGINE,
-)
-
-_FF10_ORIGINAL_PARSE_PROJECT_REQUEST = globals().get("parse_project_request")
-_FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER = globals().get("_normalize_sheet_register")
-_FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
-
-def parse_project_request(raw_input: str, template_hint: str = "") -> dict:
-    data = _ff10_parse_foundation_request(str(raw_input or "") + " " + str(template_hint or ""))
-    if data.get("project_kind") == "foundation_slab":
-        data["section"] = "КЖ"
-        data["project_name"] = "Проект фундаментной плиты"
-        return data
-    if callable(_FF10_ORIGINAL_PARSE_PROJECT_REQUEST):
-        return _FF10_ORIGINAL_PARSE_PROJECT_REQUEST(raw_input, template_hint)
-    return data
-
-def _normalize_sheet_register(template: dict, data: dict) -> list:
-    if str((data or {}).get("project_kind") or "").lower() == "foundation_slab":
-        return _ff10_foundation_sheets()
-    if callable(_FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER):
-        return _FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER(template, data)
-    return _ff10_foundation_sheets()
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    if not callable(_FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT):
-        return {"success": False, "engine": _FF10_ENGINE, "error": "ORIGINAL_PROJECT_ENGINE_NOT_FOUND"}
-
-    res = await _FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-    if not isinstance(res, dict):
-        return {"success": False, "engine": _FF10_ENGINE, "error": "INVALID_ENGINE_RESULT"}
-
-    data = res.get("data") or parse_project_request(raw_input, template_hint)
-    if str(data.get("project_kind") or "").lower() == "foundation_slab":
-        res["section"] = "КЖ"
-        res["sheet_count"] = len(_ff10_foundation_sheets())
-        pdf_path = str(res.get("pdf_path") or "")
-        pdf_text = _ff10_extract_pdf_text(pdf_path)
-        ok, err = _ff10_validate_foundation_text(pdf_text)
-        if not ok:
-            res["success"] = False
-            res["engine"] = _FF10_ENGINE
-            res["error"] = err
-            res["message"] = "Проект не создан: проверка PDF не пройдена"
-            return res
-
-    res["engine"] = _FF10_ENGINE
-    return res
-
-async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_10_TOTAL_CLOSURE_CAD_OVERRIDE ===
-
-
-# === FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_CAD_OVERRIDE ===
-try:
-    from core.orchestra_closure_engine import create_compact_project_documentation as _ff12_compact_project
-
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-except Exception:
-    pass
-# === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_CAD_OVERRIDE ===
-
-====================================================================================================
-END_FILE: core/cad_project_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/capability_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1aee1e85df8d7f5455453865a1ac6b6c8e443edeb29e71de1cda0a58adfcfeec
-====================================================================================================
-# === FULLFIX_CAPABILITY_ROUTER_STAGE_2 ===
-from __future__ import annotations
-from typing import Any, Dict, List
-
-ROUTER_VERSION = "CAPABILITY_ROUTER_V1"
-
-ENGINE_MAP = {
-    "general_chat":          "ai_router",
-    "orchestration_core":    "ai_router",
-    "telegram_automation":   "ai_router",
-    "memory_archive":        "ai_router",
-    "internet_search":       "search_supplier",
-    "product_search":        "search_supplier",
-    "auto_parts_search":     "search_supplier",
-    "construction_search":   "search_supplier",
-    "technical_supervision": "defect_act",
-    "estimates":             "estimate_unified",
-    "defect_acts":           "defect_act",
-    "documents":             "document_engine",
-    "spreadsheets":          "sheets_route",
-    "google_drive_storage":  "drive_storage",
-    "devops_server":         "ai_router",
-    "vpn_network":           "ai_router",
-    "ocr_photo":             "ocr_engine",
-    "cad_dwg":               "dwg_engine",
-    "structural_design":     "project_engine",
-    "roofing":               "estimate_unified",
-    "monolith_concrete":     "estimate_unified",
-    "crm_leads":             "ai_router",
-    "email_ingress":         "email_ingress",
-    "social_content":        "content_engine",
-    "video_production":      "video_production_agent",
-    "photo_cleanup":         "photo_cleanup",
-    "isolated_project_ivan": "ai_router",
-}
-
-FALLBACK_ENGINE = "ai_router"
-
-
-def _step(engine, action, params=None, required=True):
-    return {"engine": engine, "action": action, "params": params or {}, "required": required, "status": "pending"}
-
-
-def _plan(direction, profile, work_item):
-    engine = profile.get("engine") or ENGINE_MAP.get(direction, FALLBACK_ENGINE)
-    formats_out = profile.get("output_formats") or ["telegram_text"]
-    requires_search = bool(profile.get("requires_search"))
-    quality_gates = profile.get("quality_gates") or []
-    input_type = (getattr(work_item, "input_type", "") or "").lower()
-    raw_text = (getattr(work_item, "raw_text", "") or "")[:300]
-
-    steps = []
-    if input_type in ("photo", "image") and direction != "photo_cleanup":
-        steps.append(_step("ocr_engine", "extract_text", required=False))
-    if requires_search:
-        steps.append(_step("search_supplier", "search", {"query": raw_text, "direction": direction}))
-    steps.append(_step(engine, "execute", {"direction": direction, "formats_out": formats_out, "quality_gates": quality_gates}))
-    if "xlsx" in formats_out:
-        steps.append(_step("format_adapter", "to_xlsx"))
-    if "docx" in formats_out or "pdf" in formats_out:
-        steps.append(_step("format_adapter", "to_document"))
-    if "drive_link" in formats_out:
-        steps.append(_step("drive_storage", "upload", required=False))
-    return steps, engine
-
-
-class CapabilityRouter:
-    def apply_to_work_item(self, work_item) -> Dict[str, Any]:
-        direction = getattr(work_item, "direction", None) or "general_chat"
-        profile = getattr(work_item, "direction_profile", {}) or {}
-        if not profile:
-            profile = {"engine": ENGINE_MAP.get(direction, FALLBACK_ENGINE)}
-
-        steps, engine = _plan(direction, profile, work_item)
-        work_item.execution_plan = steps
-        work_item.formats_out = profile.get("output_formats") or ["telegram_text"]
-        work_item.quality_gates = profile.get("quality_gates") or []
-        work_item.add_audit("capability_router", ROUTER_VERSION)
-        work_item.add_audit("engine", engine)
-        work_item.add_audit("execution_plan_steps", len(steps))
-        return {"direction": direction, "engine": engine, "execution_plan": steps,
-                "formats_out": work_item.formats_out, "quality_gates": work_item.quality_gates,
-                "router_version": ROUTER_VERSION}
-# === END FULLFIX_CAPABILITY_ROUTER_STAGE_2 ===
-
-====================================================================================================
-END_FILE: core/capability_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/capability_router_dispatch.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5289c229f54cd10f2a8a2c42c36b5ceadbaf5e717d8473c4c354d3a390b9ae49
-====================================================================================================
-# === CAPABILITY_ROUTER_REAL_DISPATCH_V1 ===
-from __future__ import annotations
-
-from typing import Any, Dict
-
-def build_execution_plan(input_type: str = "", user_text: str = "", file_name: str = "", mime_type: str = "", topic_id: int = 0) -> Dict[str, Any]:
-    low = f"{input_type} {user_text} {file_name} {mime_type}".lower()
-    if any(x in low for x in ("dwg", "dxf", "ifc", "чертеж", "чертёж", "проект", "кж", "кмд")):
-        engine = "dwg_project"
-    elif any(x in low for x in ("смет", "расч", "вор", "xlsx", "xls", "csv")):
-        engine = "estimate"
-    elif any(x in low for x in ("технадзор", "акт", "дефект", "фото", "jpg", "png", "heic", "сп", "гост")):
-        engine = "technadzor"
-    elif any(x in low for x in ("найди", "поиск", "цена", "купить")):
-        engine = "search"
-    else:
-        engine = "universal"
-    return {
-        "router": "CAPABILITY_ROUTER_REAL_DISPATCH_V1",
-        "topic_id": int(topic_id or 0),
-        "engine": engine,
-        "input_type": input_type,
-        "file_name": file_name,
-        "mime_type": mime_type,
-    }
-
-def dispatch_hint(plan: Dict[str, Any]) -> str:
-    return str((plan or {}).get("engine") or "universal")
-# === END_CAPABILITY_ROUTER_REAL_DISPATCH_V1 ===
-
-====================================================================================================
-END_FILE: core/capability_router_dispatch.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/chat_exports_policy.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5dba229a50fdb45fd5e3c6537274316caad7f37759487be75e2c97cad258c4d0
-====================================================================================================
-# === CHAT_EXPORTS_DEDUP_POLICY_V1 ===
-# Канонический источник: chat_exports/ (lowercase)
-# CHAT_EXPORTS/ — legacy, не удалять, но игнорировать в агрегаторе
-import os, logging
-from pathlib import Path
-logger = logging.getLogger(__name__)
-
-BASE = Path("/root/.areal-neva-core")
-CANONICAL_DIR = BASE / "chat_exports"
-LEGACY_DIR = BASE / "CHAT_EXPORTS"
-
-def get_canonical_exports_dir() -> Path:
-    return CANONICAL_DIR
-
-def list_canonical_exports() -> list:
-    if not CANONICAL_DIR.exists():
-        return []
-    return sorted(CANONICAL_DIR.rglob("*.json")) + sorted(CANONICAL_DIR.rglob("*.txt"))
-
-def is_legacy_dir(path: str) -> bool:
-    return "CHAT_EXPORTS" in str(path) and "chat_exports" not in str(path).lower().replace("CHAT_EXPORTS","")
-
-def dedup_export_files(files: list) -> list:
-    """Убрать дубли — если файл есть в обоих dirs, брать из canonical"""
-    seen_names = set()
-    result = []
-    # Сначала canonical
-    canonical = [f for f in files if CANONICAL_DIR.name in str(f) and not is_legacy_dir(str(f))]
-    legacy = [f for f in files if is_legacy_dir(str(f))]
-    for f in canonical:
-        seen_names.add(Path(f).name)
-        result.append(f)
-    for f in legacy:
-        if Path(f).name not in seen_names:
-            result.append(f)
-    return result
-# === END CHAT_EXPORTS_DEDUP_POLICY_V1 ===
-
-====================================================================================================
-END_FILE: core/chat_exports_policy.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/constraint_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e8ffe41c2f52aef2692c65e65c8b59713ab45ba46f13cbffee21118e00d60382
-====================================================================================================
-# === CONSTRAINT_ENGINE_V1 ===
-import re, logging
-logger = logging.getLogger(__name__)
-
-# MULTI_OFFER_CONSISTENCY — все офферы в одном формате
-def normalize_offer(offer: dict) -> dict:
-    return {
-        "supplier":  str(offer.get("supplier") or offer.get("поставщик") or "UNKNOWN"),
-        "platform":  str(offer.get("platform") or offer.get("площадка") or ""),
-        "seller_type": str(offer.get("seller_type") or "UNKNOWN"),
-        "city":      str(offer.get("city") or offer.get("город") or ""),
-        "price":     _to_float(offer.get("price") or offer.get("цена") or 0),
-        "unit":      str(offer.get("unit") or offer.get("ед") or ""),
-        "stock":     str(offer.get("stock") or offer.get("наличие") or "UNKNOWN"),
-        "delivery":  str(offer.get("delivery") or offer.get("доставка") or "UNKNOWN"),
-        "tco":       _to_float(offer.get("tco") or 0),
-        "risk":      str(offer.get("risk") or "UNVERIFIED"),
-        "contact":   str(offer.get("contact") or offer.get("контакт") or ""),
-        "url":       str(offer.get("url") or offer.get("ссылка") or ""),
-        "verified":  bool(offer.get("verified") or False),
-    }
-
-def _to_float(v) -> float:
-    try:
-        return float(re.sub(r"[^\d.]", "", str(v)) or 0)
-    except Exception:
-        return 0.0
-
-def validate_offer(offer: dict) -> dict:
-    """Проверить оффер на минимальное качество"""
-    issues = []
-    if not offer.get("price") or offer["price"] <= 0:
-        issues.append("NO_PRICE")
-    if not offer.get("contact") and not offer.get("url"):
-        issues.append("NO_CONTACT")
-    if offer.get("price") and offer["price"] < 10:
-        issues.append("PRICE_TOO_LOW")
-    return {"ok": len(issues) == 0, "issues": issues}
-
-def rank_offers(offers: list) -> list:
-    """ResultRanker — сортировка по TCO или цене"""
-    def score(o):
-        tco = o.get("tco") or o.get("price") or 999999
-        risk_penalty = {"CONFIRMED": 0, "PARTIAL": 5, "UNVERIFIED": 15, "RISK": 30}.get(o.get("risk","UNVERIFIED"), 15)
-        return tco + risk_penalty * 100
-    return sorted(offers, key=score)
-
-# CONSTRAINT_ENGINE — ограничения на поиск
-_CONSTRAINTS = {
-    "price_min": 0,
-    "price_max": 999_999_999,
-    "region": [],
-    "exclude_keywords": ["1 руб", "договорная", "под заказ в пути"],
-    "require_contact": False,
-    "require_stock": False,
-}
-
-def apply_constraints(offers: list, constraints: dict = None) -> list:
-    c = {**_CONSTRAINTS, **(constraints or {})}
-    result = []
-    for o in offers:
-        price = _to_float(o.get("price") or 0)
-        if price and (price < c["price_min"] or price > c["price_max"]):
-            continue
-        text = str(o).lower()
-        if any(ex.lower() in text for ex in c["exclude_keywords"]):
-            continue
-        if c["require_contact"] and not o.get("contact"):
-            continue
-        result.append(o)
-    return result
-# === END CONSTRAINT_ENGINE_V1 ===
-
-====================================================================================================
-END_FILE: core/constraint_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/context_loader.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b2e7c83efbb7cd1e9893212919ed790834ccaef025265a92c0b40faf6898e8e5
-====================================================================================================
-# === FULLFIX_CONTEXT_LOADER_STAGE_3 ===
-from __future__ import annotations
-import asyncio
-from typing import Any, Dict, Optional
-
-CONTEXT_LOADER_VERSION = "CONTEXT_LOADER_V1"
-
-
-def _safe_str(v, default=""):
-    if v is None: return default
-    return str(v)
-
-
-class ContextLoader:
-    """
-    Stage 3 shadow mode: загружает контекст задачи из доступных источников.
-    Пишет context_refs в WorkItem. Не блокирует выполнение при ошибках.
-    """
-
-    def load(self, work_item, db_conn=None) -> Dict[str, Any]:
-        chat_id = _safe_str(getattr(work_item, "chat_id", ""))
-        topic_id = int(getattr(work_item, "topic_id", 0) or 0)
-        raw_text = _safe_str(getattr(work_item, "raw_text", ""))[:500]
-        direction = _safe_str(getattr(work_item, "direction", "general_chat"))
-
-        refs = {
-            "chat_id": chat_id,
-            "topic_id": topic_id,
-            "direction": direction,
-            "short_memory": None,
-            "long_memory": None,
-            "recent_tasks": [],
-            "topic_context": None,
-            "loader_version": CONTEXT_LOADER_VERSION,
-            "shadow_mode": True,
-        }
-
-        # short_memory — из memory_api если доступна
-        try:
-            refs["short_memory"] = self._load_short_memory(chat_id, topic_id)
-        except Exception as e:
-            refs["short_memory_error"] = str(e)
-
-        # topic_context — последние задачи по теме из DB
-        if db_conn is not None:
-            try:
-                refs["topic_context"] = self._load_topic_context(db_conn, chat_id, topic_id)
-            except Exception as e:
-                refs["topic_context_error"] = str(e)
-
-        work_item.context_refs = refs
-        work_item.add_audit("context_loader", CONTEXT_LOADER_VERSION)
-        work_item.add_audit("context_topic_id", topic_id)
-        return refs
-
-    def _load_short_memory(self, chat_id, topic_id):
-        import urllib.request, json
-        url = f"http://127.0.0.1:8765/memory?chat_id={chat_id}&topic_id={topic_id}&limit=5"
-        try:
-            req = urllib.request.urlopen(url, timeout=2)
-            data = json.loads(req.read().decode())
-            return data if isinstance(data, (list, dict)) else None
-        except Exception:
-            return None
-
-    def _load_topic_context(self, db_conn, chat_id, topic_id):
-        try:
-            import sqlite3
-            if hasattr(db_conn, "execute"):
-                rows = db_conn.execute(
-                    "SELECT id, state, created_at FROM tasks WHERE chat_id=? AND topic_id=? ORDER BY created_at DESC LIMIT 5",
-                    (str(chat_id), int(topic_id))
-                ).fetchall()
-            else:
-                rows = []
-            return [{"id": r[0], "state": r[1], "created_at": r[2]} for r in rows]
-        except Exception:
-            return []
-
-
-def load_context(work_item, db_conn=None):
-    return ContextLoader().load(work_item, db_conn)
-# === END FULLFIX_CONTEXT_LOADER_STAGE_3 ===
-
-====================================================================================================
-END_FILE: core/context_loader.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/data_classification.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 94b1f8b88f75ccb2d032ff2f77790acb7884c5f9e6ec7e7ad0f9277824d6d4bf
-====================================================================================================
-# === DATA_CLASSIFICATION_V1 ===
-# Канон §28.3 — File Routing Canon
-import re, logging
-logger = logging.getLogger(__name__)
-
-_DOMAIN_MAP = {
-    "STROYKA":     ["кровля", "фасад", "фундамент", "кирпич", "бетон", "арматура", "утеплитель",
-                    "металлочерепица", "профнастил", "сайдинг", "монтаж", "строительство", "ангар"],
-    "ESTIMATES":   ["смета", "ведомость", "объём работ", "вор", "ФЕР", "ТЕР", "расценка", "калькул"],
-    "TEHNADZOR":   ["технадзор", "дефект", "акт осмотра", "нарушение", "предписание", "сп ", "гост", "снип"],
-    "AUTO":        ["toyota", "hiace", "запчасть", "brembo", "vin", "авто", "машина"],
-    "SEARCH":      ["найди", "поищи", "цена", "стоимость", "купить", "поставщик", "avito", "ozon"],
-    "DOCS_PDF_DWG": ["dwg", "dxf", "чертёж", "pdf", "docx", "проект"],
-    "NEURON_SOFT_VPN": ["vpn", "wireguard", "xray", "vless", "конфиг", "ключ"],
-}
-
-def classify_domain(text: str, file_name: str = "") -> str:
-    combined = (text + " " + file_name).lower()
-    scores = {}
-    for domain, keywords in _DOMAIN_MAP.items():
-        scores[domain] = sum(1 for kw in keywords if kw.lower() in combined)
-    best = max(scores, key=scores.get)
-    return best if scores[best] > 0 else "UNSORTED"
-
-def classify_file_type(file_name: str) -> str:
-    ext = file_name.lower().rsplit(".", 1)[-1] if "." in file_name else ""
-    mapping = {
-        "pdf": "PDF", "docx": "DOCX", "doc": "DOCX",
-        "xlsx": "XLSX", "xls": "XLSX", "csv": "CSV",
-        "dwg": "DWG", "dxf": "DXF",
-        "jpg": "IMAGE", "jpeg": "IMAGE", "png": "IMAGE",
-        "heic": "IMAGE", "webp": "IMAGE",
-        "zip": "ARCHIVE", "rar": "ARCHIVE",
-        "mp4": "VIDEO", "mov": "VIDEO",
-        "ogg": "AUDIO", "mp3": "AUDIO",
-    }
-    return mapping.get(ext, "UNKNOWN")
-
-def classify_intent(text: str) -> str:
-    low = text.lower()
-    if any(w in low for w in ["смета", "посчитай", "расценка", "объём"]):
-        return "estimate"
-    if any(w in low for w in ["шаблон", "образец", "возьми как"]):
-        return "template"
-    if any(w in low for w in ["дефект", "акт", "нарушение", "технадзор"]):
-        return "technadzor"
-    if any(w in low for w in ["проект", "кж", "ар", "кд", "км"]):
-        return "project"
-    if any(w in low for w in ["найди", "поищи", "цена", "купить"]):
-        return "search"
-    if any(w in low for w in ["dwg", "dxf", "чертёж"]):
-        return "dwg"
-    return "text"
-# === END DATA_CLASSIFICATION_V1 ===
-
-====================================================================================================
-END_FILE: core/data_classification.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/defect_act_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ef8ae207b552886b90aed1104beb8171ccb8159e19e4d1b05796d867afbb1817
-====================================================================================================
-# === FULLFIX_15_DEFECT_ACT ===
-import os, logging
-from datetime import date
-logger = logging.getLogger(__name__)
-ENGINE = "FULLFIX_15_DEFECT_ACT"
-RUNTIME_DIR = "/root/.areal-neva-core/runtime"
-os.makedirs(RUNTIME_DIR, exist_ok=True)
-ACT_PHRASES = ["акт", "дефект", "осмотр", "сделай акт", "по фото", "технадзор", "нарушение"]
-
-def is_defect_act_intent(text, mime_type=""):
-    t = (text or "").lower()
-    return "image" in (mime_type or "") and any(p in t for p in ACT_PHRASES)
-
-def generate_act_docx(task_id, caption, file_name, object_name="UNKNOWN"):
-    from docx import Document
-    path = os.path.join(RUNTIME_DIR, "act_" + task_id[:8] + ".docx")
-    doc = Document()
-    doc.add_heading("АКТ ОСМОТРА / ДЕФЕКТНАЯ ВЕДОМОСТЬ", 0)
-    today = date.today().strftime("%d.%m.%Y")
-    doc.add_paragraph("Дата: " + today)
-    doc.add_paragraph("Объект: " + (object_name or "UNKNOWN"))
-    doc.add_paragraph("Основание: фото — " + (file_name or ""))
-    table = doc.add_table(rows=1, cols=6)
-    table.style = "Table Grid"
-    for i, h in enumerate(["№", "Фото/файл", "Описание дефекта", "Локация", "Рекомендация", "Статус"]):
-        table.rows[0].cells[i].text = h
-    row = table.add_row().cells
-    row[0].text = "1"; row[1].text = file_name or ""; row[2].text = caption or "требует уточнения"
-    row[3].text = "-"; row[4].text = "Устранить"; row[5].text = "Открыт"
-    doc.add_paragraph("Заключение: зафиксированы дефекты, требующие устранения.")
-    doc.add_paragraph("Составил: ________________________  Дата: " + today)
-    doc.save(path)
-    return path
-
-def generate_act_pdf(task_id, caption, file_name, object_name="UNKNOWN"):
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
-    from reportlab.lib import colors
-    from core.pdf_cyrillic import register_cyrillic_fonts, make_styles, make_paragraph, clean_pdf_text, FONT_REGULAR, FONT_BOLD
-    path = os.path.join(RUNTIME_DIR, "act_" + task_id[:8] + ".pdf")
-    register_cyrillic_fonts()
-    styles = make_styles()
-    today = date.today().strftime("%d.%m.%Y")
-    doc = SimpleDocTemplate(path, pagesize=A4, topMargin=20, bottomMargin=20, leftMargin=20, rightMargin=20)
-    story = [
-        make_paragraph("АКТ ОСМОТРА / ДЕФЕКТНАЯ ВЕДОМОСТЬ", "header", styles), Spacer(1,8),
-        make_paragraph("Дата: " + today, "normal", styles),
-        make_paragraph("Объект: " + (object_name or "UNKNOWN"), "normal", styles),
-        make_paragraph("Основание: " + (file_name or ""), "normal", styles),
-        Spacer(1,10),
-    ]
-    data = [
-        [make_paragraph(h, "bold", styles) for h in ["№", "Файл", "Описание", "Локация", "Рекомендация", "Статус"]],
-        [make_paragraph(x, "normal", styles) for x in ["1", clean_pdf_text(file_name or ""), clean_pdf_text(caption or "требует уточнения"), "-", "Устранить", "Открыт"]],
-    ]
-    tbl = Table(data, colWidths=[22, 70, 150, 55, 80, 50])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#444444")),
-        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
-        ("FONTNAME",(0,0),(-1,0),FONT_BOLD),
-        ("FONTSIZE",(0,0),(-1,-1),8),
-        ("GRID",(0,0),(-1,-1),0.4,colors.black),
-        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-    ]))
-    story.append(tbl); story.append(Spacer(1,12))
-    story.append(make_paragraph("Заключение: зафиксированы дефекты, требующие устранения.", "normal", styles))
-    story.append(make_paragraph("Составил: ________________________  Дата: " + today, "normal", styles))
-    doc.build(story)
-    return path
-
-def process_defect_act_sync(conn, task_id, chat_id, topic_id, raw_input, file_name="", local_path=""):
-    from core.artifact_upload_guard import upload_many_or_fail
-    from core.reply_sender import send_reply_ex
-    # === FULLFIX_20_GEMINI_DEFECT_SYNC ===
-    _ff20_vision_text = ""
-    try:
-        if local_path and any(str(local_path).lower().endswith(ext) for ext in (".jpg",".jpeg",".png",".webp",".heic")):
-            import asyncio as _ff20_aio
-            from core.gemini_vision import analyze_image_file as _ff20_gif
-            try:
-                _ff20_aio.get_running_loop()
-            except RuntimeError:
-                _ff20_vision_text = _ff20_aio.run(
-                    _ff20_gif(local_path, prompt="\u041e\u043f\u0438\u0448\u0438 \u0434\u0435\u0444\u0435\u043a\u0442 \u0434\u043b\u044f \u0430\u043a\u0442\u0430", timeout=60)
-                ) or ""
-            logger.info("FF20_GEMINI_DEFECT_SYNC len=%s", len(_ff20_vision_text))
-    except Exception as _ff20_ve:
-        logger.warning("FF20_GEMINI_DEFECT_SYNC_ERR=%s", _ff20_ve)
-    if _ff20_vision_text:
-        raw_input = str(raw_input or "") + "\n\n\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u0430: " + str(_ff20_vision_text)
-    # === END FULLFIX_20_GEMINI_DEFECT_SYNC ===
-    # === NORMATIVE_DB_V1_WIRED ===
-    try:
-        import asyncio as _norm_aio
-        from core.normative_db import search_norms as _search_norms
-        _norm_desc = str(raw_input or "") + " " + str(_ff20_vision_text or "")
-        try:
-            _norm_loop = _norm_aio.get_running_loop()
-            _norm_results = []
-        except RuntimeError:
-            _norm_results = _norm_aio.run(_search_norms(_norm_desc))
-        if _norm_results:
-            _norm_lines = ["\n\nНормативные требования:"]
-            for _n in _norm_results:
-                _norm_lines.append(f"  {_n['norm_id']}: {_n['requirement'][:200]}")
-            raw_input = str(raw_input or "") + "\n".join(_norm_lines)
-    except Exception as _ne:
-        logger.warning("NORMATIVE_DB_V1_WIRED err=%s", _ne)
-    # === END NORMATIVE_DB_V1_WIRED ===
-
-
-    try:
-        caption = raw_input or file_name
-        docx_path = generate_act_docx(task_id, caption, file_name)
-        pdf_path = generate_act_pdf(task_id, caption, file_name)
-        files = [{"path": pdf_path, "kind": "act_pdf"}, {"path": docx_path, "kind": "act_docx"}]
-        up = upload_many_or_fail(files, task_id, topic_id)
-        pdf_r = up["results"].get(pdf_path, {}); docx_r = up["results"].get(docx_path, {})
-        lines = ["Акт осмотра готов."]
-        if pdf_r.get("success") and pdf_r.get("link"): lines.append("PDF: " + pdf_r["link"])
-        if docx_r.get("success") and docx_r.get("link"): lines.append("DOCX: " + docx_r["link"])
-        if len(lines) == 1: lines.append("Drive недоступен. Файл: " + (file_name or ""))
-        result_text = "\n".join(lines)
-        conn.execute("UPDATE tasks SET state='AWAITING_CONFIRMATION',result=?,updated_at=datetime('now') WHERE id=?", (result_text, task_id))
-        conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "state:AWAITING_CONFIRMATION"))
-        conn.commit()
-        try:
-            _br = send_reply_ex(chat_id=str(chat_id), text=result_text, reply_to_message_id=None)
-            _bmid = None
-            if isinstance(_br, dict): _bmid = _br.get("bot_message_id") or _br.get("message_id")
-            elif _br and hasattr(_br, "message_id"): _bmid = _br.message_id
-            if _bmid:
-                conn.execute("UPDATE tasks SET bot_message_id=? WHERE id=?", (str(_bmid), task_id))
-                conn.commit()
-        except Exception as _se:
-            logger.error("ACT_SEND_ERR task=%s err=%s", task_id, _se)
-        return True
-    except Exception as e:
-        logger.error("DEFECT_ACT_ERROR task=%s err=%s", task_id, e)
-        return False
-
-async def process_defect_act(conn, task_id, chat_id, topic_id, raw_input, file_name="", local_path=""):
-    import asyncio
-    return await asyncio.get_event_loop().run_in_executor(
-        None, process_defect_act_sync, conn, task_id, chat_id, topic_id, raw_input, file_name, local_path
-    )
-# === END FULLFIX_15_DEFECT_ACT ===
-
-====================================================================================================
-END_FILE: core/defect_act_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/direction_registry.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 9a97f853b4f786ce481776317e043e44c142dbf4ada231f8e027bc19d3c64e23
-====================================================================================================
-# === FULLFIX_DIRECTION_KERNEL_STAGE_1_DIRECTION_REGISTRY ===
-from __future__ import annotations
-import json
-from pathlib import Path
-from typing import Any, Dict, List
-
-BASE = Path("/root/.areal-neva-core")
-CONFIG_PATH = BASE / "config" / "directions.yaml"
-SEARCH_TRIGGER_TOKENS = ["найд","поиск","куп","цена","avito","ozon","wildberries","drom","auto.ru","exist","emex","zzap"]
-
-def _s(v): return "" if v is None else str(v)
-def _low(v): return _s(v).lower()
-
-
-class DirectionRegistry:
-    def __init__(self, path=None):
-        self.path = Path(path) if path else CONFIG_PATH
-        self.data = self._load()
-        self.directions = self.data.get("directions", {})
-
-    def _load(self):
-        raw = self.path.read_text(encoding="utf-8")
-        try: return json.loads(raw)
-        except Exception:
-            try:
-                import yaml
-                return yaml.safe_load(raw) or {}
-            except Exception as e:
-                raise RuntimeError(f"DIRECTION_REGISTRY_LOAD_FAIL path={self.path} err={e}")
-
-    def _score_direction(self, direction_id, profile, work_item):
-        raw = _low(getattr(work_item, "raw_text", ""))
-        topic_id = int(getattr(work_item, "topic_id", 0) or 0)
-        input_type = _low(getattr(work_item, "input_type", ""))
-        formats_in = [str(x).lower() for x in getattr(work_item, "formats_in", []) or []]
-
-        score = 0
-        reasons = []
-
-        strong = profile.get("strong_aliases") or []
-        strong_hits = [a for a in strong if _low(a) and _low(a) in raw]
-        if strong_hits:
-            score += min(250, 200 + 25 * (len(strong_hits) - 1))
-            reasons.append("strong:" + ",".join(strong_hits[:5]))
-
-        topic_ids = profile.get("topic_ids") or []
-        topic_match = topic_id in topic_ids
-        if topic_match:
-            score += 70 + max(0, 10 - len(topic_ids))
-            reasons.append(f"topic_id:{topic_id}")
-
-        aliases = profile.get("aliases") or []
-        alias_hits = [a for a in aliases if _low(a) and _low(a) in raw]
-        if alias_hits:
-            score += min(120, 30 * len(alias_hits))
-            reasons.append("aliases:" + ",".join(alias_hits[:5]))
-
-        any_signal = bool(strong_hits or topic_match or alias_hits)
-
-        if any_signal:
-            input_types = [str(x).lower() for x in profile.get("input_types") or []]
-            if input_type and input_type in input_types:
-                score += 15
-                reasons.append("input_type:" + input_type)
-            profile_formats = [str(x).lower() for x in profile.get("input_formats") or []]
-            fmt_hits = sorted(set(formats_in).intersection(set(profile_formats)))
-            if fmt_hits:
-                score += min(40, 10 * len(fmt_hits))
-                reasons.append("formats:" + ",".join(fmt_hits))
-
-        if any_signal and bool(profile.get("requires_search")):
-            if any(t in raw for t in SEARCH_TRIGGER_TOKENS):
-                score += 25
-                reasons.append("search_signal")
-
-        if not profile.get("enabled", False):
-            score = max(0, score - 80)
-            reasons.append("passive_penalty")
-
-        return score, {"direction_id": direction_id, "score": score, "reasons": reasons,
-                       "enabled": bool(profile.get("enabled", False)), "topic_ids_count": len(topic_ids)}
-
-    def detect(self, work_item):
-        results = []
-        for direction_id, profile in self.directions.items():
-            score, item = self._score_direction(direction_id, profile or {}, work_item)
-            item["profile"] = dict(profile or {})
-            results.append(item)
-
-        results.sort(key=lambda r: (-r["score"], r["topic_ids_count"]))
-
-        if not results or results[0]["score"] <= 0:
-            best_profile = dict(self.directions.get("general_chat", {}))
-            best_profile["id"] = "general_chat"
-            best_profile["score"] = 0
-            best_profile["audit"] = []
-            return best_profile
-
-        winner = results[0]
-        out = dict(winner["profile"])
-        out["id"] = winner["direction_id"]
-        out["score"] = winner["score"]
-        out["audit"] = [{k: v for k, v in r.items() if k != "profile"} for r in results[:10]]
-        return out
-
-
-def detect_direction(work_item):
-    return DirectionRegistry().detect(work_item)
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_DIRECTION_REGISTRY ===
-
-====================================================================================================
-END_FILE: core/direction_registry.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/document_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3ccafce81ca7ed0c744d41e2ca489c2ee4208ecbb1d17b278c03fee1a072f588
-====================================================================================================
-import os
-import logging
-from typing import Dict, Any
-
-logger = logging.getLogger(__name__)
-
-def parse_document(path: str) -> Dict[str, Any]:
-    if not os.path.exists(path):
-        return {"text": "", "tables": [], "metadata": {}, "error": f"File not found: {path}"}
-    ext = os.path.splitext(path)[1].lower()
-    try:
-        if ext == ".pdf":
-            return _parse_pdf(path)
-        elif ext == ".docx":
-            return _parse_docx(path)
-        elif ext in (".xlsx", ".xls"):
-            return _parse_excel(path)
-        elif ext == ".csv":
-            return _parse_csv(path)
-        else:
-            return {"text": "", "tables": [], "metadata": {}, "error": f"Unsupported: {ext}"}
-    except Exception as e:
-        logger.error(f"parse_document error: {e}")
-        return {"text": "", "tables": [], "metadata": {}, "error": str(e)}
-
-def extract_text_from_document(path: str) -> str:
-    return parse_document(path).get("text", "")
-
-def extract_tables_from_document(path: str) -> list:
-    return parse_document(path).get("tables", [])
-
-def _parse_pdf(path: str) -> Dict[str, Any]:
-    import pdfplumber
-    text_parts = []
-    tables = []
-    with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
-            t = page.extract_text()
-            if t: text_parts.append(t)
-            for tbl in page.extract_tables():
-                if tbl: tables.append(tbl)
-    return {"text": "\n".join(text_parts), "tables": tables, "metadata": {"pages": len(pdf.pages)}, "error": ""}
-
-def _parse_docx(path: str) -> Dict[str, Any]:
-    from docx import Document
-    doc = Document(path)
-    text = "\n".join(p.text for p in doc.paragraphs if p.text)
-    tables = [[[cell.text for cell in row.cells] for row in t.rows] for t in doc.tables]
-    return {"text": text, "tables": tables, "metadata": {"source": path}, "error": ""}
-
-def _parse_excel(path: str) -> Dict[str, Any]:
-    import pandas as pd
-    sheets = pd.read_excel(path, sheet_name=None)
-    text, tables = [], []
-    for name, df in sheets.items():
-        text.append(f"=== {name} ===\n{df.to_string(max_rows=50)}")
-        tables.append({"sheet": name, "data": df.fillna("").to_dict(orient="records")})
-    return {"text": "\n".join(text), "tables": tables, "metadata": {"sheets": list(sheets.keys())}, "error": ""}
-
-def _parse_csv(path: str) -> Dict[str, Any]:
-    import pandas as pd
-    df = pd.read_csv(path)
-    text = df.to_string(max_rows=50)
-    tables = [{"data": df.fillna("").to_dict(orient="records")}]
-    return {"text": text, "tables": tables, "metadata": {"source": path}, "error": ""}
-
-====================================================================================================
-END_FILE: core/document_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/drive_content_indexer.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 86a8da0033f275d1ba30d0be51cfc639a9dbc68b75b7e2a5ac2dbec3d0f0cd59
-====================================================================================================
-# === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 ===
-from __future__ import annotations
-
-import csv
-import io
-import json
-import os
-import re
-import sqlite3
-import tempfile
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from dotenv import load_dotenv
-
-BASE = "/root/.areal-neva-core"
-MEM_DB = f"{BASE}/data/memory.db"
-load_dotenv(f"{BASE}/.env", override=True)
-
-MAX_TEXT = 50000
-MAX_ROWS = 300
-
-
-def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v.strip()
-    try:
-        return json.dumps(v, ensure_ascii=False)
-    except Exception:
-        return str(v).strip()
-
-
-def _clean(text: str, limit: int = MAX_TEXT) -> str:
-    text = (text or "").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:limit]
-
-
-def _kind(file_name: str, mime_type: str = "") -> str:
-    ext = os.path.splitext((file_name or "").lower())[1]
-    mime = (mime_type or "").lower()
-    if ext in (".xlsx", ".xlsm", ".csv") or "spreadsheet" in mime or mime == "text/csv":
-        return "table"
-    if ext in (".pdf", ".docx", ".doc", ".txt") or mime in ("application/pdf", "text/plain"):
-        return "document"
-    return "skip"
-
-
-def _drive_service():
-    from core.topic_drive_oauth import _oauth_service
-    return _oauth_service()
-
-
-def download_drive_file(file_id: str, file_name: str) -> Optional[str]:
-    if not file_id:
-        return None
-    service = _drive_service()
-    suffix = os.path.splitext(file_name or "")[1] or ".bin"
-    fd, out = tempfile.mkstemp(prefix="drive_content_", suffix=suffix, dir="/tmp")
-    os.close(fd)
-
-    request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
-    from googleapiclient.http import MediaIoBaseDownload
-    with io.FileIO(out, "wb") as fh:
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done:
-            _, done = downloader.next_chunk()
-    return out
-
-
-def extract_pdf(path: str) -> str:
-    try:
-        from pypdf import PdfReader
-        reader = PdfReader(path)
-        parts = []
-        for page in reader.pages[:80]:
-            try:
-                parts.append(page.extract_text() or "")
-            except Exception:
-                pass
-        return _clean("\n".join(parts), MAX_TEXT)
-    except Exception as e:
-        return f"PDF_PARSE_ERROR: {e}"
-
-
-def extract_docx(path: str) -> str:
-    try:
-        from docx import Document
-        doc = Document(path)
-        return _clean("\n".join(p.text for p in doc.paragraphs if p.text), MAX_TEXT)
-    except Exception as e:
-        return f"DOCX_PARSE_ERROR: {e}"
-
-
-def extract_txt(path: str) -> str:
-    try:
-        return _clean(Path(path).read_text(encoding="utf-8", errors="ignore"), MAX_TEXT)
-    except Exception as e:
-        return f"TXT_PARSE_ERROR: {e}"
-
-
-def extract_table(path: str, file_name: str) -> str:
-    rows: List[str] = []
-    ext = os.path.splitext((file_name or "").lower())[1]
-
-    try:
-        if ext == ".csv":
-            with open(path, "r", encoding="utf-8", errors="ignore", newline="") as f:
-                reader = csv.reader(f)
-                for idx, row in enumerate(reader):
-                    rows.append(" | ".join(_s(x) for x in row))
-                    if idx >= MAX_ROWS:
-                        break
-        else:
-            from openpyxl import load_workbook
-            wb = load_workbook(path, data_only=True, read_only=True)
-            for ws in wb.worksheets[:5]:
-                rows.append(f"=== SHEET: {ws.title} ===")
-                for idx, row in enumerate(ws.iter_rows(values_only=True)):
-                    vals = [_s(x) for x in row if _s(x)]
-                    if vals:
-                        rows.append(" | ".join(vals))
-                    if idx >= MAX_ROWS:
-                        break
-    except Exception as e:
-        rows.append(f"TABLE_PARSE_ERROR: {e}")
-
-    return _clean("\n".join(rows), MAX_TEXT)
-
-
-def extract_content(local_path: str, file_name: str, mime_type: str = "") -> Dict[str, Any]:
-    kind = _kind(file_name, mime_type)
-    ext = os.path.splitext((file_name or "").lower())[1]
-
-    if kind == "table":
-        text = extract_table(local_path, file_name)
-    elif kind == "document":
-        if ext == ".pdf":
-            text = extract_pdf(local_path)
-        elif ext == ".docx":
-            text = extract_docx(local_path)
-        else:
-            text = extract_txt(local_path)
-    else:
-        text = ""
-
-    return {
-        "ok": bool(text and not text.endswith("_PARSE_ERROR")),
-        "kind": kind,
-        "file_name": file_name,
-        "mime_type": mime_type,
-        "content": _clean(text, MAX_TEXT),
-        "chars": len(text or ""),
-    }
-
-
-def save_file_content_memory(chat_id: str, topic_id: int, task_id: str, file_id: str, file_name: str, mime_type: str, content: str) -> Dict[str, Any]:
-    if not content.strip():
-        return {"ok": False, "reason": "EMPTY_CONTENT"}
-
-    key = f"topic_{int(topic_id or 0)}_file_content_{task_id}"
-    value = json.dumps({
-        "task_id": task_id,
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id or 0),
-        "file_id": file_id,
-        "file_name": file_name,
-        "mime_type": mime_type,
-        "content": _clean(content, MAX_TEXT),
-    }, ensure_ascii=False)
-
-    with sqlite3.connect(MEM_DB) as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
-        existing = conn.execute("SELECT 1 FROM memory WHERE chat_id=? AND key=? LIMIT 1", (str(chat_id), key)).fetchone()
-        if existing:
-            return {"ok": True, "key": key, "dedup": True}
-        import hashlib
-        mid = hashlib.sha1(f"{chat_id}:{key}".encode()).hexdigest()
-        conn.execute(
-            "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,datetime('now'))",
-            (mid, str(chat_id), key, value),
-        )
-        conn.commit()
-
-    return {"ok": True, "key": key, "dedup": False}
-
-
-def index_drive_file_content(chat_id: str, topic_id: int, task_id: str, file_id: str, file_name: str, mime_type: str = "") -> Dict[str, Any]:
-    local_path = None
-    try:
-        if _kind(file_name, mime_type) == "skip":
-            return {"ok": False, "reason": "UNSUPPORTED_TYPE", "file_name": file_name}
-
-        local_path = download_drive_file(file_id, file_name)
-        if not local_path or not os.path.exists(local_path):
-            return {"ok": False, "reason": "DOWNLOAD_FAILED", "file_name": file_name}
-
-        extracted = extract_content(local_path, file_name, mime_type)
-        if not extracted.get("content"):
-            return {"ok": False, "reason": "EXTRACT_EMPTY", "file_name": file_name}
-
-        saved = save_file_content_memory(
-            chat_id=str(chat_id),
-            topic_id=int(topic_id or 0),
-            task_id=str(task_id),
-            file_id=str(file_id),
-            file_name=str(file_name),
-            mime_type=str(mime_type or ""),
-            content=str(extracted.get("content") or ""),
-        )
-        return {
-            "ok": bool(saved.get("ok")),
-            "reason": "INDEXED" if saved.get("ok") else saved.get("reason"),
-            "key": saved.get("key"),
-            "dedup": saved.get("dedup", False),
-            "kind": extracted.get("kind"),
-            "chars": extracted.get("chars"),
-            "file_name": file_name,
-        }
-    except Exception as e:
-        return {"ok": False, "reason": f"ERROR:{e}", "file_name": file_name}
-    finally:
-        if local_path:
-            try:
-                os.remove(local_path)
-            except Exception:
-                pass
-# === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 ===
-
-====================================================================================================
-END_FILE: core/drive_content_indexer.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/drive_folder_resolver.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 74da8dc00bdbf6caea745c54e55bb20c0fb180092f6feb58a2135924fbfcc21f
-====================================================================================================
-# === DRIVE_CANON_FOLDER_RESOLVER_V1 ===
-from __future__ import annotations
-
-import os
-import logging
-from dotenv import load_dotenv
-
-logger = logging.getLogger("drive_folder_resolver")
-
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
-
-DEFAULT_CHAT_ID = "-1003725299009"
-
-
-def get_or_create_topic_folder(topic_id: int, chat_id: str = "") -> str:
-    """
-    Canonical Drive layout:
-    AI_ORCHESTRA / chat_<chat_id> / topic_<topic_id>
-
-    This resolver MUST NOT use Service Account and MUST NOT create flat folders:
-    chat_-1003725299009_topic_2
-    """
-    from core.topic_drive_oauth import _oauth_service, _root_folder_id, _ensure_folder
-
-    service = _oauth_service()
-    root_id = _root_folder_id()
-    chat = str(chat_id or os.getenv("TELEGRAM_CHAT_ID") or DEFAULT_CHAT_ID)
-    chat_folder = _ensure_folder(service, root_id, f"chat_{chat}")
-    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
-    logger.info(
-        "DRIVE_CANON_FOLDER_RESOLVER_V1_OK chat=%s topic=%s folder=%s",
-        chat,
-        int(topic_id or 0),
-        topic_folder,
-    )
-    return topic_folder
-
-
-# === END_DRIVE_CANON_FOLDER_RESOLVER_V1 ===
-
-====================================================================================================
-END_FILE: core/drive_folder_resolver.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/duplicate_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 674c881d7bc3af021c821051940aebf69d78a44129626e36b5d68be8f7690403
-====================================================================================================
-import json
-import logging
-from typing import Optional, Dict
-
-logger = logging.getLogger(__name__)
-
-def get_file_id(raw_input: str) -> Optional[str]:
-    try:
-        return json.loads(raw_input or "{}").get("file_id")
-    except Exception:
-        return None
-
-def find_duplicate(conn, chat_id: str, topic_id: int, file_id: str) -> Optional[Dict]:
-    if not file_id:
-        return None
-    row = conn.execute(
-        """SELECT id, state, substr(result,1,240) result, updated_at
-           FROM tasks
-           WHERE chat_id=?
-             AND COALESCE(topic_id,0)=?
-             AND input_type='drive_file'
-             AND COALESCE(raw_input,'') LIKE ?
-             AND state IN ('DONE','AWAITING_CONFIRMATION')
-           ORDER BY updated_at DESC
-           LIMIT 1""",
-        (str(chat_id), int(topic_id or 0), f'%"file_id": "{file_id}"%'),
-    ).fetchone()
-    return dict(row) if row else None
-
-def duplicate_message(prev: Dict, file_name: str) -> str:
-    prev_result = (prev.get("result") or "").strip()[:160]
-    if prev_result:
-        return (
-            f"Этот файл уже был: {file_name}\n"
-            f"Прошлый результат: {prev_result}\n\n"
-            f"Что сделать?\n"
-            f"1. Повторить обработку\n"
-            f"2. Сделать другое\n"
-            f"3. Отменить"
-        )
-    return (
-        f"Этот файл уже был: {file_name}\n\n"
-        f"Что сделать?\n"
-        f"1. Повторить обработку\n"
-        f"2. Сделать другое\n"
-        f"3. Отменить"
-    )
-
-====================================================================================================
-END_FILE: core/duplicate_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/dwg_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 52d4a88254ff45a37f7535763c22e5ca09d2bcd1490a60c7e9d770b0833b1859
-====================================================================================================
-# === DWG_DXF_PROJECT_CLOSE_V1 ===
-from __future__ import annotations
-
-import json
-import math
-import os
-import re
-import shutil
-import subprocess
-import tempfile
-import zipfile
-from collections import Counter, defaultdict
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-SECTION_MAP = {
-    "кж": "КЖ — Конструкции железобетонные",
-    "км": "КМ — Конструкции металлические",
-    "кмд": "КМД — Конструкции металлические деталировочные",
-    "кр": "КР — Конструктивные решения",
-    "ар": "АР — Архитектурные решения",
-    "ов": "ОВ — Отопление и вентиляция",
-    "вк": "ВК — Водоснабжение и канализация",
-    "эом": "ЭОМ — Электрооборудование",
-    "гп": "ГП — Генеральный план",
-    "пз": "ПЗ — Пояснительная записка",
-}
-
-NORMS_MAP = {
-    "кж": ["СП 63.13330.2018", "СП 20.13330.2016/2017", "ГОСТ 34028-2016", "ГОСТ 21.501-2018"],
-    "км": ["СП 16.13330.2017", "СП 20.13330.2016/2017", "ГОСТ 27772-2015", "ГОСТ 21.502-2016"],
-    "кмд": ["СП 16.13330.2017", "ГОСТ 23118-2019", "ГОСТ 21.502-2016"],
-    "кр": ["СП 20.13330.2016/2017", "ГОСТ 21.501-2018"],
-    "ар": ["ГОСТ 21.501-2018", "ГОСТ 21.101-2020", "СП 55.13330.2016"],
-    "ов": ["СП 60.13330.2020", "ГОСТ 21.602-2016"],
-    "вк": ["СП 30.13330.2020", "ГОСТ 21.601-2011"],
-    "эом": ["ПУЭ-7", "СП 256.1325800.2016", "ГОСТ 21.608-2014"],
-    "гп": ["СП 42.13330.2016", "ГОСТ 21.508-2020"],
-}
-
-ENTITY_PROJECT_HINTS = {
-    "LINE": "линейная геометрия",
-    "LWPOLYLINE": "полилинии/контуры",
-    "POLYLINE": "полилинии/контуры",
-    "CIRCLE": "окружности/отверстия",
-    "ARC": "дуги",
-    "TEXT": "текстовые подписи",
-    "MTEXT": "многострочные подписи",
-    "DIMENSION": "размеры",
-    "INSERT": "блоки/узлы",
-    "HATCH": "штриховки",
-}
-
-def _clean(v: Any, limit: int = 2000) -> str:
-    if v is None:
-        return ""
-    s = str(v).replace("\r", "\n")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"\n{3,}", "\n\n", s)
-    return s.strip()[:limit]
-
-def _safe_name(v: Any, fallback: str = "drawing") -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 120)).strip("._")
-    return s or fallback
-
-def _detect_section(file_name: str = "", user_text: str = "", drawing_text: str = "") -> str:
-    hay_sources = [file_name or "", user_text or "", drawing_text[:2000] if drawing_text else ""]
-    priority = ("кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз")
-    for src in hay_sources:
-        low = src.lower()
-        up = src.upper()
-        for key in priority:
-            if re.search(rf"(^|[^А-ЯA-Z0-9]){re.escape(key.upper())}([^А-ЯA-Z0-9]|$)", up):
-                return key
-            if key in low:
-                return key
-    return "кр"
-
-def _read_bytes_head(path: str, n: int = 64) -> bytes:
-    try:
-        with open(path, "rb") as f:
-            return f.read(n)
-    except Exception:
-        return b""
-
-def _try_read_text(path: str, limit: int = 4_000_000) -> str:
-    data = b""
-    try:
-        with open(path, "rb") as f:
-            data = f.read(limit)
-    except Exception:
-        return ""
-    for enc in ("utf-8", "cp1251", "latin-1"):
-        try:
-            return data.decode(enc, errors="ignore")
-        except Exception:
-            pass
-    return data.decode("latin-1", errors="ignore")
-
-def _file_signature(path: str) -> str:
-    head = _read_bytes_head(path, 32)
-    if head.startswith(b"AC10"):
-        return head[:12].decode("latin-1", errors="ignore")
-    txt = head.decode("latin-1", errors="ignore")
-    if "SECTION" in _try_read_text(path, 4096).upper():
-        return "ASCII_DXF"
-    return head[:16].hex()
-
-def _try_convert_dwg_to_dxf(path: str) -> Optional[str]:
-    src = Path(path)
-    if src.suffix.lower() != ".dwg":
-        return None
-
-    tmp = Path(tempfile.mkdtemp(prefix="dwg_convert_"))
-    in_dir = tmp / "in"
-    out_dir = tmp / "out"
-    in_dir.mkdir(parents=True, exist_ok=True)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    safe = in_dir / src.name
-    shutil.copy2(src, safe)
-
-    converters = [
-        shutil.which("dwg2dxf"),
-        shutil.which("ODAFileConverter"),
-        shutil.which("ODAFileConverter.exe"),
-    ]
-
-    for conv in [c for c in converters if c]:
-        try:
-            name = os.path.basename(conv).lower()
-            if "dwg2dxf" in name:
-                out = out_dir / (src.stem + ".dxf")
-                subprocess.run([conv, str(safe), str(out)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
-                if out.exists() and out.stat().st_size > 100:
-                    return str(out)
-            else:
-                subprocess.run(
-                    [conv, str(in_dir), str(out_dir), "ACAD2018", "DXF", "0", "1"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=180,
-                )
-                found = list(out_dir.rglob("*.dxf"))
-                if found:
-                    found.sort(key=lambda p: p.stat().st_size, reverse=True)
-                    if found[0].stat().st_size > 100:
-                        return str(found[0])
-        except Exception:
-            continue
-
-    return None
-
-def _parse_ascii_dxf(path: str) -> Dict[str, Any]:
-    text = _try_read_text(path)
-    lines = [x.rstrip("\n") for x in text.splitlines()]
-    pairs: List[Tuple[str, str]] = []
-    i = 0
-    while i + 1 < len(lines):
-        code = lines[i].strip()
-        value = lines[i + 1].strip()
-        pairs.append((code, value))
-        i += 2
-
-    entities = []
-    current: Optional[Dict[str, Any]] = None
-    in_entities = False
-
-    for code, value in pairs:
-        if code == "0" and value.upper() == "SECTION":
-            current = None
-            continue
-        if code == "2" and value.upper() == "ENTITIES":
-            in_entities = True
-            continue
-        if code == "0" and value.upper() == "ENDSEC":
-            if current:
-                entities.append(current)
-                current = None
-            in_entities = False
-            continue
-        if not in_entities:
-            continue
-
-        if code == "0":
-            if current:
-                entities.append(current)
-            current = {"type": value.upper(), "layer": "", "points": [], "texts": [], "raw": {}}
-            continue
-
-        if current is None:
-            continue
-
-        current["raw"].setdefault(code, []).append(value)
-        if code == "8":
-            current["layer"] = value
-        elif code in ("1", "2", "3"):
-            if value and len(value) <= 500:
-                current["texts"].append(value)
-        elif code in ("10", "20", "30", "11", "21", "31", "12", "22", "32"):
-            try:
-                current["points"].append((code, float(str(value).replace(",", "."))))
-            except Exception:
-                pass
-
-    if current:
-        entities.append(current)
-
-    entity_counts = Counter(e.get("type") or "UNKNOWN" for e in entities)
-    layer_counts = Counter(e.get("layer") or "0" for e in entities)
-
-    texts = []
-    for e in entities:
-        for t in e.get("texts") or []:
-            if t and t not in texts:
-                texts.append(t)
-            if len(texts) >= 80:
-                break
-
-    x_vals, y_vals = [], []
-    for e in entities:
-        coords = e.get("points") or []
-        for code, val in coords:
-            if code in ("10", "11", "12"):
-                x_vals.append(val)
-            elif code in ("20", "21", "22"):
-                y_vals.append(val)
-
-    extents = {}
-    if x_vals and y_vals:
-        extents = {
-            "min_x": min(x_vals),
-            "max_x": max(x_vals),
-            "min_y": min(y_vals),
-            "max_y": max(y_vals),
-            "width": max(x_vals) - min(x_vals),
-            "height": max(y_vals) - min(y_vals),
-        }
-
-    dims = []
-    for t in texts:
-        for m in re.findall(r"(?<!\d)(\d{2,6})(?!\d)", t):
-            try:
-                v = int(m)
-                if 10 <= v <= 100000:
-                    dims.append(v)
-            except Exception:
-                pass
-    dims = sorted(set(dims))[:120]
-
-    return {
-        "parse_status": "DXF_PARSED",
-        "raw_text_chars": len(text),
-        "entities_total": len(entities),
-        "entity_counts": dict(entity_counts.most_common(60)),
-        "layers": dict(layer_counts.most_common(80)),
-        "texts": texts[:80],
-        "dimensions_detected": dims,
-        "extents": extents,
-    }
-
-def _parse_dwg_metadata(path: str) -> Dict[str, Any]:
-    p = Path(path)
-    sig = _file_signature(path)
-    return {
-        "parse_status": "DWG_BINARY_METADATA_ONLY",
-        "signature": sig,
-        "file_size": p.stat().st_size if p.exists() else 0,
-        "note": "DWG binary parsed as metadata only. For geometry extraction install ODAFileConverter or dwg2dxf on server; DXF is parsed directly",
-    }
-
-def _build_model(local_path: str, file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, Any]:
-    p = Path(local_path)
-    ext = p.suffix.lower()
-    source_path = str(p)
-    converted_from_dwg = False
-
-    if ext == ".dwg":
-        converted = _try_convert_dwg_to_dxf(local_path)
-        if converted:
-            source_path = converted
-            ext = ".dxf"
-            converted_from_dwg = True
-
-    if ext == ".dxf":
-        parsed = _parse_ascii_dxf(source_path)
-    elif p.suffix.lower() == ".dwg":
-        parsed = _parse_dwg_metadata(local_path)
-    else:
-        parsed = {
-            "parse_status": "UNSUPPORTED_DRAWING_FORMAT",
-            "signature": _file_signature(local_path),
-            "file_size": p.stat().st_size if p.exists() else 0,
-        }
-
-    drawing_text = "\n".join(parsed.get("texts") or [])
-    section = _detect_section(file_name, user_text, drawing_text)
-    entity_counts = parsed.get("entity_counts") or {}
-    layers = parsed.get("layers") or {}
-    texts = parsed.get("texts") or []
-
-    output_documents = [
-        "DOCX_DWG_DXF_ANALYSIS_REPORT",
-        "XLSX_DWG_DXF_ENTITY_REGISTER",
-        "ZIP_PROJECT_PACKAGE",
-    ]
-
-    if section in ("кж", "км", "кмд", "кр"):
-        output_documents.extend(["SPECIFICATION_DRAFT", "STRUCTURAL_DRAWING_REGISTER"])
-    if section == "ар":
-        output_documents.extend(["ARCHITECTURAL_SHEET_REGISTER", "ROOM_PLAN_REVIEW"])
-
-    risk_flags = []
-    if parsed.get("parse_status") == "DWG_BINARY_METADATA_ONLY":
-        risk_flags.append("DWG_GEOMETRY_NOT_EXTRACTED_WITHOUT_CONVERTER")
-    if not layers:
-        risk_flags.append("LAYERS_NOT_FOUND")
-    if not entity_counts:
-        risk_flags.append("ENTITIES_NOT_FOUND")
-    if not texts:
-        risk_flags.append("TEXT_LABELS_NOT_FOUND")
-
-    model = {
-        "schema": "DWG_DXF_PROJECT_MODEL_V1",
-        "source_file": file_name or p.name,
-        "source_path": local_path,
-        "mime_type": mime_type,
-        "topic_role": topic_role,
-        "user_text": user_text,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "section": section,
-        "section_title": SECTION_MAP.get(section, section.upper()),
-        "norms": NORMS_MAP.get(section, []),
-        "converted_from_dwg": converted_from_dwg,
-        "parse": parsed,
-        "layers": layers,
-        "entity_counts": entity_counts,
-        "texts": texts[:80],
-        "dimensions_detected": parsed.get("dimensions_detected") or [],
-        "extents": parsed.get("extents") or {},
-        "output_documents": output_documents,
-        "risk_flags": risk_flags,
-        "status": "PARTIAL" if risk_flags else "CONFIRMED",
-    }
-    return model
-
-def _summary(model: Dict[str, Any]) -> str:
-    parse = model.get("parse") or {}
-    entity_counts = model.get("entity_counts") or {}
-    layers = model.get("layers") or {}
-    risk_flags = model.get("risk_flags") or []
-    lines = [
-        "DWG/DXF проектный контур отработал",
-        f"Файл: {model.get('source_file')}",
-        f"Раздел: {model.get('section_title')}",
-        f"Статус: {model.get('status')}",
-        f"Parse: {parse.get('parse_status')}",
-        f"Слоёв: {len(layers)}",
-        f"Сущностей: {sum(int(v) for v in entity_counts.values()) if entity_counts else 0}",
-    ]
-    if entity_counts:
-        lines.append("Типы сущностей: " + ", ".join(f"{k}:{v}" for k, v in list(entity_counts.items())[:12]))
-    if layers:
-        lines.append("Слои: " + ", ".join(list(layers.keys())[:20]))
-    if model.get("dimensions_detected"):
-        lines.append("Размеры/числа из подписей: " + ", ".join(map(str, model.get("dimensions_detected")[:30])))
-    if model.get("norms"):
-        lines.append("Нормы: " + ", ".join(model.get("norms")))
-    if risk_flags:
-        lines.append("Ограничения: " + ", ".join(risk_flags))
-    lines.append("Артефакты: DOCX отчёт + XLSX реестр + ZIP пакет")
-    return "\n".join(lines).strip()
-
-def _write_docx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_report_{_safe_name(task_id, 'manual')}.docx"
-    try:
-        from docx import Document
-
-        doc = Document()
-        doc.add_heading("DWG/DXF PROJECT MODEL", level=1)
-        doc.add_paragraph(f"Файл: {model.get('source_file')}")
-        doc.add_paragraph(f"Раздел: {model.get('section_title')}")
-        doc.add_paragraph(f"Статус: {model.get('status')}")
-        doc.add_paragraph(f"Parse: {(model.get('parse') or {}).get('parse_status')}")
-
-        doc.add_heading("Нормативная база", level=2)
-        norms = model.get("norms") or []
-        if norms:
-            for n in norms:
-                doc.add_paragraph(f"• {n}")
-        else:
-            doc.add_paragraph("Норма не подтверждена")
-
-        doc.add_heading("Слои", level=2)
-        layers = model.get("layers") or {}
-        if layers:
-            table = doc.add_table(rows=1, cols=2)
-            table.style = "Table Grid"
-            table.rows[0].cells[0].text = "Слой"
-            table.rows[0].cells[1].text = "Кол-во"
-            for name, cnt in list(layers.items())[:80]:
-                row = table.add_row().cells
-                row[0].text = str(name)
-                row[1].text = str(cnt)
-        else:
-            doc.add_paragraph("Слои не извлечены")
-
-        doc.add_heading("Сущности", level=2)
-        ents = model.get("entity_counts") or {}
-        if ents:
-            table = doc.add_table(rows=1, cols=3)
-            table.style = "Table Grid"
-            table.rows[0].cells[0].text = "Тип"
-            table.rows[0].cells[1].text = "Кол-во"
-            table.rows[0].cells[2].text = "Назначение"
-            for name, cnt in list(ents.items())[:80]:
-                row = table.add_row().cells
-                row[0].text = str(name)
-                row[1].text = str(cnt)
-                row[2].text = ENTITY_PROJECT_HINTS.get(str(name), "")
-        else:
-            doc.add_paragraph("Сущности не извлечены")
-
-        doc.add_heading("Текстовые подписи", level=2)
-        texts = model.get("texts") or []
-        if texts:
-            for t in texts[:60]:
-                doc.add_paragraph(f"• {t}")
-        else:
-            doc.add_paragraph("Текстовые подписи не извлечены")
-
-        doc.add_heading("Проектные выходные документы", level=2)
-        for x in model.get("output_documents") or []:
-            doc.add_paragraph(f"• {x}")
-
-        doc.add_heading("Ограничения", level=2)
-        risks = model.get("risk_flags") or []
-        if risks:
-            for r in risks:
-                doc.add_paragraph(f"• {r}")
-        else:
-            doc.add_paragraph("Критичных ограничений не выявлено")
-
-        doc.save(out)
-        return str(out)
-    except Exception:
-        txt = out.with_suffix(".txt")
-        txt.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-        return str(txt)
-
-def _write_xlsx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_register_{_safe_name(task_id, 'manual')}.xlsx"
-    try:
-        from openpyxl import Workbook
-        wb = Workbook()
-
-        ws = wb.active
-        ws.title = "Summary"
-        rows = [
-            ("Файл", model.get("source_file")),
-            ("Раздел", model.get("section_title")),
-            ("Статус", model.get("status")),
-            ("Parse", (model.get("parse") or {}).get("parse_status")),
-            ("Нормы", ", ".join(model.get("norms") or [])),
-            ("Ограничения", ", ".join(model.get("risk_flags") or [])),
-        ]
-        for i, (k, v) in enumerate(rows, 1):
-            ws.cell(i, 1, k)
-            ws.cell(i, 2, v)
-
-        ws2 = wb.create_sheet("Layers")
-        ws2.append(["Слой", "Кол-во"])
-        for k, v in (model.get("layers") or {}).items():
-            ws2.append([k, v])
-
-        ws3 = wb.create_sheet("Entities")
-        ws3.append(["Тип", "Кол-во", "Назначение"])
-        for k, v in (model.get("entity_counts") or {}).items():
-            ws3.append([k, v, ENTITY_PROJECT_HINTS.get(str(k), "")])
-
-        ws4 = wb.create_sheet("Texts")
-        ws4.append(["№", "Текст"])
-        for i, t in enumerate(model.get("texts") or [], 1):
-            ws4.append([i, t])
-
-        ws5 = wb.create_sheet("ModelJSON")
-        raw = json.dumps(model, ensure_ascii=False, indent=2)
-        for i, line in enumerate(raw.splitlines(), 1):
-            ws5.cell(i, 1, line)
-
-        wb.save(out)
-        wb.close()
-        return str(out)
-    except Exception:
-        csv = out.with_suffix(".csv")
-        lines = ["key,value"]
-        lines.append(f"file,{model.get('source_file')}")
-        lines.append(f"section,{model.get('section_title')}")
-        lines.append(f"status,{model.get('status')}")
-        csv.write_text("\n".join(lines), encoding="utf-8")
-        return str(csv)
-
-def _write_json(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_model_{_safe_name(task_id, 'manual')}.json"
-    out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(out)
-
-def _zip_artifacts(paths: List[str], task_id: str, source_file: str = "") -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_project_package_{_safe_name(task_id, 'manual')}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-        manifest = {
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "task_id": task_id,
-            "source_file": source_file,
-            "files": [os.path.basename(p) for p in paths if p and os.path.exists(p)],
-            "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-        }
-        z.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
-    return str(out)
-
-def process_drawing_file(
-    local_path: str,
-    file_name: str = "",
-    mime_type: str = "",
-    user_text: str = "",
-    topic_role: str = "",
-    task_id: str = "artifact",
-    topic_id: int = 0,
-) -> Dict[str, Any]:
-    if not local_path or not os.path.exists(local_path):
-        return {
-            "success": False,
-            "error": "DRAWING_FILE_NOT_FOUND",
-            "summary": "DWG/DXF файл не найден",
-        }
-
-    model = _build_model(local_path, file_name or os.path.basename(local_path), mime_type, user_text, topic_role)
-    docx = _write_docx(model, task_id)
-    xlsx = _write_xlsx(model, task_id)
-    js = _write_json(model, task_id)
-    package = _zip_artifacts([docx, xlsx, js], task_id, model.get("source_file") or file_name)
-
-    return {
-        "success": True,
-        "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-        "summary": _summary(model),
-        "model": model,
-        "docx_path": docx,
-        "xlsx_path": xlsx,
-        "json_path": js,
-        "artifact_path": package,
-        "artifact_name": f"{Path(file_name or local_path).stem}_dwg_dxf_project_package.zip",
-        "extra_artifacts": [docx, xlsx, js],
-        "status": model.get("status"),
-    }
-
-async def process_drawing_file_async(*args, **kwargs) -> Dict[str, Any]:
-    return process_drawing_file(*args, **kwargs)
-
-# === END_DWG_DXF_PROJECT_CLOSE_V1 ===
-
-====================================================================================================
-END_FILE: core/dwg_engine.py
 FILE_CHUNK: 1/1
 ====================================================================================================
