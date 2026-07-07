@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-07-07T13:23:40.860686+00:00
-git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+generated_at_utc: 2026-07-07T13:53:41.877403+00:00
+git_sha_before_commit: c447339103fe45d7483e65d4dae4a246739d2439
 part: 1/21
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 58202a8aa446fe5b3473635a830336024d4a8124fd64e839ec69e573971cd1a5
+SHA256_FULL_FILE: da6b87a668dafba6a954e59a6a5f6498f0914d9cb82dc5c3fbd9f84d4b4aa9c4
 ====================================================================================================
 # LATEST HANDOFF — 2026-07-05 topic_2 / STROYKA
 
@@ -434,6 +434,131 @@ Open verification:
 
 Clean export:
 - `chat_exports/CHAT_EXPORT__2026-07-07_FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD.json`
+
+---
+
+# Session handoff — 2026-07-07 topic_2 / search / live dialogue
+
+This is a factual handoff record. It is not a new canon and does not replace existing canons.
+
+## Applied canon / SSOT baseline
+
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`: `INSTALLED != VERIFIED`; topic statuses at session time: `topic_2 STROYKA = INSTALLED_NOT_VERIFIED`, `topic_5 TEKHNADZOR = BROKEN`, `topic_500 VEB_POISK = BROKEN`.
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` §12:
+  - estimate facts only from current user task, uploaded project, photo, PDF, OCR text, reply context or explicit clarification;
+  - old tasks/pin/context must not be mixed into a new task;
+  - missing data requires precise clarification; invented positions/volumes/materials are forbidden;
+  - PDF/OCR/voice/reply/pin/fixed-message context belongs to canonical topic_2 flow;
+  - internet prices require explicit user authorization or valid cache/memory reuse;
+  - topic_2 search route = Sonar/Perplexity only; DeepSeek forbidden;
+  - final topic_2 result must be Telegram + Google Drive XLSX/PDF links;
+  - `DONE` only after explicit owner confirmation for the parent task.
+- `docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md`: file -> processed -> artifact -> Drive/GitHub link -> Telegram -> `AWAITING_CONFIRMATION`; Perplexity for search, DeepSeek for final answer only.
+
+## What was done today
+
+### Search / internet route
+
+- Verified owner-visible issue: OpenRouter logs showed DeepSeek calls near search work; this violates search canons if the call belongs to internet/search route.
+- Existing policy baseline remains: ordinary chat may use `DEFAULT_MODEL=deepseek/deepseek-chat`; internet/search must use `ONLINE_MODEL=perplexity/sonar`; DeepSeek fallback for search is forbidden.
+- Further full cross-topic search verification remains open; do not assume all search surfaces are fully closed until live-tested.
+
+### topic_2 live task `287a613c-c47d-4fae-9a71-d57fa3f2b762`
+
+User task: two files are one project; calculate construction cost and material cost by project; if data is missing ask; internet prices only after confirmation. Files attached in project context:
+
+- `/root/.areal-neva-core/runtime/drive_files/287a613c-c47d-4fae-9a71-d57fa3f2b762_Раздел 4 - КР.pdf`
+- `/root/.areal-neva-core/runtime/drive_files/287a613c-c47d-4fae-9a71-d57fa3f2b762_Раздел 3 - АР.pdf`
+
+Facts established:
+
+- Multifile context was attached as one project.
+- `Раздел 4 - КР.pdf` was processed through `core/pdf_spec_extractor.py` but extractor returned only 8 rows in the live flow.
+- The 8-row output is not sufficient for canon: project KR has visible specification tables, including BФм1/floor and truss/foundation schedules.
+- Current final artifact was delivered, but it is not a fully canonical estimate because OCR/spec extraction is incomplete.
+
+Current task state after lifecycle repair:
+
+- `state = AWAITING_CONFIRMATION`
+- `bot_message_id = 12283`
+- Excel: `https://drive.google.com/file/d/1V0T5PRcZqIrvNeGAnDJQ_UextGvHYdXf/view`
+- PDF: `https://drive.google.com/file/d/1yuJUrvi5gPmSSpULrWtypMKzINPC0D5R/view`
+- `bad_after_98688 = 0`, `recovery_after_98688 = 0`, `sanitize_after_98688 = 0`, `done_contract_after_98688 = 0` in the last live check.
+
+Runtime fixes applied during the session:
+
+- `task_worker.py`
+  - widened topic_2 artifact-marker history lookup so old delivered Drive/TG markers are not lost behind noisy history;
+  - prevented project parent task with its own PDF/project context from being treated as a child follow-up update;
+  - prevented sanitizer from rewriting already canonical Drive XLSX/PDF final text;
+  - guarded repeated `TOPIC2_DONE_CONTRACT_OK` writes;
+  - blocked automatic `DONE` transition for a delivered topic_2 parent unless `TOPIC2_EXPLICIT_CONFIRM%` exists;
+  - restored task `287a...` to `AWAITING_CONFIRMATION` with Drive links after old guards had forced `FAILED`.
+- `core/stroyka_estimate_canon.py`
+  - protected active same-task multifile/project pending context from stale-deprecation;
+  - added logistics/delivery price-search terms when project distance is present.
+- `core/pdf_spec_extractor.py`
+  - confirmed exact root cause: OCR/page selection did not include all needed KR pages and stopped early after 8 rows;
+  - adjusted KR targeted page order toward end-of-file specification sheets;
+  - increased the row threshold before early stop;
+  - added page-specific OCR settings for the last KR specification page.
+
+Verification performed:
+
+- `python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/pdf_spec_extractor.py` passed after the lifecycle repairs and after the OCR extractor edits.
+- Live task `287a...` stopped cycling after final worker reload: no new `TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED`, recovery, sanitizer or repeated DONE markers after history id `98688`.
+- OCR extractor diagnostic facts:
+  - PDF has 26 pages;
+  - old fast pages were `[24, 22, 26]` or similar and missed/under-read required tables;
+  - corrected targeted order reached `[26, 22, 24]`;
+  - full extractor was still too slow for live use: bounded 70-90 second tests timed out;
+  - single-page OCR confirmed useful table text on page 26, including BФм1/floor material rows, but the integrated extractor still needs a faster targeted parser path.
+
+## Open blockers / not closed
+
+1. topic_2 OCR/PDF extraction is not closed.
+   - Must add a fast targeted KR table parser path for page 26 / BФм1/floor table and truss/foundation sheets.
+   - Must not hand-build the estimate manually; orchestra must extract rows and build artifacts itself.
+   - Must re-run full live cycle only after extractor returns canonical project rows within a bounded runtime.
+
+2. topic_2 final estimate for task `287a...` is delivered but not accepted as fully canonical.
+   - It has Drive links and is stable in `AWAITING_CONFIRMATION`.
+   - It must be regenerated by the orchestra after OCR/spec extraction is fixed.
+   - It must include construction work + material cost from actual project specs, not invented rows.
+
+3. Search/product-search contour still needs full live verification.
+   - DeepSeek must not be used for internet/search under any topic.
+   - Duplicate contacts must be filtered by phone number.
+   - Links/sites/groups must be checked as live before public output.
+   - Long search output should go to Google Drive with a Telegram link when needed.
+
+4. Live reply / memory / file-context contour remains open.
+   - Replies, pins, duplicate files, already-uploaded Telegram files, voice continuation and active/short/long/archive memory must work system-wide.
+   - When an existing file is found in Telegram memory, the bot must reply/link to the original Telegram file/message, not dump irrelevant old estimates.
+   - Completion phrases must close only the relevant parent task and must not cancel unrelated work.
+
+5. topic_5 TEKHNADZOR remains broken by SSOT status and was not repaired today.
+   - Needs canon-first verification of file intake, technical documentation binding, normative modules/SP/GOST lookup, live answer logic and final artifact delivery.
+
+6. topic_210 PROEKTIROVANIE remains not verified.
+   - Same file/document/OCR/memory/reply principles must be checked under its own canon before any patch.
+
+7. Working tree is dirty and broad.
+   - Do not commit broad dirty tree blindly.
+   - Safe GitHub save for this stop point is this handoff record plus explicitly scoped files only after review.
+   - `.env`, DB files, Telegram artifacts, Drive exports, heavy media, backups and secrets must not be committed.
+
+## Next start point
+
+Start from `core/pdf_spec_extractor.py` only:
+
+1. Read SSOT + topic_2 canon + file/OCR parts again.
+2. Inspect current extractor diff and backups:
+   - `core/pdf_spec_extractor.py.bak_kr_ocr_page25_fullscan_20260707_1730`
+   - `core/pdf_spec_extractor.py.bak_kr_ocr_targeted_pages_20260707_1745`
+3. Implement bounded targeted parser for KR specification pages instead of full-page slow OCR loop.
+4. Verify extractor on `287a..._Раздел 4 - КР.pdf` returns project rows from page 26 and truss/foundation schedules inside a bounded time.
+5. Only then rerun the topic_2 task through the orchestra; do not calculate manually in Codex.
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
@@ -7929,251 +8054,5 @@ This file records what was done and what rules were established during the 2026-
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/SESSION_20260706_TOPIC2_TWO_DAY_SAVE.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d91
-====================================================================================================
-{
-  "chat_id": "chatgpt_current_session_2026-04-30_fullfix_13_15",
-  "chat_name": "ChatGPT current session — AREAL-NEVA ORCHESTRA fullfix 13-15",
-  "exported_at": "2026-04-30T13:35:00+03:00",
-  "source_model": "GPT-5.5 Thinking",
-  "source_scope": "Facts explicitly present in the current visible ChatGPT session only. No hidden server state was invented. No secrets included.",
-  "repository": {
-    "full_name": "rj7hmz9cvm-lgtm/areal-neva-core",
-    "default_branch": "main",
-    "verified_connector_permission": "admin, maintain, pull, push, triage"
-  },
-  "system": {
-    "project": "AREAL-NEVA ORCHESTRA / NEURON SOFT VPN",
-    "server_path": "/root/.areal-neva-core",
-    "main_services": [
-      "areal-task-worker",
-      "telegram-ingress",
-      "areal-memory-api",
-      "areal-monitor-jobs"
-    ],
-    "main_db": "/root/.areal-neva-core/data/core.db",
-    "memory_db": "/root/.areal-neva-core/data/memory.db",
-    "runtime_path": "/root/.areal-neva-core/runtime"
-  },
-  "architecture": {
-    "core_pipeline": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> route engines -> reply_sender.py -> Telegram",
-    "storage_rule": "Server stores logic/runtime; Google Drive stores generated heavy artifacts",
-    "github_rule": "GitHub areal-neva-core main branch is SSOT for source code and factual handoffs"
-  },
-  "completed_verified_in_session": [
-    {
-      "id": "FULLFIX_10_TOTAL_CLOSURE",
-      "commit": "6234457",
-      "facts": [
-        "Installed and pushed to main",
-        "SYNTAX_OK",
-        "Project smoke succeeded: KJ, 14 sheets, PDF, DXF, XLSX, MANIFEST",
-        "Estimate smoke succeeded: total 10000, PDF, XLSX, MANIFEST",
-        "Classifier smoke: da->confirm, net->revision, project->project, estimate->estimate",
-        "areal-task-worker active",
-        "areal-monitor-jobs active"
-      ]
-    },
-    {
-      "id": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
-      "commit": "17dc9f3",
-      "facts": [
-        "Installed and pushed to main",
-        "Compact project PDF smoke succeeded",
-        "Engine marker FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT present",
-        "Generated compact KJ foundation slab PDF album with 4 sheets",
-        "Services active after restart"
-      ]
-    },
-    {
-      "id": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
-      "commits": [
-        "3da6a02",
-        "a6432d2 local rejected before later successful push chain"
-      ],
-      "facts": [
-        "core/sample_template_engine.py created",
-        "task_worker.py route inserted before FULLFIX_10 route",
-        "sample intent smoke passed true/false cases",
-        "estimate intent smoke passed",
-        "template estimate parser returned 2 items for proflist and montazh",
-        "route locals were fixed because _handle_new had task/raw_input/reply_to locals, not input_type/reply_to_message_id locals"
-      ]
-    },
-    {
-      "id": "FULLFIX_13B_ESTIMATE_OUTPUT_FORMULAS_NO_MANIFEST",
-      "commit": "da1818a",
-      "facts": [
-        "Installed before FULLFIX_13D according to git log",
-        "Purpose in session: estimate formulas, clean output, sample hard stop"
-      ]
-    },
-    {
-      "id": "FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND",
-      "facts": [
-        "task_worker.py patched with _ff13c_strip_manifest_links",
-        "Smoke showed HAS_PDF True, HAS_XLSX True, HAS_MANIFEST False",
-        "Worker restarted and active",
-        "Marker present at task_worker.py around line 781"
-      ]
-    },
-    {
-      "id": "FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP",
-      "commit": "48881a9",
-      "facts": [
-        "core/reply_sender.py patched globally",
-        "task_worker.py direct send belt patched",
-        "Smoke showed HAS_PDF True, HAS_XLSX True, HAS_MANIFEST False",
-        "telegram-ingress restarted and active",
-        "areal-task-worker restarted and active",
-        "Committed locally and present in later pushed history"
-      ]
-    },
-    {
-      "id": "FULLFIX_14_ARTIFACT_UPLOAD_GUARD_ESTIMATE_TEMPLATE_DEFECT_MULTIFILE",
-      "commit": "cca22a8",
-      "facts": [
-        "5 engine files written: core/artifact_upload_guard.py, core/estimate_unified_engine.py, core/template_intake_engine.py, core/defect_act_engine.py, core/multifile_artifact_engine.py",
-        "PY_COMPILE OK for 5 files",
-        "IMPORT_OK for 5 files",
-        "Direct smoke: ESTIMATE_ROWS 2, ESTIMATE_TOTAL 55000.0",
-        "Sample intent true for 'возьми это как образец' and false for 'сделай смету профлист'",
-        "File row multifile parser printed recent estimate artifacts",
-        "FULLFIX_14_UNIFIED_ROUTE inserted in task_worker.py",
-        "task_worker.py py_compile OK",
-        "areal-task-worker active after restart",
-        "Git push to main succeeded"
-      ]
-    },
-    {
-      "id": "PATCH_VOICE_CONFIRM_DIRECT",
-      "commit": "64bbac9",
-      "facts": [
-        "telegram_daemon.py patched after STT because voice does not populate message.text",
-        "Patch marker PATCH_VOICE_CONFIRM_DIRECT present",
-        "New task_history actions: voice_confirmed:DONE and voice_rejected:WAITING_CLARIFICATION",
-        "telegram_daemon.py py_compile OK",
-        "telegram-ingress restarted and active",
-        "Git push to main succeeded"
-      ]
-    }
-  ],
-  "terminal_facts_recorded": {
-    "latest_known_pushed_head": "64bbac9 PATCH voice confirm after STT for awaiting confirmation",
-    "previous_head_sequence_seen": [
-      "cca22a8 FULLFIX_14 artifact_upload_guard estimate_unified template_intake defect_act multifile",
-      "48881a9 FULLFIX_13D global strip manifest links before Telegram send",
-      "da1818a FULLFIX_13B estimate formulas clean output and sample hard stop",
-      "3da6a02 FULLFIX_13A fix sample route locals and commit sample template engine",
-      "9264511 SESSION_EXPORT: ChatGPT fullfix 08-12 factual export 2026-04-30",
-      "17dc9f3 FULLFIX_12 compact project PDF layout",
-      "6234457 FULLFIX_10 total closure routes project estimate memory replies monitor"
-    ],
-    "fullfix_14_push_result": "To github main: 3da6a02..cca22a8 main -> main",
-    "voice_confirm_push_result": "To github main: cca22a8..64bbac9 main -> main"
-  },
-  "known_not_verified_or_not_closed": [
-    {
-      "item": "FULLFIX_15 final Cyrillic PDF artifact quality and route guards",
-      "status": "NOT VERIFIED in current visible session",
-      "evidence": "Diagnostic showed ls: cannot access core/pdf_cyrillic.py and grep FULLFIX_15 in core/estimate_unified_engine.py returned 0"
-    },
-    {
-      "item": "Cyrillic in generated estimate PDF",
-      "status": "NOT VERIFIED",
-      "evidence": "User reported PDF text was bad/unreadable and asked to inspect link; no terminal proof of fixed Cyrillic was provided"
-    },
-    {
-      "item": "Live Telegram estimate route after FULLFIX_14/FULLFIX_15",
-      "status": "PARTIALLY VERIFIED",
-      "evidence": "Bot returned estimates with PDF and XLSX links; later MANIFEST disappeared after 13D in one shown response, but PDF quality remained bad"
-    },
-    {
-      "item": "Voice confirm live test through Telegram",
-      "status": "CODE VERIFIED ONLY, LIVE NOT VERIFIED",
-      "evidence": "Patch exists and telegram-ingress active, but no DB row showing voice_confirmed:DONE from a live voice message was provided"
-    },
-    {
-      "item": "Project route after FULLFIX_14",
-      "status": "NOT LIVE VERIFIED AFTER FULLFIX_14",
-      "evidence": "Earlier FULLFIX_12 project smoke worked; no later live Telegram proof after FULLFIX_14 was shown"
-    },
-    {
-      "item": "Defect act route",
-      "status": "NOT LIVE VERIFIED",
-      "evidence": "FULLFIX_14 wrote defect_act_engine.py and import passed; no Telegram photo-to-act output was provided"
-    },
-    {
-      "item": "Multi-file route",
-      "status": "NOT LIVE VERIFIED",
-      "evidence": "FULLFIX_14 direct smoke parsed recent file rows; no user-facing multifile artifact output was shown"
-    },
-    {
-      "item": "Internet search quality contour",
-      "status": "NOT CLOSED IN THIS SESSION",
-      "evidence": "SEARCH_MONOLITH_V1 was listed earlier as not live-tested; no later terminal proof was shown"
-    },
-    {
-      "item": "ONE_SHARED_CONTEXT cron/aggregator freshness",
-      "status": "NOT CLOSED IN THIS SESSION",
-      "evidence": "Earlier list stated ONE_SHARED_CONTEXT cron not updated since 29.04; no later proof of repair was shown"
-    }
-  ],
-  "technical_tasks_handed_to_claude": [
-    {
-      "task": "FULLFIX_15_FINAL_ARTIFACT_QUALITY_AND_CYRILLIC_CLOSURE",
-      "purpose": "Fix Cyrillic PDF, estimate layout, XLSX formulas, manifest stripping, route guards, defect act PDF/DOCX, and smoke tests",
-      "status": "Assigned to Claude by user; output not shown as completed in current visible session"
-    },
-    {
-      "task": "ADDENDUM TO CLAUDE — FULL FINAL CLOSURE AFTER FULLFIX_14 + VOICE_CONFIRM_DIRECT",
-      "purpose": "Final closure checklist including route priority, Cyrillic, estimate, defect, multifile, voice confirm verification, and git acceptance criteria",
-      "status": "Provided to user for Claude"
-    }
-  ],
-  "current_required_next_steps": [
-    "Install and verify FULLFIX_15 or equivalent Cyrillic/font patch",
-    "Run direct smoke for PDF Cyrillic extraction and XLSX formulas",
-    "Run live Telegram estimate test and inspect generated PDF text",
-    "Run live voice confirm test and prove DB state DONE plus task_history voice_confirmed:DONE",
-    "Run live sample/template test and prove no project task is created",
-    "Run live project command test after FULLFIX_14/FULLFIX_15",
-    "Run live defect photo-to-act test",
-    "Run live multifile aggregation test",
-    "Return to search contour and ONE_SHARED_CONTEXT cron after artifact quality is verified"
-  ],
-  "safe_git_policy_used": [
-    "Only source files should be staged",
-    "Do not stage .env, token.json, credentials.json, sessions, data, runtime, logs, backups, *.bak, *.db, *.session",
-    "Server backup commands were used before edits in terminal outputs",
-    "Several git status outputs showed many untracked backups/secrets/runtime files, but commits shown only staged intended source files"
-  ],
-  "limits": [
-    "This export is based on the current visible ChatGPT session and user-provided terminal outputs",
-    "No direct SSH execution was performed by ChatGPT in this export step",
-    "No hidden chain-of-thought included",
-    "No secrets included",
-    "Live server truth must still be verified by terminal logs and DB queries"
-  ],
-  "final_state": {
-    "github_export_created_by_chatgpt": true,
-    "export_file_path": "docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json",
-    "highest_verified_pushed_commit_in_session": "64bbac9",
-    "artifact_quality_contour": "PARTIAL, FULLFIX_15 not verified",
-    "voice_confirm_contour": "CODE PATCHED, LIVE TEST STILL REQUIRED",
-    "estimate_contour": "ARTIFACT GENERATION WORKING, PDF CYRILLIC QUALITY STILL REQUIRED",
-    "project_contour": "COMPACT PROJECT PDF WORKING EARLIER, POST-FULLFIX_14 LIVE TEST REQUIRED",
-    "memory_and_search_contour": "NOT FULLY CLOSED IN THIS SESSION"
-  }
-}
-
-====================================================================================================
-END_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
 FILE_CHUNK: 1/1
 ====================================================================================================

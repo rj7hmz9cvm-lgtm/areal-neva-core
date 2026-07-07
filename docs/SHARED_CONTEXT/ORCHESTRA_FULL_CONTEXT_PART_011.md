@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T13:23:40.871089+00:00
-git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+generated_at_utc: 2026-07-07T13:53:41.887902+00:00
+git_sha_before_commit: c447339103fe45d7483e65d4dae4a246739d2439
 part: 11/21
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b0e263ef634e0179e7eeac7db29a0ca7c433222ee024af4bc995f82bc4d59b47
+SHA256_FULL_FILE: d250a75a5ebb4adf97a864ae34fa6402b907b07e0268eff39bc90e7389d41fb6
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -2757,7 +2757,9 @@ def _krtocr_fast_pages_v1(file_path: str, pages: int) -> List[int]:
         if len(low.strip()) < 80 or re.search(r"спецификац|пецификац|ведомост|ферм|масса|кол\.", low, re.I):
             out.append(page)
     if pages >= 24:
-        priority = [pages - 2, pages - 4, pages, pages - 1, pages - 3]
+        # KR schedules in this project class are concentrated near the end:
+        # page-1 = BFM/floor spec, page-4 = truss spec, page-2 = foundation spec.
+        priority = [pages, pages - 4, pages - 2]
         ordered = []
         for page in priority + list(reversed(out)):
             if 1 <= page <= pages and page not in ordered:
@@ -2777,11 +2779,14 @@ def _krtocr_fast_text_v1(file_path: str, max_pages: int = 30) -> str:
         for page in page_order:
             prefix = os.path.join(tmp, f"p{page:03d}")
             try:
+                dpi = "260" if page == pages else "180"
+                render_timeout = 35 if page == pages else 18
+                ocr_timeout = 35 if page == pages else 18
                 subprocess.run(
-                    ["pdftoppm", "-r", "130", "-png", "-f", str(page), "-l", str(page), str(file_path), prefix],
+                    ["pdftoppm", "-r", dpi, "-png", "-f", str(page), "-l", str(page), str(file_path), prefix],
                     capture_output=True,
                     text=True,
-                    timeout=14,
+                    timeout=render_timeout,
                 )
                 hits = [os.path.join(tmp, x) for x in os.listdir(tmp) if x.startswith(f"p{page:03d}") and x.endswith(".png")]
                 img = hits[0] if hits else ""
@@ -2792,7 +2797,7 @@ def _krtocr_fast_text_v1(file_path: str, max_pages: int = 30) -> str:
                     ["tesseract", img, out_base, "-l", "rus+eng", "--psm", "6"],
                     capture_output=True,
                     text=True,
-                    timeout=14,
+                    timeout=ocr_timeout,
                 )
                 txt_path = out_base + ".txt"
                 if os.path.exists(txt_path):
@@ -2800,7 +2805,7 @@ def _krtocr_fast_text_v1(file_path: str, max_pages: int = 30) -> str:
                         text = fh.read().strip()
                     if text:
                         chunks.append(f"\n--- OCR_PAGE {page} ---\n{text}")
-                if len(_krtocr_material_rows_v1("\n".join(chunks))) >= 8:
+                if len(_krtocr_material_rows_v1("\n".join(chunks))) >= 40:
                     break
             except subprocess.TimeoutExpired:
                 continue
@@ -2843,7 +2848,7 @@ def _krtocr_targeted_slow_text_v1(file_path: str, max_pages: int = 30) -> str:
                         text = fh.read().strip()
                     if text:
                         chunks.append(f"\n--- OCR_PAGE {page} ---\n{text}")
-                if len(_krtocr_material_rows_v1("\n".join(chunks))) >= 8:
+                if len(_krtocr_material_rows_v1("\n".join(chunks))) >= 40:
                     break
             except subprocess.TimeoutExpired:
                 continue

@@ -1,8 +1,181 @@
 # ORCHESTRA_FULL_CONTEXT_PART_003
-generated_at_utc: 2026-07-07T13:23:40.863354+00:00
-git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+generated_at_utc: 2026-07-07T13:53:41.880238+00:00
+git_sha_before_commit: c447339103fe45d7483e65d4dae4a246739d2439
 part: 3/21
 
+
+====================================================================================================
+BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CLAUDE_ANALYSIS__2026-04-26.txt
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 85e37aae2a8bbda2509e5e002c31c1516c3917dac8f9e21044a5063a1390bc11
+====================================================================================================
+﻿{"chat_id": "CLAUDE_AREAL_NEVA_ORCHESTRA_ANALYSIS_2026-04-26", "chat_name": "AREAL-NEVA ORCHESTRA - Drive Audit + Terminal Analysis 26.04.2026", "exported_at": "2026-04-26T14:30:00Z", "source_model": "Claude Sonnet 4.6", "system": "AREAL-NEVA ORCHESTRA - Ubuntu 24.04 VPS 89.22.225.136 / root/.areal-neva-core / bot @ai_orkestra_all_bot id=8216054898 / chat -1003725299009", "architecture": "Telegram text/voice/file -> telegram_daemon.py -> STT (Groq whisper-large-v3-turbo) -> core.db -> task_worker.py -> core/ai_router.py -> OpenRouter (deepseek/deepseek-chat default / perplexity/sonar online) -> core/reply_sender.py -> Telegram", "pipeline": "NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED | Branches: WAITING_CLARIFICATION / FAILED / CANCELLED", "files": ["telegram_daemon.py", "task_worker.py", "core/ai_router.py", "core/reply_sender.py", "core/orchestra_agents/agent_router.py", "core/orchestra_agents/external_models.py", "core/orchestra_agents/local_checks.py", "core/estimate_engine.py", "core/ocr_engine.py", "core/technadzor_engine.py", "core/document_engine.py", "core/pin_manager.py", "data/core.db", "data/memory.db"], "code": "PASS1 patches confirmed: fcntl.flock lock telegram_daemon.py (CANON_PASS6_SINGLE_INSTANCE_LOCK lines 10-23); _VOICE_CONTROL_HARD list expanded line 892; _voice_hit contains-check line 894; CHAT_ONLY_PHRASES for voice line 902; CANON_PASS6_LIVE_CORE_OVERLAY in task_worker.py (_cp6_save_topic_directions / _is_valid_result / _auto_close_trash_awaiting / _recover_stale_tasks)", "patches": ["PASS1 APPLIED 26.04.2026 13:47 MSK - CONFIRMED: telegram_daemon.py LOCK_INSERTED (PID 1434854 single process, conflict=0)", "PASS1: SHORT_CONFIRM_EXTENDED + FINISH_PHRASES_EXTENDED + VOICE_CONTROL contains-match", "PASS1: local_checks.py extract_code() returns empty if no code block", "PASS1: agent_router.py shows real status MISSING_KEY / HTTP_XXX / TIMEOUT_OR_NETWORK", "P01-P03 (25.04): task_worker.py PATCH_INVALID_RESULT_MSG_FIX | PATCH_FILE_NOT_FOUND_MSG_FIX | PATCH_VALIDATE_TABLE_ITEMS_ADD", "P04-P07 (25.04): ENGINE_TIMEOUT 300s / INTAKE_TIMEOUT / REQUEUE_LOOP_ALLOW_ONCE / pin_manager.py PIN_FALLBACK_CLOSED", "P08-P14 (26.04 00:30): task_worker.py confirmation_text / _auto_close_trash_awaiting / _send_awaiting_reminders 180s / MEMORY_NOISE_MARKERS / ValidationGate NO_VALID_ARTIFACT", "P15-P24 (26.04 02:00): telegram_daemon.py FINISH_PHRASES / CHAT_ONLY / Reply->_find_parent_task / removed double reminder / VOICE_CONTROL narrowed / file->message.reply", "P25 (document_engine.py): cid:NNN filter for PDF garbage", "P26-P27 (estimate_engine.py): canon_pass2_add_formulas_and_sum after _write_xlsx / generate_estimate_from_text() added", "P28-P29 (ocr_engine.py): _build_excel improved / LLM fallback via Gemini Flash", "P30-P31 (technadzor_engine.py): AI dtype per photo via vision API / Vedomost typo fixed"], "commands": ["ssh areal bash -s << ENDSSH ... readonly diagnostics", "ps -eo pid,ppid,etime,cmd | grep telegram_daemon.py", "grep -n VOICE_CONTROL telegram_daemon.py", "sqlite3 -header -column data/core.db SELECT id,state,error_message,bot_message_id", "journalctl -u areal-task-worker -n 120 --no-pager", "/root/.areal-neva-core/.venv/bin/python3 -m py_compile telegram_daemon.py task_worker.py"], "db": "core.db: ARCHIVED=371 CANCELLED=153 DONE=24 FAILED=54 AWAITING=0 IN_PROGRESS=0 NEW=0 queue=empty (confirmed 26.04 11:40 MSK) | topic_3008 last task: 10a5d344 state=FAILED STALE_TIMEOUT raw=prover_kod result=Otprav_kod_dlya_proverki", "memory": "memory.db: topic_2 last_output 2026-04-25 02:08:01 angar 18x30 | topic_961 2026-04-25 01:32:34 avtozapchasti | topic_5 2026-04-23 akty_osmatra | topic_500 2026-04-20 metallacherepitsa | topic_directions for topic_2: UNKNOWN (not verified live)", "services": ["areal-task-worker: active (26.04 confirmed)", "areal-telegram-daemon: active PID 1434854 (26.04 13:47 MSK start)", "areal-memory-api: active (port 8091)"], "errors": ["TelegramConflictError -> two polling processes same bot token -> PASS1 fcntl.flock added -> single process but PID 1439838 (1 sec) seen at 14:13 MSK -> respawn source not identified", "SyntaxError in task_worker.py (journalctl x2) -> bad patch 25.04 morning -> restored from backup -> PY_COMPILE_OK confirmed", "areal-task-worker: Failed to kill control group x5 -> systemd could not cleanly kill after SyntaxError crash -> historical (pre-PASS1)", "bot_message_id stopped saving after 25.04 10:54 MSK -> regression from bad patch -> not yet fixed", "Multi-model topic_3008 all 5 models = NET_OTVETA -> Gemini BLOCKED by AEZA IP, other 4 models API not responding -> API keys in .env not verified", "daemon logs empty (0 lines) from journalctl with grep filter -> logging not going to journald or level not matching criteria", "U1-02-26-R-KZH1.6.pdf all tasks FAILED -> TEXT_FOLLOWUP_REQUEUED stage never advanced to DOWNLOADED -> not fixed"], "decisions": ["PASS1 before leads-contour: no external monitoring until reply path is stable", "bot_message_id regression promoted to HIGH priority (from MEDIUM in state.json)", "multi-model api keys and AEZA IP block are separate task from patches", "fcntl lock pattern from telegram_daemon PASS1 to be reused for leads tg_listener with separate lock file", "leads-classifier must not use process_ai_task() directly -> topic_3008 guard overlay would interfere", "personal_notifier for leads must use separate bot token"], "solutions": ["PASS1: fcntl.flock(LOCK_EX|LOCK_NB) -> ensures single telegram_daemon process", "PASS1: contains-match for _VOICE_CONTROL_HARD -> partial phrases now trigger control", "P22: VOICE_CONTROL narrowed -> removed da/net/ok to prevent false control matches", "P24: file/photo intake now uses message.reply() instead of message.answer() -> reply to original message", "P26: canon_pass2_add_formulas_and_sum called after _write_xlsx -> Excel formulas =C*D and =SUM now inserted"], "state": "PASS1 APPLIED_BY_TERMINAL / LIVE_TESTS_PENDING / system active / 31 patches in code / active open issues A1-A5 B1-B8 C1-C4 D1-D3 E1-E4 F1-F6", "what_working": ["telegram_daemon.py single process after PASS1 (PID 1434854)", "task_worker.py active and logging", "STT Groq whisper-large-v3-turbo - voice transcription works", "proverka koda without code block -> Otprav kod dlya proverki", "PY_COMPILE_OK: all 4 core files", "core.db queue clean NEW=0 IN_PROGRESS=0", "Google Drive file upload pipeline exists"], "what_broken": ["bot_message_id not saved reliably - regression after 25.04 10:54 MSK", "multi-model topic_3008 all 5 models NET_OTVETA - API connectivity not verified", "daemon logs empty from journalctl grep", "PID 1439838 (1 sec) second daemon process detected at 14:13 - spawn source unknown", "U1-02-26-R-KZH1.6.pdf - all tasks FAILED TEXT_FOLLOWUP_REQUEUED - artifact never created", "STT fail -> STALE_TIMEOUT (should be WAITING_CLARIQICATION)", "generate_estimate_from_text - no hook in task_worker - function exists but never called", "topic_role not saved in memory.db for CHAT_ZADACH", "INVALID_RESULT_GATE blocks history/search requests (C2)"], "what_not_done": ["PASS2: bot_message_id reliable save + generate_estimate_from_text hook + INVALID_RESULT_GATE bypass for recall", "PASS3: File engines live tests (cid:474 Excel formulas technadzor)", "GitHub snapshot - git not configured", "Multi-file one task - not implemented", "Template Engine integration in task_worker", "Versioning _v2/_v3 on REVISION", "Drive runtime/drive_files/ cleanup", "Email IMAP/SMTP ingress", "VK/Avito/Profi unified inbox", "AmoCRM integration"], "current_breakpoint": "LIVE_TEST_PENDING: voice control close task after PASS1 / respawn source of PID 1439838 unknown / multi-model API keys unverified", "root_causes": ["System instability caused by bad patches not organic failures", "Dual telegram_daemon processes caused TelegramConflictError - random message routing", "bot_message_id regression coincides with PATCH_REQUEUE_LOOP_ALLOW_ONCE and multiple bad patches 25.04 10:54", "Gemini BLOCKED by AEZA IP - recorded in canon 06_MULTI_MODEL", "Validation Gate too strict - rejects legitimate chat/recall responses"], "verification": ["PY_COMPILE_OK: telegram_daemon.py task_worker.py agent_router.py external_models.py", "systemctl status all 3 services active 26.04 11:40 MSK", "sqlite3 core.db queue empty", "telegram_daemon PID 1434854 single process confirmed at 14:13 MSK", "Passed: proverka koda without code -> Otprav kod dlya proverki", "Failed live test: voice control close task - not yet tested after PASS1"], "limits": ["AEZA IP blocks Gemini API - topic_3008 multi-model degraded", "GitHub not configured - no code snapshots", "SSH commands must be Mac/iPhone compatible: no heredoc << EOF, no multiline backslash in quotes", "No silent actions: every change requires user confirmation before execution", "task_worker ValidationGate: text_result without drive.google.com = FAILED:NO_VALID_ARTIFACT - blocks chat responses"]}
+====================================================================================================
+END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CLAUDE_ANALYSIS__2026-04-26.txt
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CURRENT_CHAT__2026-04-25.txt
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
+====================================================================================================
+﻿
+====================================================================================================
+END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CURRENT_CHAT__2026-04-25.txt
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-24.txt
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: b03264115264bda9ab91e50965f0051c8c426118c4224ba5570a5e0b3d124cf1
+====================================================================================================
+﻿{
+  "chat_id": "UNKNOWN",
+  "chat_name": "AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT",
+  "exported_at": "2026-04-24T10:00:00+03:00",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "Server project AREAL-NEVA ORCHESTRA. Base path /root/.areal-neva-core. Core DB /root/.areal-neva-core/data/core.db. Memory DB /root/.areal-neva-core/data/memory.db. Services mentioned: areal-task-worker, telegram-ingress, areal-memory-api. Google Drive AI_ORCHESTRA folder ID 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB.",
+  "architecture": "Telegram/Drive file pipeline and server-side worker architecture discussed. Confirmed services active. Technical contour target: PDF/DOCX/XLSX/photo -> parse/OCR -> extract construction quantities -> create non-empty Excel/DOCX artifact -> upload to Drive topic folder -> Telegram result link.",
+  "pipeline": "Known pipeline in chat: Google Drive file tasks in core.db with input_type=drive_file; task_worker.py handles drive_file through _handle_drive_file; _download_from_drive downloads files; route_file/analyze_downloaded_file/process_estimate_to_excel/process_image_to_excel/create_google_sheet/create_google_doc are involved.",
+  "files": [
+    "/root/.areal-neva-core/core/artifact_pipeline.py",
+    "/root/.areal-neva-core/core/estimate_engine.py",
+    "/root/.areal-neva-core/core/document_engine.py",
+    "/root/.areal-neva-core/core/file_intake_router.py",
+    "/root/.areal-neva-core/core/ocr_engine.py",
+    "/root/.areal-neva-core/core/technadzor_engine.py",
+    "/root/.areal-neva-core/core/sheets_generator.py",
+    "/root/.areal-neva-core/core/docs_generator.py",
+    "/root/.areal-neva-core/core/tech_contour_router.py",
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/google_io.py",
+    "/root/.areal-neva-core/core/engine_base.py",
+    "/root/.areal-neva-core/data/core.db",
+    "/root/.areal-neva-core/data/memory.db",
+    "/root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
+    "/root/.areal-neva-core/runtime/drive_files/b6ed8407-3a71-486a-a73b-55d279dd0211_У1-02-26-Р-КЖ1.6.pdf"
+  ],
+  "code": "Confirmed code anchors: estimate_engine.py has process_estimate_to_excel and process_estimate_to_sheets; artifact_pipeline.py uses pypdf PdfReader and unit regex; file_intake_router.py has estimate/ocr/document routes and create_google_sheet/create_google_doc calls; ocr_engine.py uses pytesseract with rus+eng; task_worker.py has _handle_drive_file and _download_from_drive.",
+  "patches": [
+    "PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.upload_to_drive from async def to def according to later grep output",
+    "SECRET_BACKUP_WITH_HUMAN_INDEX__V2 created backup at /root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
+    "No confirmed final patch closing PDF estimate/document contour in this chat"
+  ],
+  "commands": [
+    "grep -n \"_run_upload_sync\\|upload_to_drive\" /root/.areal-neva-core/core/engine_base.py",
+    "systemctl restart areal-task-worker",
+    "journalctl -u areal-task-worker -n 30 --no-pager -o cat",
+    "grep -n \"def upload_to_drive\\|async def upload_to_drive\" /root/.areal-neva-core/google_io.py",
+    "sqlite3 queries against /root/.areal-neva-core/data/core.db for tasks and drive_files",
+    "pypdf/pdfplumber/pytesseract/openpyxl parser diagnostics against У1-02-26-Р-КЖ1.6.pdf"
+  ],
+  "db": "core.db facts: 28 tasks with state=NEW input_type=drive_file were shown; drive_files had discovered|28; failed PDF task 9ba1bc25-0fc4-4e6c-ad0e-1ee60a91de21 with file У1-02-26-Р-КЖ1.6.pdf and error PIPELINE_NOT_EXECUTED; previous PDF task 7c940256-e531-4c99-bc71-553cddc55740 failed STALE_TIMEOUT after result 'Файл ... скачан, ожидает анализа'; failed photo task 42462bef-ba92-4371-a27c-e4e53531f175 error PIPELINE_NOT_EXECUTED; task_history schema is id, task_id, action, created_at.",
+  "memory": "memory API active and returned {\"status\":\"ok\"}. memory.db examples shown for topic_5, topic_500, topic_961. topic_5_role exists, topic_961_role and topic_961_directions exist. topic_500_role, topic_3008_role, and latest confirmed topic_2 construction/estimate role were not confirmed in the output.",
+  "services": [
+    "areal-task-worker=active",
+    "telegram-ingress=active",
+    "areal-memory-api=active"
+  ],
+  "errors": [
+    "upload_artifact_to_drive: This event loop is already running → async upload_to_drive called from running loop → google_io later shown as def upload_to_drive and engine_base calls link = upload_to_drive(file_path, versioned_name)",
+    "RuntimeWarning coroutine upload_to_drive was never awaited → async/sync mismatch → later import showed upload_to_drive is <class 'function'> and IS_COROUTINE False",
+    "create_google_sheet 403 caller does not have permission → Google Sheets native generation permission problem → not fixed in this chat",
+    "У1-02-26-Р-КЖ1.6.pdf PIPELINE_NOT_EXECUTED → technical contour did not produce real estimate → not fixed in this chat",
+    "Empty /tmp/artifact_*.docx 0 bytes → DOCX quality gate missing → not fixed in this chat",
+    "Almost empty /tmp/est_*.xlsx around 6099-6100 bytes → estimate quality gate missing → not fixed in this chat",
+    "pypdf returned broken Cyrillic glyphs like ǋǮǭǷ → PDF text extraction unusable → OCR fallback required",
+    "pdfplumber returned (cid:...) text while detecting tables → text extraction unusable → OCR fallback required"
+  ],
+  "decisions": [
+    "Main focus changed from export/chat queue to full technical contour",
+    "Primary priority: close PDF/estimate/document technical contour before memory and behavior contours",
+    "Do not spend current cycle on CHAT_EXPORT drive_file NEW queue unless it blocks real file processing",
+    "Technical contour must reject empty Excel/DOCX as failure, not success"
+  ],
+  "solutions": [
+    "OAuth refresh was verified OK",
+    "Drive topic upload contract tested OK for topics 0, 2, 500, 961, 3008",
+    "Secret backup with human index created at /root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
+    "PDF estimate/document contour still requires fullfix"
+  ],
+  "state": "Current main breakpoint: technical contour is not production-ready because PDF text extraction is broken and OCR fallback / estimate quality gate are not enforcing a real non-empty result. Memory and behavior contours are also not fully verified end-to-end.",
+  "what_working": [
+    "areal-task-worker active",
+    "telegram-ingress active",
+    "areal-memory-api active",
+    "OAuth refresh OK",
+    "DRIVE_INGEST_FOLDER_ID set",
+    "upload_file_to_topic returned ok=true with drive_file_id/folder_id/chat_folder_id for tested topics",
+    "pypdf installed",
+    "pdfplumber installed",
+    "pytesseract installed",
+    "tesseract binary exists with eng/osd/rus languages",
+    "openpyxl installed",
+    "pandas installed"
+  ],
+  "what_broken": [
+    "PDF estimate extraction produces empty/almost empty xlsx",
+    "DOCX artifacts were 0 bytes",
+    "PDF text layer extraction returns corrupted Cyrillic or cid text",
+    "No confirmed OCR fallback for broken PDF estimate path",
+    "Google Sheets create_google_sheet had 403 permission errors",
+    "PIPELINE_NOT_EXECUTED occurred for construction PDF and photo tasks"
+  ],
+  "what_not_done": [
+    "Implement PDF broken-text detection",
+    "Implement OCR fallback for broken PDF text",
+    "Implement robust estimate row extraction",
+    "Implement Excel quality gate",
+    "Implement DOCX quality gate",
+    "Implement automatic estimate intent for construction PDFs even with empty caption",
+    "Verify non-empty Excel from existing У1-02-26-Р-КЖ1.6.pdf",
+    "Verify memory/pin/archive end-to-end",
+    "Verify Telegram text/voice/reply/file lifecycle end-to-end",
+    "Clean GitHub SSOT snapshot after successful fixes"
+  ],
+  "current_breakpoint": "Existing PDF /root/.areal-neva-core/runtime/drive_files/b6ed8407-3a71-486a-a73b-55d279dd0211_У1-02-26-Р-КЖ1.6.pdf is readable as a file but text extraction is corrupted; estimate engine produced near-empty xlsx; no accepted production-grade estimate artifact exists from this PDF.",
+  "root_causes": [
+    "PDF has unusable embedded text for pypdf/pdfplumber extraction",
+    "Estimate pipeline lacks enforced OCR fallback for broken PDF text",
+    "Artifact quality gates allow empty/near-empty outputs",
+    "Routing with empty caption can lead to PIPELINE_NOT_EXECUTED instead of construction estimate processing"
+  ],
+  "verification": [
+    "PDF exists with size 2.6M",
+    "pypdf pages: 8 and returned broken glyph text",
+    "pdfplumber pages: 8 and saw tables, but table/text content contained cid sequences",
+    "tesseract 5.3.4 available with rus language",
+    "Local artifacts list showed many 0 byte docx and 6099-6100 byte xlsx files",
+    "core.db showed failed PDF task with PIPELINE_NOT_EXECUTED"
+  ],
+  "limits": [
+    "This export is based only on the visible current chat content",
+    "No external web verification performed",
+    "Created Google Doc may not be in requested parentId because available create_file tool schema did not expose parentId/content parameters",
+    "This batch update writes JSON into an already created Google Doc using Google Docs API requests"
+  ]
+}
+
+
+
+
+--- APPEND__MANUAL_ORCHESTRA_FOLDER_CONFIRMED__2026-04-24 ---
+{
+  "append_reason": "User manually moved the document into the required AI_ORCHESTRA folder after initial creation limitations.",
+  "manual_folder_fix": "CONFIRMED_BY_USER",
+  "required_folder_id": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+  "required_folder_name": "AI_ORCHESTRA",
+  "export_status_after_append": "JSON content exists in document; document location was manually corrected by user; this append records that correction inside the export document.",
+  "remaining_protocol_deviation": "Initial creation was not performed through text/plain + base64 + parentId due to available tool schema limitations; content was inserted through Google Docs batch_update_document.",
+  "current_focus": "Close technical contour first: PDF estimate extraction, OCR fallback, non-empty Excel/DOCX quality gates, construction file routing, then memory/pin/archive and answer behavior contours.",
+  "main_breakpoint": "Existing PDF У1-02-26-Р-КЖ1.6.pdf has broken embedded text extraction; pypdf/pdfplumber return corrupted text; estimate output was near-empty; DOCX outputs were 0 bytes; OCR fallback and quality gates are required."
+}
+====================================================================================================
+END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-24.txt
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-27.txt

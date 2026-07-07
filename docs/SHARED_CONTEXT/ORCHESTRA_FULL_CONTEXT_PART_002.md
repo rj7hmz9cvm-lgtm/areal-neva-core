@@ -1,8 +1,389 @@
 # ORCHESTRA_FULL_CONTEXT_PART_002
-generated_at_utc: 2026-07-07T13:23:40.862054+00:00
-git_sha_before_commit: e80be12ae74ba853314f744e5002044348ea5ef1
+generated_at_utc: 2026-07-07T13:53:41.878953+00:00
+git_sha_before_commit: c447339103fe45d7483e65d4dae4a246739d2439
 part: 2/21
 
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/SESSION_20260707_TOPIC2_SEARCH_OCR_LIVE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 0c37c5da0e7e71a7e1bfe0ada138016546926df4d63e3b1b71738810e9638a1e
+====================================================================================================
+---
+
+# Session handoff — 2026-07-07 topic_2 / search / live dialogue
+
+This is a factual handoff record. It is not a new canon and does not replace existing canons.
+
+## Applied canon / SSOT baseline
+
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`: `INSTALLED != VERIFIED`; topic statuses at session time: `topic_2 STROYKA = INSTALLED_NOT_VERIFIED`, `topic_5 TEKHNADZOR = BROKEN`, `topic_500 VEB_POISK = BROKEN`.
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` §12:
+  - estimate facts only from current user task, uploaded project, photo, PDF, OCR text, reply context or explicit clarification;
+  - old tasks/pin/context must not be mixed into a new task;
+  - missing data requires precise clarification; invented positions/volumes/materials are forbidden;
+  - PDF/OCR/voice/reply/pin/fixed-message context belongs to canonical topic_2 flow;
+  - internet prices require explicit user authorization or valid cache/memory reuse;
+  - topic_2 search route = Sonar/Perplexity only; DeepSeek forbidden;
+  - final topic_2 result must be Telegram + Google Drive XLSX/PDF links;
+  - `DONE` only after explicit owner confirmation for the parent task.
+- `docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md`: file -> processed -> artifact -> Drive/GitHub link -> Telegram -> `AWAITING_CONFIRMATION`; Perplexity for search, DeepSeek for final answer only.
+
+## What was done today
+
+### Search / internet route
+
+- Verified owner-visible issue: OpenRouter logs showed DeepSeek calls near search work; this violates search canons if the call belongs to internet/search route.
+- Existing policy baseline remains: ordinary chat may use `DEFAULT_MODEL=deepseek/deepseek-chat`; internet/search must use `ONLINE_MODEL=perplexity/sonar`; DeepSeek fallback for search is forbidden.
+- Further full cross-topic search verification remains open; do not assume all search surfaces are fully closed until live-tested.
+
+### topic_2 live task `287a613c-c47d-4fae-9a71-d57fa3f2b762`
+
+User task: two files are one project; calculate construction cost and material cost by project; if data is missing ask; internet prices only after confirmation. Files attached in project context:
+
+- `/root/.areal-neva-core/runtime/drive_files/287a613c-c47d-4fae-9a71-d57fa3f2b762_Раздел 4 - КР.pdf`
+- `/root/.areal-neva-core/runtime/drive_files/287a613c-c47d-4fae-9a71-d57fa3f2b762_Раздел 3 - АР.pdf`
+
+Facts established:
+
+- Multifile context was attached as one project.
+- `Раздел 4 - КР.pdf` was processed through `core/pdf_spec_extractor.py` but extractor returned only 8 rows in the live flow.
+- The 8-row output is not sufficient for canon: project KR has visible specification tables, including BФм1/floor and truss/foundation schedules.
+- Current final artifact was delivered, but it is not a fully canonical estimate because OCR/spec extraction is incomplete.
+
+Current task state after lifecycle repair:
+
+- `state = AWAITING_CONFIRMATION`
+- `bot_message_id = 12283`
+- Excel: `https://drive.google.com/file/d/1V0T5PRcZqIrvNeGAnDJQ_UextGvHYdXf/view`
+- PDF: `https://drive.google.com/file/d/1yuJUrvi5gPmSSpULrWtypMKzINPC0D5R/view`
+- `bad_after_98688 = 0`, `recovery_after_98688 = 0`, `sanitize_after_98688 = 0`, `done_contract_after_98688 = 0` in the last live check.
+
+Runtime fixes applied during the session:
+
+- `task_worker.py`
+  - widened topic_2 artifact-marker history lookup so old delivered Drive/TG markers are not lost behind noisy history;
+  - prevented project parent task with its own PDF/project context from being treated as a child follow-up update;
+  - prevented sanitizer from rewriting already canonical Drive XLSX/PDF final text;
+  - guarded repeated `TOPIC2_DONE_CONTRACT_OK` writes;
+  - blocked automatic `DONE` transition for a delivered topic_2 parent unless `TOPIC2_EXPLICIT_CONFIRM%` exists;
+  - restored task `287a...` to `AWAITING_CONFIRMATION` with Drive links after old guards had forced `FAILED`.
+- `core/stroyka_estimate_canon.py`
+  - protected active same-task multifile/project pending context from stale-deprecation;
+  - added logistics/delivery price-search terms when project distance is present.
+- `core/pdf_spec_extractor.py`
+  - confirmed exact root cause: OCR/page selection did not include all needed KR pages and stopped early after 8 rows;
+  - adjusted KR targeted page order toward end-of-file specification sheets;
+  - increased the row threshold before early stop;
+  - added page-specific OCR settings for the last KR specification page.
+
+Verification performed:
+
+- `python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/pdf_spec_extractor.py` passed after the lifecycle repairs and after the OCR extractor edits.
+- Live task `287a...` stopped cycling after final worker reload: no new `TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED`, recovery, sanitizer or repeated DONE markers after history id `98688`.
+- OCR extractor diagnostic facts:
+  - PDF has 26 pages;
+  - old fast pages were `[24, 22, 26]` or similar and missed/under-read required tables;
+  - corrected targeted order reached `[26, 22, 24]`;
+  - full extractor was still too slow for live use: bounded 70-90 second tests timed out;
+  - single-page OCR confirmed useful table text on page 26, including BФм1/floor material rows, but the integrated extractor still needs a faster targeted parser path.
+
+## Open blockers / not closed
+
+1. topic_2 OCR/PDF extraction is not closed.
+   - Must add a fast targeted KR table parser path for page 26 / BФм1/floor table and truss/foundation sheets.
+   - Must not hand-build the estimate manually; orchestra must extract rows and build artifacts itself.
+   - Must re-run full live cycle only after extractor returns canonical project rows within a bounded runtime.
+
+2. topic_2 final estimate for task `287a...` is delivered but not accepted as fully canonical.
+   - It has Drive links and is stable in `AWAITING_CONFIRMATION`.
+   - It must be regenerated by the orchestra after OCR/spec extraction is fixed.
+   - It must include construction work + material cost from actual project specs, not invented rows.
+
+3. Search/product-search contour still needs full live verification.
+   - DeepSeek must not be used for internet/search under any topic.
+   - Duplicate contacts must be filtered by phone number.
+   - Links/sites/groups must be checked as live before public output.
+   - Long search output should go to Google Drive with a Telegram link when needed.
+
+4. Live reply / memory / file-context contour remains open.
+   - Replies, pins, duplicate files, already-uploaded Telegram files, voice continuation and active/short/long/archive memory must work system-wide.
+   - When an existing file is found in Telegram memory, the bot must reply/link to the original Telegram file/message, not dump irrelevant old estimates.
+   - Completion phrases must close only the relevant parent task and must not cancel unrelated work.
+
+5. topic_5 TEKHNADZOR remains broken by SSOT status and was not repaired today.
+   - Needs canon-first verification of file intake, technical documentation binding, normative modules/SP/GOST lookup, live answer logic and final artifact delivery.
+
+6. topic_210 PROEKTIROVANIE remains not verified.
+   - Same file/document/OCR/memory/reply principles must be checked under its own canon before any patch.
+
+7. Working tree is dirty and broad.
+   - Do not commit broad dirty tree blindly.
+   - Safe GitHub save for this stop point is this handoff record plus explicitly scoped files only after review.
+   - `.env`, DB files, Telegram artifacts, Drive exports, heavy media, backups and secrets must not be committed.
+
+## Next start point
+
+Start from `core/pdf_spec_extractor.py` only:
+
+1. Read SSOT + topic_2 canon + file/OCR parts again.
+2. Inspect current extractor diff and backups:
+   - `core/pdf_spec_extractor.py.bak_kr_ocr_page25_fullscan_20260707_1730`
+   - `core/pdf_spec_extractor.py.bak_kr_ocr_targeted_pages_20260707_1745`
+3. Implement bounded targeted parser for KR specification pages instead of full-page slow OCR loop.
+4. Verify extractor on `287a..._Раздел 4 - КР.pdf` returns project rows from page 26 and truss/foundation schedules inside a bounded time.
+5. Only then rerun the topic_2 task through the orchestra; do not calculate manually in Codex.
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/SESSION_20260707_TOPIC2_SEARCH_OCR_LIVE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d91
+====================================================================================================
+{
+  "chat_id": "chatgpt_current_session_2026-04-30_fullfix_13_15",
+  "chat_name": "ChatGPT current session — AREAL-NEVA ORCHESTRA fullfix 13-15",
+  "exported_at": "2026-04-30T13:35:00+03:00",
+  "source_model": "GPT-5.5 Thinking",
+  "source_scope": "Facts explicitly present in the current visible ChatGPT session only. No hidden server state was invented. No secrets included.",
+  "repository": {
+    "full_name": "rj7hmz9cvm-lgtm/areal-neva-core",
+    "default_branch": "main",
+    "verified_connector_permission": "admin, maintain, pull, push, triage"
+  },
+  "system": {
+    "project": "AREAL-NEVA ORCHESTRA / NEURON SOFT VPN",
+    "server_path": "/root/.areal-neva-core",
+    "main_services": [
+      "areal-task-worker",
+      "telegram-ingress",
+      "areal-memory-api",
+      "areal-monitor-jobs"
+    ],
+    "main_db": "/root/.areal-neva-core/data/core.db",
+    "memory_db": "/root/.areal-neva-core/data/memory.db",
+    "runtime_path": "/root/.areal-neva-core/runtime"
+  },
+  "architecture": {
+    "core_pipeline": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> route engines -> reply_sender.py -> Telegram",
+    "storage_rule": "Server stores logic/runtime; Google Drive stores generated heavy artifacts",
+    "github_rule": "GitHub areal-neva-core main branch is SSOT for source code and factual handoffs"
+  },
+  "completed_verified_in_session": [
+    {
+      "id": "FULLFIX_10_TOTAL_CLOSURE",
+      "commit": "6234457",
+      "facts": [
+        "Installed and pushed to main",
+        "SYNTAX_OK",
+        "Project smoke succeeded: KJ, 14 sheets, PDF, DXF, XLSX, MANIFEST",
+        "Estimate smoke succeeded: total 10000, PDF, XLSX, MANIFEST",
+        "Classifier smoke: da->confirm, net->revision, project->project, estimate->estimate",
+        "areal-task-worker active",
+        "areal-monitor-jobs active"
+      ]
+    },
+    {
+      "id": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
+      "commit": "17dc9f3",
+      "facts": [
+        "Installed and pushed to main",
+        "Compact project PDF smoke succeeded",
+        "Engine marker FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT present",
+        "Generated compact KJ foundation slab PDF album with 4 sheets",
+        "Services active after restart"
+      ]
+    },
+    {
+      "id": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+      "commits": [
+        "3da6a02",
+        "a6432d2 local rejected before later successful push chain"
+      ],
+      "facts": [
+        "core/sample_template_engine.py created",
+        "task_worker.py route inserted before FULLFIX_10 route",
+        "sample intent smoke passed true/false cases",
+        "estimate intent smoke passed",
+        "template estimate parser returned 2 items for proflist and montazh",
+        "route locals were fixed because _handle_new had task/raw_input/reply_to locals, not input_type/reply_to_message_id locals"
+      ]
+    },
+    {
+      "id": "FULLFIX_13B_ESTIMATE_OUTPUT_FORMULAS_NO_MANIFEST",
+      "commit": "da1818a",
+      "facts": [
+        "Installed before FULLFIX_13D according to git log",
+        "Purpose in session: estimate formulas, clean output, sample hard stop"
+      ]
+    },
+    {
+      "id": "FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND",
+      "facts": [
+        "task_worker.py patched with _ff13c_strip_manifest_links",
+        "Smoke showed HAS_PDF True, HAS_XLSX True, HAS_MANIFEST False",
+        "Worker restarted and active",
+        "Marker present at task_worker.py around line 781"
+      ]
+    },
+    {
+      "id": "FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP",
+      "commit": "48881a9",
+      "facts": [
+        "core/reply_sender.py patched globally",
+        "task_worker.py direct send belt patched",
+        "Smoke showed HAS_PDF True, HAS_XLSX True, HAS_MANIFEST False",
+        "telegram-ingress restarted and active",
+        "areal-task-worker restarted and active",
+        "Committed locally and present in later pushed history"
+      ]
+    },
+    {
+      "id": "FULLFIX_14_ARTIFACT_UPLOAD_GUARD_ESTIMATE_TEMPLATE_DEFECT_MULTIFILE",
+      "commit": "cca22a8",
+      "facts": [
+        "5 engine files written: core/artifact_upload_guard.py, core/estimate_unified_engine.py, core/template_intake_engine.py, core/defect_act_engine.py, core/multifile_artifact_engine.py",
+        "PY_COMPILE OK for 5 files",
+        "IMPORT_OK for 5 files",
+        "Direct smoke: ESTIMATE_ROWS 2, ESTIMATE_TOTAL 55000.0",
+        "Sample intent true for 'возьми это как образец' and false for 'сделай смету профлист'",
+        "File row multifile parser printed recent estimate artifacts",
+        "FULLFIX_14_UNIFIED_ROUTE inserted in task_worker.py",
+        "task_worker.py py_compile OK",
+        "areal-task-worker active after restart",
+        "Git push to main succeeded"
+      ]
+    },
+    {
+      "id": "PATCH_VOICE_CONFIRM_DIRECT",
+      "commit": "64bbac9",
+      "facts": [
+        "telegram_daemon.py patched after STT because voice does not populate message.text",
+        "Patch marker PATCH_VOICE_CONFIRM_DIRECT present",
+        "New task_history actions: voice_confirmed:DONE and voice_rejected:WAITING_CLARIFICATION",
+        "telegram_daemon.py py_compile OK",
+        "telegram-ingress restarted and active",
+        "Git push to main succeeded"
+      ]
+    }
+  ],
+  "terminal_facts_recorded": {
+    "latest_known_pushed_head": "64bbac9 PATCH voice confirm after STT for awaiting confirmation",
+    "previous_head_sequence_seen": [
+      "cca22a8 FULLFIX_14 artifact_upload_guard estimate_unified template_intake defect_act multifile",
+      "48881a9 FULLFIX_13D global strip manifest links before Telegram send",
+      "da1818a FULLFIX_13B estimate formulas clean output and sample hard stop",
+      "3da6a02 FULLFIX_13A fix sample route locals and commit sample template engine",
+      "9264511 SESSION_EXPORT: ChatGPT fullfix 08-12 factual export 2026-04-30",
+      "17dc9f3 FULLFIX_12 compact project PDF layout",
+      "6234457 FULLFIX_10 total closure routes project estimate memory replies monitor"
+    ],
+    "fullfix_14_push_result": "To github main: 3da6a02..cca22a8 main -> main",
+    "voice_confirm_push_result": "To github main: cca22a8..64bbac9 main -> main"
+  },
+  "known_not_verified_or_not_closed": [
+    {
+      "item": "FULLFIX_15 final Cyrillic PDF artifact quality and route guards",
+      "status": "NOT VERIFIED in current visible session",
+      "evidence": "Diagnostic showed ls: cannot access core/pdf_cyrillic.py and grep FULLFIX_15 in core/estimate_unified_engine.py returned 0"
+    },
+    {
+      "item": "Cyrillic in generated estimate PDF",
+      "status": "NOT VERIFIED",
+      "evidence": "User reported PDF text was bad/unreadable and asked to inspect link; no terminal proof of fixed Cyrillic was provided"
+    },
+    {
+      "item": "Live Telegram estimate route after FULLFIX_14/FULLFIX_15",
+      "status": "PARTIALLY VERIFIED",
+      "evidence": "Bot returned estimates with PDF and XLSX links; later MANIFEST disappeared after 13D in one shown response, but PDF quality remained bad"
+    },
+    {
+      "item": "Voice confirm live test through Telegram",
+      "status": "CODE VERIFIED ONLY, LIVE NOT VERIFIED",
+      "evidence": "Patch exists and telegram-ingress active, but no DB row showing voice_confirmed:DONE from a live voice message was provided"
+    },
+    {
+      "item": "Project route after FULLFIX_14",
+      "status": "NOT LIVE VERIFIED AFTER FULLFIX_14",
+      "evidence": "Earlier FULLFIX_12 project smoke worked; no later live Telegram proof after FULLFIX_14 was shown"
+    },
+    {
+      "item": "Defect act route",
+      "status": "NOT LIVE VERIFIED",
+      "evidence": "FULLFIX_14 wrote defect_act_engine.py and import passed; no Telegram photo-to-act output was provided"
+    },
+    {
+      "item": "Multi-file route",
+      "status": "NOT LIVE VERIFIED",
+      "evidence": "FULLFIX_14 direct smoke parsed recent file rows; no user-facing multifile artifact output was shown"
+    },
+    {
+      "item": "Internet search quality contour",
+      "status": "NOT CLOSED IN THIS SESSION",
+      "evidence": "SEARCH_MONOLITH_V1 was listed earlier as not live-tested; no later terminal proof was shown"
+    },
+    {
+      "item": "ONE_SHARED_CONTEXT cron/aggregator freshness",
+      "status": "NOT CLOSED IN THIS SESSION",
+      "evidence": "Earlier list stated ONE_SHARED_CONTEXT cron not updated since 29.04; no later proof of repair was shown"
+    }
+  ],
+  "technical_tasks_handed_to_claude": [
+    {
+      "task": "FULLFIX_15_FINAL_ARTIFACT_QUALITY_AND_CYRILLIC_CLOSURE",
+      "purpose": "Fix Cyrillic PDF, estimate layout, XLSX formulas, manifest stripping, route guards, defect act PDF/DOCX, and smoke tests",
+      "status": "Assigned to Claude by user; output not shown as completed in current visible session"
+    },
+    {
+      "task": "ADDENDUM TO CLAUDE — FULL FINAL CLOSURE AFTER FULLFIX_14 + VOICE_CONFIRM_DIRECT",
+      "purpose": "Final closure checklist including route priority, Cyrillic, estimate, defect, multifile, voice confirm verification, and git acceptance criteria",
+      "status": "Provided to user for Claude"
+    }
+  ],
+  "current_required_next_steps": [
+    "Install and verify FULLFIX_15 or equivalent Cyrillic/font patch",
+    "Run direct smoke for PDF Cyrillic extraction and XLSX formulas",
+    "Run live Telegram estimate test and inspect generated PDF text",
+    "Run live voice confirm test and prove DB state DONE plus task_history voice_confirmed:DONE",
+    "Run live sample/template test and prove no project task is created",
+    "Run live project command test after FULLFIX_14/FULLFIX_15",
+    "Run live defect photo-to-act test",
+    "Run live multifile aggregation test",
+    "Return to search contour and ONE_SHARED_CONTEXT cron after artifact quality is verified"
+  ],
+  "safe_git_policy_used": [
+    "Only source files should be staged",
+    "Do not stage .env, token.json, credentials.json, sessions, data, runtime, logs, backups, *.bak, *.db, *.session",
+    "Server backup commands were used before edits in terminal outputs",
+    "Several git status outputs showed many untracked backups/secrets/runtime files, but commits shown only staged intended source files"
+  ],
+  "limits": [
+    "This export is based on the current visible ChatGPT session and user-provided terminal outputs",
+    "No direct SSH execution was performed by ChatGPT in this export step",
+    "No hidden chain-of-thought included",
+    "No secrets included",
+    "Live server truth must still be verified by terminal logs and DB queries"
+  ],
+  "final_state": {
+    "github_export_created_by_chatgpt": true,
+    "export_file_path": "docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json",
+    "highest_verified_pushed_commit_in_session": "64bbac9",
+    "artifact_quality_contour": "PARTIAL, FULLFIX_15 not verified",
+    "voice_confirm_contour": "CODE PATCHED, LIVE TEST STILL REQUIRED",
+    "estimate_contour": "ARTIFACT GENERATION WORKING, PDF CYRILLIC QUALITY STILL REQUIRED",
+    "project_contour": "COMPACT PROJECT PDF WORKING EARLIER, POST-FULLFIX_14 LIVE TEST REQUIRED",
+    "memory_and_search_contour": "NOT FULLY CLOSED IN THIS SESSION"
+  }
+}
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
@@ -9599,178 +9980,5 @@ SHA256_FULL_FILE: 459ca409e6d4251c8a59b69c556d9a3e9022a41046cf05b10be68c1f250bfa
 ﻿{"chat_id":"current_chat","chat_name":"AREAL_NEVA_ORCHESTRA_CANON_CLOSE","exported_at":"2026-04-28T00:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA ORCHESTRA: серверный Telegram-оркестр на /root/.areal-neva-core с telegram-ingress, areal-task-worker, areal-memory-api, core.db, memory.db, Google Drive storage","architecture":"Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram; файлы через Drive/drive_files/artifact pipeline; память через memory.db и topic_id","pipeline":"NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED; ветки WAITING_CLARIFICATION, FAILED, CANCELLED; STALE_TIMEOUT=600 подтвержден grep","files":["/root/.areal-neva-core/task_worker.py -> основной worker/lifecycle/file/direct-context","/root/.areal-neva-core/telegram_daemon.py -> Telegram ingress/STT/task creation","/root/.areal-neva-core/core/ai_router.py -> AI routing","/root/.areal-neva-core/core/reply_sender.py -> Telegram reply sending","/root/.areal-neva-core/google_io.py -> Google Drive IO forbidden to edit","/root/.areal-neva-core/data/core.db -> runtime tasks/pin/drive_files","/root/.areal-neva-core/data/memory.db -> long memory forbidden schema edit","/root/.areal-neva-core/core/engine_base.py -> proposed/created compatibility for engine imports in latest code block"],"code":"Ubuntu VPS, Python venv /root/.areal-neva-core/.venv/bin/python3, SQLite, systemd, Telegram bot, OpenRouter/DeepSeek/Perplexity, Groq STT, Google Drive","patches":["PHASE1 markers -> task_worker.py -> MEMORY_SAVED/MEMORY_SKIPPED/INTENT/CONTEXT/ROUTER_OK -> applied_by_terminal","PHASE2_NO_BLIND_CLOSE -> telegram_daemon.py -> line 502 -> applied_by_terminal","PHASE3 history/file-list skip -> task_worker.py -> _is_history_or_file_list_question_safe_final + TEXT_FOLLOWUP_REQUEUE_SKIPPED_HISTORY -> applied_by_terminal","Broken PHASE4 Runtime history attempt -> task_worker.py -> SyntaxError line 1505 -> failed then restored","CANON_CLOSE_FACT_HELPERS_V1 -> task_worker.py -> direct-context helpers lines 1477..1672 -> applied_by_terminal","DIRECT_CALL_INSERTED_OK -> task_worker.py -> call at line 1902 -> applied_by_terminal","CANON_STALE_DONE_WITH_RESULT -> task_worker.py -> line 758 -> applied_by_terminal"],"commands":["ssh areal grep/sed diagnostics around _load_memory_context and _is_history_or_file_list_question_safe_final","ssh areal cp task_worker.py backups and py_compile","ssh areal restore from task_worker.py.bak.20260427_222059","ssh areal diagnostics services/syntax/last tasks/logs","ssh areal sqlite3 queries for tasks, drive_files, memory","ssh areal patches inserting PHASE3 and canon direct context","ssh areal forbidden file stat compare","ssh areal DB schema compare","ssh areal active definitions and logs"],"db":"core.db schema confirmed: tasks(id,chat_id,user_id,input_type,raw_input,state,result,error_message,reply_to_message_id,created_at,updated_at,bot_message_id,topic_id,task_type); pin(...topic_id); drive_files(...artifact_file_id). Queue status after patch: ARCHIVED 371, CANCELLED 164, DONE 93, FAILED 47. DB schema unchanged confirmed by diff","memory":"memory.db exists; latest visible keys include topic_3008_user_input/assistant_output/task_summary, topic_961, topic_5_role, topic_500. Topic isolation expected by topic_{id}_* keys. memory.db schema edit forbidden","services":["telegram-ingress: active","areal-task-worker: active","areal-memory-api: active"],"canons":["Оркестр = исполнительная система, не чат-бот","Telegram/Server/Drive separation: Telegram IO, server logic/runtime, Drive heavy files/artifacts","Topic isolation by chat_id+topic_id","Lifecycle NEW->IN_PROGRESS->AWAITING_CONFIRMATION->DONE->ARCHIVED","Intent priority FINISH > CONFIRM > REVISION > TASK > SEARCH > CHAT","Reply continuity: bot_message_id != reply_to_message_id","File pipeline 8 stages: INTAKE DOWNLOAD CLASSIFY ROUTE EXTRACT PROCESS ARTIFACT DELIVER","File task without artifact is not complete","User-facing answer must not show FAILED/STALE/stage/error_message/raw paths","Excel estimate formulas: =C2*D2 and =SUM","Golden backup: code cp backup, SQLite sqlite3 .backup","Forbidden files: .env credentials sessions google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd units without permission"],"decisions":["Do not rewrite core; only overlays above existing logic","Do not mutate historical failed rows with invented result text","Keep only first cleanup UPDATE that changes stale failed tasks with existing result to DONE; remove invented cleanup results","Direct-context for history/file/status should bypass INVALID_RESULT_GATE","Engine import failure is P0 before file pipeline can close","KZH PDF must produce estimate artifact, not source Drive link"],"errors":["SyntaxError unterminated string literal line 1505 -> bad heredoc/string patch -> restored backup 20260427_222059","PHASE3 missing after restore -> grep empty -> reapplied PHASE3","History/file questions failed -> INVALID_RESULT_GATE/STALE_TIMEOUT -> direct-context handler inserted","Direct-context initially not called -> function existed but no call -> DIRECT_CALL_INSERTED_OK","User-facing file status showed system/source file links/stage -> still broken by user report","KZH PDF tasks remain stalled in TEXT_FOLLOWUP_REQUEUED/STALE without artifact -> file pipeline not closed"],"solutions":["PHASE3 skip prevents history/file-list questions from being requeued as drive_file -> applied","Direct context call inserted before requeue -> applied","Forbidden files stat compare -> unchanged confirmed","DB schema compare -> unchanged confirmed","engine_base import compatibility -> drafted in latest code block, execution status UNKNOWN in this export","Clean user-facing file logic -> drafted latest code block, execution status UNKNOWN in this export"],"state":"Система active и syntax OK; поведенческие direct-context частично работают, но полный канон не закрыт из-за file pipeline/artifact/engine/OCR/user-facing issues","what_working":["services active active active","task_worker.py syntax OK","telegram_daemon.py syntax OK","CANON_FILE_LIST_CONTEXT_HIT logged for task 26983094","CANON_FILE_STATUS_CONTEXT_HIT logged for task 2e24b41f","forbidden files unchanged after patch","DB schema unchanged after patch","reply_to/bot_message_id columns exist"],"what_broken":["Last file task 2b053aad remains IN_PROGRESS with TEXT_FOLLOWUP_REQUEUED_AS_DRIVE_FILE","KZH PDF У1-02-26-Р-КЖ1.6.pdf shows no completed estimate artifact","Direct file answer shows source/system Drive file instead of ready estimate","Old tasks орик/вот failed INVALID_RESULT_GATE","Old file/history tasks failed INVALID_RESULT_GATE/STALE_TIMEOUT","OCR/estimate result for ВОР кирпичная кладка previously produced garbage values per chat facts"],"what_not_done":["Full engine import fix not verified after latest drafted code","route_file real engine execution not proven","KZH PDF -> Excel/Sheets estimate artifact not proven","VOICE_CONFIRM code not proven","INTAKE_OFFER_ACTIONS not proven","topic_3008 five-model verification not proven","INBOX aggregator/AmoCRM not implemented/proven","Userbot monitor_jobs.py not written/proven","Clean memory guard not fully proven","Pin relevancy not fully proven"],"current_breakpoint":"Need execute/verify P0 code: engine_base imports -> route_file -> KZH PDF artifact -> clean user-facing status without system trash","root_causes":["engine_base import failure -> stated in canon/handoff as core.ocr_engine/core.technadzor_engine fail No module named engine_base","direct-context not called -> grep showed function only, no call until DIRECT_CALL_INSERTED_OK","file status answering source links -> user live test showed answer with source KZH file, not estimate","stale recovery marks tasks FAILED despite existing result -> fixed partially with CANON_STALE_DONE_WITH_RESULT"],"verification":["services active active active -> terminal output","task_worker.py SYNTAX_OK -> terminal output","telegram_daemon.py SYNTAX_OK -> terminal output","TEXT_FOLLOWUP_REQUEUE_SKIPPED_HISTORY line 1540 -> grep output","CONTEXT line 1711 and ROUTER_OK line 1762 -> grep output","DIRECT_CALL_INSERTED_OK -> terminal output","_canon_complete_direct_context_v1 call line 1902 -> grep output","FORBIDDEN_FILES_UNCHANGED_OK -> terminal output","DB_SCHEMA_UNCHANGED_OK -> terminal output","CANON_FILE_LIST_CONTEXT_HIT and CANON_FILE_STATUS_CONTEXT_HIT -> task_worker.log output"],"limits":["tail logs short, normally <=20..80 lines","no web guessing; facts/logs only","backup first before file edits","SQLite backup via sqlite3 .backup","do not edit .env credentials sessions google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd units without direct permission","no DB schema changes without direct permission","no invented historical result mutation","only overlays/patches, no core rewrite"]}
 ====================================================================================================
 END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_CLOSE__2026-04-28.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CLAUDE_ANALYSIS__2026-04-26.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 85e37aae2a8bbda2509e5e002c31c1516c3917dac8f9e21044a5063a1390bc11
-====================================================================================================
-﻿{"chat_id": "CLAUDE_AREAL_NEVA_ORCHESTRA_ANALYSIS_2026-04-26", "chat_name": "AREAL-NEVA ORCHESTRA - Drive Audit + Terminal Analysis 26.04.2026", "exported_at": "2026-04-26T14:30:00Z", "source_model": "Claude Sonnet 4.6", "system": "AREAL-NEVA ORCHESTRA - Ubuntu 24.04 VPS 89.22.225.136 / root/.areal-neva-core / bot @ai_orkestra_all_bot id=8216054898 / chat -1003725299009", "architecture": "Telegram text/voice/file -> telegram_daemon.py -> STT (Groq whisper-large-v3-turbo) -> core.db -> task_worker.py -> core/ai_router.py -> OpenRouter (deepseek/deepseek-chat default / perplexity/sonar online) -> core/reply_sender.py -> Telegram", "pipeline": "NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED | Branches: WAITING_CLARIFICATION / FAILED / CANCELLED", "files": ["telegram_daemon.py", "task_worker.py", "core/ai_router.py", "core/reply_sender.py", "core/orchestra_agents/agent_router.py", "core/orchestra_agents/external_models.py", "core/orchestra_agents/local_checks.py", "core/estimate_engine.py", "core/ocr_engine.py", "core/technadzor_engine.py", "core/document_engine.py", "core/pin_manager.py", "data/core.db", "data/memory.db"], "code": "PASS1 patches confirmed: fcntl.flock lock telegram_daemon.py (CANON_PASS6_SINGLE_INSTANCE_LOCK lines 10-23); _VOICE_CONTROL_HARD list expanded line 892; _voice_hit contains-check line 894; CHAT_ONLY_PHRASES for voice line 902; CANON_PASS6_LIVE_CORE_OVERLAY in task_worker.py (_cp6_save_topic_directions / _is_valid_result / _auto_close_trash_awaiting / _recover_stale_tasks)", "patches": ["PASS1 APPLIED 26.04.2026 13:47 MSK - CONFIRMED: telegram_daemon.py LOCK_INSERTED (PID 1434854 single process, conflict=0)", "PASS1: SHORT_CONFIRM_EXTENDED + FINISH_PHRASES_EXTENDED + VOICE_CONTROL contains-match", "PASS1: local_checks.py extract_code() returns empty if no code block", "PASS1: agent_router.py shows real status MISSING_KEY / HTTP_XXX / TIMEOUT_OR_NETWORK", "P01-P03 (25.04): task_worker.py PATCH_INVALID_RESULT_MSG_FIX | PATCH_FILE_NOT_FOUND_MSG_FIX | PATCH_VALIDATE_TABLE_ITEMS_ADD", "P04-P07 (25.04): ENGINE_TIMEOUT 300s / INTAKE_TIMEOUT / REQUEUE_LOOP_ALLOW_ONCE / pin_manager.py PIN_FALLBACK_CLOSED", "P08-P14 (26.04 00:30): task_worker.py confirmation_text / _auto_close_trash_awaiting / _send_awaiting_reminders 180s / MEMORY_NOISE_MARKERS / ValidationGate NO_VALID_ARTIFACT", "P15-P24 (26.04 02:00): telegram_daemon.py FINISH_PHRASES / CHAT_ONLY / Reply->_find_parent_task / removed double reminder / VOICE_CONTROL narrowed / file->message.reply", "P25 (document_engine.py): cid:NNN filter for PDF garbage", "P26-P27 (estimate_engine.py): canon_pass2_add_formulas_and_sum after _write_xlsx / generate_estimate_from_text() added", "P28-P29 (ocr_engine.py): _build_excel improved / LLM fallback via Gemini Flash", "P30-P31 (technadzor_engine.py): AI dtype per photo via vision API / Vedomost typo fixed"], "commands": ["ssh areal bash -s << ENDSSH ... readonly diagnostics", "ps -eo pid,ppid,etime,cmd | grep telegram_daemon.py", "grep -n VOICE_CONTROL telegram_daemon.py", "sqlite3 -header -column data/core.db SELECT id,state,error_message,bot_message_id", "journalctl -u areal-task-worker -n 120 --no-pager", "/root/.areal-neva-core/.venv/bin/python3 -m py_compile telegram_daemon.py task_worker.py"], "db": "core.db: ARCHIVED=371 CANCELLED=153 DONE=24 FAILED=54 AWAITING=0 IN_PROGRESS=0 NEW=0 queue=empty (confirmed 26.04 11:40 MSK) | topic_3008 last task: 10a5d344 state=FAILED STALE_TIMEOUT raw=prover_kod result=Otprav_kod_dlya_proverki", "memory": "memory.db: topic_2 last_output 2026-04-25 02:08:01 angar 18x30 | topic_961 2026-04-25 01:32:34 avtozapchasti | topic_5 2026-04-23 akty_osmatra | topic_500 2026-04-20 metallacherepitsa | topic_directions for topic_2: UNKNOWN (not verified live)", "services": ["areal-task-worker: active (26.04 confirmed)", "areal-telegram-daemon: active PID 1434854 (26.04 13:47 MSK start)", "areal-memory-api: active (port 8091)"], "errors": ["TelegramConflictError -> two polling processes same bot token -> PASS1 fcntl.flock added -> single process but PID 1439838 (1 sec) seen at 14:13 MSK -> respawn source not identified", "SyntaxError in task_worker.py (journalctl x2) -> bad patch 25.04 morning -> restored from backup -> PY_COMPILE_OK confirmed", "areal-task-worker: Failed to kill control group x5 -> systemd could not cleanly kill after SyntaxError crash -> historical (pre-PASS1)", "bot_message_id stopped saving after 25.04 10:54 MSK -> regression from bad patch -> not yet fixed", "Multi-model topic_3008 all 5 models = NET_OTVETA -> Gemini BLOCKED by AEZA IP, other 4 models API not responding -> API keys in .env not verified", "daemon logs empty (0 lines) from journalctl with grep filter -> logging not going to journald or level not matching criteria", "U1-02-26-R-KZH1.6.pdf all tasks FAILED -> TEXT_FOLLOWUP_REQUEUED stage never advanced to DOWNLOADED -> not fixed"], "decisions": ["PASS1 before leads-contour: no external monitoring until reply path is stable", "bot_message_id regression promoted to HIGH priority (from MEDIUM in state.json)", "multi-model api keys and AEZA IP block are separate task from patches", "fcntl lock pattern from telegram_daemon PASS1 to be reused for leads tg_listener with separate lock file", "leads-classifier must not use process_ai_task() directly -> topic_3008 guard overlay would interfere", "personal_notifier for leads must use separate bot token"], "solutions": ["PASS1: fcntl.flock(LOCK_EX|LOCK_NB) -> ensures single telegram_daemon process", "PASS1: contains-match for _VOICE_CONTROL_HARD -> partial phrases now trigger control", "P22: VOICE_CONTROL narrowed -> removed da/net/ok to prevent false control matches", "P24: file/photo intake now uses message.reply() instead of message.answer() -> reply to original message", "P26: canon_pass2_add_formulas_and_sum called after _write_xlsx -> Excel formulas =C*D and =SUM now inserted"], "state": "PASS1 APPLIED_BY_TERMINAL / LIVE_TESTS_PENDING / system active / 31 patches in code / active open issues A1-A5 B1-B8 C1-C4 D1-D3 E1-E4 F1-F6", "what_working": ["telegram_daemon.py single process after PASS1 (PID 1434854)", "task_worker.py active and logging", "STT Groq whisper-large-v3-turbo - voice transcription works", "proverka koda without code block -> Otprav kod dlya proverki", "PY_COMPILE_OK: all 4 core files", "core.db queue clean NEW=0 IN_PROGRESS=0", "Google Drive file upload pipeline exists"], "what_broken": ["bot_message_id not saved reliably - regression after 25.04 10:54 MSK", "multi-model topic_3008 all 5 models NET_OTVETA - API connectivity not verified", "daemon logs empty from journalctl grep", "PID 1439838 (1 sec) second daemon process detected at 14:13 - spawn source unknown", "U1-02-26-R-KZH1.6.pdf - all tasks FAILED TEXT_FOLLOWUP_REQUEUED - artifact never created", "STT fail -> STALE_TIMEOUT (should be WAITING_CLARIQICATION)", "generate_estimate_from_text - no hook in task_worker - function exists but never called", "topic_role not saved in memory.db for CHAT_ZADACH", "INVALID_RESULT_GATE blocks history/search requests (C2)"], "what_not_done": ["PASS2: bot_message_id reliable save + generate_estimate_from_text hook + INVALID_RESULT_GATE bypass for recall", "PASS3: File engines live tests (cid:474 Excel formulas technadzor)", "GitHub snapshot - git not configured", "Multi-file one task - not implemented", "Template Engine integration in task_worker", "Versioning _v2/_v3 on REVISION", "Drive runtime/drive_files/ cleanup", "Email IMAP/SMTP ingress", "VK/Avito/Profi unified inbox", "AmoCRM integration"], "current_breakpoint": "LIVE_TEST_PENDING: voice control close task after PASS1 / respawn source of PID 1439838 unknown / multi-model API keys unverified", "root_causes": ["System instability caused by bad patches not organic failures", "Dual telegram_daemon processes caused TelegramConflictError - random message routing", "bot_message_id regression coincides with PATCH_REQUEUE_LOOP_ALLOW_ONCE and multiple bad patches 25.04 10:54", "Gemini BLOCKED by AEZA IP - recorded in canon 06_MULTI_MODEL", "Validation Gate too strict - rejects legitimate chat/recall responses"], "verification": ["PY_COMPILE_OK: telegram_daemon.py task_worker.py agent_router.py external_models.py", "systemctl status all 3 services active 26.04 11:40 MSK", "sqlite3 core.db queue empty", "telegram_daemon PID 1434854 single process confirmed at 14:13 MSK", "Passed: proverka koda without code -> Otprav kod dlya proverki", "Failed live test: voice control close task - not yet tested after PASS1"], "limits": ["AEZA IP blocks Gemini API - topic_3008 multi-model degraded", "GitHub not configured - no code snapshots", "SSH commands must be Mac/iPhone compatible: no heredoc << EOF, no multiline backslash in quotes", "No silent actions: every change requires user confirmation before execution", "task_worker ValidationGate: text_result without drive.google.com = FAILED:NO_VALID_ARTIFACT - blocks chat responses"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CLAUDE_ANALYSIS__2026-04-26.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CURRENT_CHAT__2026-04-25.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
-====================================================================================================
-﻿
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CURRENT_CHAT__2026-04-25.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-24.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b03264115264bda9ab91e50965f0051c8c426118c4224ba5570a5e0b3d124cf1
-====================================================================================================
-﻿{
-  "chat_id": "UNKNOWN",
-  "chat_name": "AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT",
-  "exported_at": "2026-04-24T10:00:00+03:00",
-  "source_model": "GPT-5.5 Thinking",
-  "system": "Server project AREAL-NEVA ORCHESTRA. Base path /root/.areal-neva-core. Core DB /root/.areal-neva-core/data/core.db. Memory DB /root/.areal-neva-core/data/memory.db. Services mentioned: areal-task-worker, telegram-ingress, areal-memory-api. Google Drive AI_ORCHESTRA folder ID 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB.",
-  "architecture": "Telegram/Drive file pipeline and server-side worker architecture discussed. Confirmed services active. Technical contour target: PDF/DOCX/XLSX/photo -> parse/OCR -> extract construction quantities -> create non-empty Excel/DOCX artifact -> upload to Drive topic folder -> Telegram result link.",
-  "pipeline": "Known pipeline in chat: Google Drive file tasks in core.db with input_type=drive_file; task_worker.py handles drive_file through _handle_drive_file; _download_from_drive downloads files; route_file/analyze_downloaded_file/process_estimate_to_excel/process_image_to_excel/create_google_sheet/create_google_doc are involved.",
-  "files": [
-    "/root/.areal-neva-core/core/artifact_pipeline.py",
-    "/root/.areal-neva-core/core/estimate_engine.py",
-    "/root/.areal-neva-core/core/document_engine.py",
-    "/root/.areal-neva-core/core/file_intake_router.py",
-    "/root/.areal-neva-core/core/ocr_engine.py",
-    "/root/.areal-neva-core/core/technadzor_engine.py",
-    "/root/.areal-neva-core/core/sheets_generator.py",
-    "/root/.areal-neva-core/core/docs_generator.py",
-    "/root/.areal-neva-core/core/tech_contour_router.py",
-    "/root/.areal-neva-core/task_worker.py",
-    "/root/.areal-neva-core/google_io.py",
-    "/root/.areal-neva-core/core/engine_base.py",
-    "/root/.areal-neva-core/data/core.db",
-    "/root/.areal-neva-core/data/memory.db",
-    "/root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
-    "/root/.areal-neva-core/runtime/drive_files/b6ed8407-3a71-486a-a73b-55d279dd0211_У1-02-26-Р-КЖ1.6.pdf"
-  ],
-  "code": "Confirmed code anchors: estimate_engine.py has process_estimate_to_excel and process_estimate_to_sheets; artifact_pipeline.py uses pypdf PdfReader and unit regex; file_intake_router.py has estimate/ocr/document routes and create_google_sheet/create_google_doc calls; ocr_engine.py uses pytesseract with rus+eng; task_worker.py has _handle_drive_file and _download_from_drive.",
-  "patches": [
-    "PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.upload_to_drive from async def to def according to later grep output",
-    "SECRET_BACKUP_WITH_HUMAN_INDEX__V2 created backup at /root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
-    "No confirmed final patch closing PDF estimate/document contour in this chat"
-  ],
-  "commands": [
-    "grep -n \"_run_upload_sync\\|upload_to_drive\" /root/.areal-neva-core/core/engine_base.py",
-    "systemctl restart areal-task-worker",
-    "journalctl -u areal-task-worker -n 30 --no-pager -o cat",
-    "grep -n \"def upload_to_drive\\|async def upload_to_drive\" /root/.areal-neva-core/google_io.py",
-    "sqlite3 queries against /root/.areal-neva-core/data/core.db for tasks and drive_files",
-    "pypdf/pdfplumber/pytesseract/openpyxl parser diagnostics against У1-02-26-Р-КЖ1.6.pdf"
-  ],
-  "db": "core.db facts: 28 tasks with state=NEW input_type=drive_file were shown; drive_files had discovered|28; failed PDF task 9ba1bc25-0fc4-4e6c-ad0e-1ee60a91de21 with file У1-02-26-Р-КЖ1.6.pdf and error PIPELINE_NOT_EXECUTED; previous PDF task 7c940256-e531-4c99-bc71-553cddc55740 failed STALE_TIMEOUT after result 'Файл ... скачан, ожидает анализа'; failed photo task 42462bef-ba92-4371-a27c-e4e53531f175 error PIPELINE_NOT_EXECUTED; task_history schema is id, task_id, action, created_at.",
-  "memory": "memory API active and returned {\"status\":\"ok\"}. memory.db examples shown for topic_5, topic_500, topic_961. topic_5_role exists, topic_961_role and topic_961_directions exist. topic_500_role, topic_3008_role, and latest confirmed topic_2 construction/estimate role were not confirmed in the output.",
-  "services": [
-    "areal-task-worker=active",
-    "telegram-ingress=active",
-    "areal-memory-api=active"
-  ],
-  "errors": [
-    "upload_artifact_to_drive: This event loop is already running → async upload_to_drive called from running loop → google_io later shown as def upload_to_drive and engine_base calls link = upload_to_drive(file_path, versioned_name)",
-    "RuntimeWarning coroutine upload_to_drive was never awaited → async/sync mismatch → later import showed upload_to_drive is <class 'function'> and IS_COROUTINE False",
-    "create_google_sheet 403 caller does not have permission → Google Sheets native generation permission problem → not fixed in this chat",
-    "У1-02-26-Р-КЖ1.6.pdf PIPELINE_NOT_EXECUTED → technical contour did not produce real estimate → not fixed in this chat",
-    "Empty /tmp/artifact_*.docx 0 bytes → DOCX quality gate missing → not fixed in this chat",
-    "Almost empty /tmp/est_*.xlsx around 6099-6100 bytes → estimate quality gate missing → not fixed in this chat",
-    "pypdf returned broken Cyrillic glyphs like ǋǮǭǷ → PDF text extraction unusable → OCR fallback required",
-    "pdfplumber returned (cid:...) text while detecting tables → text extraction unusable → OCR fallback required"
-  ],
-  "decisions": [
-    "Main focus changed from export/chat queue to full technical contour",
-    "Primary priority: close PDF/estimate/document technical contour before memory and behavior contours",
-    "Do not spend current cycle on CHAT_EXPORT drive_file NEW queue unless it blocks real file processing",
-    "Technical contour must reject empty Excel/DOCX as failure, not success"
-  ],
-  "solutions": [
-    "OAuth refresh was verified OK",
-    "Drive topic upload contract tested OK for topics 0, 2, 500, 961, 3008",
-    "Secret backup with human index created at /root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
-    "PDF estimate/document contour still requires fullfix"
-  ],
-  "state": "Current main breakpoint: technical contour is not production-ready because PDF text extraction is broken and OCR fallback / estimate quality gate are not enforcing a real non-empty result. Memory and behavior contours are also not fully verified end-to-end.",
-  "what_working": [
-    "areal-task-worker active",
-    "telegram-ingress active",
-    "areal-memory-api active",
-    "OAuth refresh OK",
-    "DRIVE_INGEST_FOLDER_ID set",
-    "upload_file_to_topic returned ok=true with drive_file_id/folder_id/chat_folder_id for tested topics",
-    "pypdf installed",
-    "pdfplumber installed",
-    "pytesseract installed",
-    "tesseract binary exists with eng/osd/rus languages",
-    "openpyxl installed",
-    "pandas installed"
-  ],
-  "what_broken": [
-    "PDF estimate extraction produces empty/almost empty xlsx",
-    "DOCX artifacts were 0 bytes",
-    "PDF text layer extraction returns corrupted Cyrillic or cid text",
-    "No confirmed OCR fallback for broken PDF estimate path",
-    "Google Sheets create_google_sheet had 403 permission errors",
-    "PIPELINE_NOT_EXECUTED occurred for construction PDF and photo tasks"
-  ],
-  "what_not_done": [
-    "Implement PDF broken-text detection",
-    "Implement OCR fallback for broken PDF text",
-    "Implement robust estimate row extraction",
-    "Implement Excel quality gate",
-    "Implement DOCX quality gate",
-    "Implement automatic estimate intent for construction PDFs even with empty caption",
-    "Verify non-empty Excel from existing У1-02-26-Р-КЖ1.6.pdf",
-    "Verify memory/pin/archive end-to-end",
-    "Verify Telegram text/voice/reply/file lifecycle end-to-end",
-    "Clean GitHub SSOT snapshot after successful fixes"
-  ],
-  "current_breakpoint": "Existing PDF /root/.areal-neva-core/runtime/drive_files/b6ed8407-3a71-486a-a73b-55d279dd0211_У1-02-26-Р-КЖ1.6.pdf is readable as a file but text extraction is corrupted; estimate engine produced near-empty xlsx; no accepted production-grade estimate artifact exists from this PDF.",
-  "root_causes": [
-    "PDF has unusable embedded text for pypdf/pdfplumber extraction",
-    "Estimate pipeline lacks enforced OCR fallback for broken PDF text",
-    "Artifact quality gates allow empty/near-empty outputs",
-    "Routing with empty caption can lead to PIPELINE_NOT_EXECUTED instead of construction estimate processing"
-  ],
-  "verification": [
-    "PDF exists with size 2.6M",
-    "pypdf pages: 8 and returned broken glyph text",
-    "pdfplumber pages: 8 and saw tables, but table/text content contained cid sequences",
-    "tesseract 5.3.4 available with rus language",
-    "Local artifacts list showed many 0 byte docx and 6099-6100 byte xlsx files",
-    "core.db showed failed PDF task with PIPELINE_NOT_EXECUTED"
-  ],
-  "limits": [
-    "This export is based only on the visible current chat content",
-    "No external web verification performed",
-    "Created Google Doc may not be in requested parentId because available create_file tool schema did not expose parentId/content parameters",
-    "This batch update writes JSON into an already created Google Doc using Google Docs API requests"
-  ]
-}
-
-
-
-
---- APPEND__MANUAL_ORCHESTRA_FOLDER_CONFIRMED__2026-04-24 ---
-{
-  "append_reason": "User manually moved the document into the required AI_ORCHESTRA folder after initial creation limitations.",
-  "manual_folder_fix": "CONFIRMED_BY_USER",
-  "required_folder_id": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
-  "required_folder_name": "AI_ORCHESTRA",
-  "export_status_after_append": "JSON content exists in document; document location was manually corrected by user; this append records that correction inside the export document.",
-  "remaining_protocol_deviation": "Initial creation was not performed through text/plain + base64 + parentId due to available tool schema limitations; content was inserted through Google Docs batch_update_document.",
-  "current_focus": "Close technical contour first: PDF estimate extraction, OCR fallback, non-empty Excel/DOCX quality gates, construction file routing, then memory/pin/archive and answer behavior contours.",
-  "main_breakpoint": "Existing PDF У1-02-26-Р-КЖ1.6.pdf has broken embedded text extraction; pypdf/pdfplumber return corrupted text; estimate output was near-empty; DOCX outputs were 0 bytes; OCR fallback and quality gates are required."
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-24.txt
 FILE_CHUNK: 1/1
 ====================================================================================================

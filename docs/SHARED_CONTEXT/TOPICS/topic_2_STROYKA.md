@@ -1,20 +1,19 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-07T13:23:40.984406+00:00
-GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
+GENERATED_AT: 2026-07-07T13:53:41.983820+00:00
+GIT_SHA: c447339103fe45d7483e65d4dae4a246739d2439
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
+ACTIVE_TASKS: 0
 FAILED_LAST_24H: 16
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- AWAITING_CONFIRMATION: 1
-- CANCELLED: 147
+- CANCELLED: 149
 - DONE: 244
 - FAILED: 161
 
@@ -26,6 +25,7 @@ FAILED_LAST_24H: 16
 - b7f12c67 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
 - f5f758c8|docs: refresh single model context after topic2 handoff
 - d690605f|topic2: save canonical live repair handoff

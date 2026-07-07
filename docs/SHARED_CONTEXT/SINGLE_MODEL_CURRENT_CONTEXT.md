@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-07T13:23:41.570615+00:00
-GIT_SHA: e80be12ae74ba853314f744e5002044348ea5ef1
+GENERATED_AT: 2026-07-07T13:53:42.508222+00:00
+GIT_SHA: c447339103fe45d7483e65d4dae4a246739d2439
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 16 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 16 |
 | 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | BROKEN | 0 | 21 |
@@ -70,13 +70,13 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 1
+active: 0
 failed_24h: 16
-commits_last_7d: 5
+commits_last_7d: 6
 recent_commits:
+- c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
 - f5f758c8|docs: refresh single model context after topic2 handoff
-- d690605f|topic2: save canonical live repair handoff
 markers_missing: 10
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
