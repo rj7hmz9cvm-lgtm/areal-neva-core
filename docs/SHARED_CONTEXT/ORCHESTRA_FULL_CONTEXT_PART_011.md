@@ -1,7 +1,7 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T15:53:53.490778+00:00
-git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
-part: 11/21
+generated_at_utc: 2026-07-07T16:23:54.164849+00:00
+git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+part: 11/22
 
 
 ====================================================================================================
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 23e0660ad9e701ddb3269d76b1f192fdc1d005f5e9fe8c309edda070850ca8e7
+SHA256_FULL_FILE: 9a5fcf83623c68288a078da6a0f91735a0fb8304e10c077b4f37febaed6452ad
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -3065,7 +3065,7 @@ def _bundle_add_ar_facts_v1(facts: List[Dict[str, Any]], file_path: str, pages: 
 
 def _bundle_add_kr_facts_v1(facts: List[Dict[str, Any]], specs: List[Dict[str, Any]], file_path: str, pages: List[Dict[str, Any]]) -> None:
     count = _bundle_pdf_page_count_v1(file_path)
-    target_pages = [count, count - 4, count - 2, count - 3, count - 1]
+    target_pages = [count, count - 2]
     seen_pages = set()
     for page in target_pages:
         if page <= 0 or page in seen_pages:

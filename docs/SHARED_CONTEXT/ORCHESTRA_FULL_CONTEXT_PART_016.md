@@ -1,8 +1,274 @@
 # ORCHESTRA_FULL_CONTEXT_PART_016
-generated_at_utc: 2026-07-07T15:53:53.498588+00:00
-git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
-part: 16/21
+generated_at_utc: 2026-07-07T16:23:54.168234+00:00
+git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+part: 16/22
 
+
+====================================================================================================
+BEGIN_FILE: core/telegram_source_skill_extractor.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 2f9e18163498265ad703ced0637bf33a83779fdfc4b7304974bb64d091a5f797
+====================================================================================================
+#!/usr/bin/env python3
+# === TELEGRAM_SOURCE_SKILL_EXTRACTOR_V1 ===
+# Read-only Telethon-based extractor for public Telegram sources.
+# Collects message metadata, links, and document references.
+# Does NOT save raw history to memory.db or create core.db tasks.
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger("telegram_source_skill_extractor")
+
+BASE = Path(__file__).parent.parent
+SESSION_PATH = BASE / "sessions" / "user.session"
+API_ID = 27925449
+
+URL_RE = re.compile(r"https?://[^\s\)\]\>\"']+")
+
+DOCUMENT_EXTENSIONS = {
+    ".pdf", ".docx", ".doc", ".xlsx", ".xls",
+    ".pptx", ".ppt", ".zip", ".rar", ".dwg", ".dxf",
+}
+
+TECHNADZOR_KEYWORDS = [
+    "акт", "дефект", "предписание", "заключение", "протокол",
+    "осмотр", "проверка", "замечание", "нарушение", "устранение",
+    "приёмка", "приемка", "скрытые работы", "исполнительная",
+    "норматив", "снип", "гост", "сп ", "фото", "документ",
+    "отчёт", "отчет", "смета", "спецификация", "чертёж", "чертеж",
+    "технадзор", "стройконтроль", "авторский надзор",
+    "кровля", "фасад", "перекрытие", "колонна", "фундамент",
+    "бетон", "арматура", "сварка", "металл", "кладка", "газобетон",
+    "отделка", "стяжка", "штукатурка", "электрика", "вентиляция",
+    "водоснабжение", "канализация", "охрана труда",
+]
+
+NOISE_MARKERS = [
+    "реклама", "продам", "куплю", "скидка", "акция",
+    "подпишись", "переходи по ссылке", "розыгрыш",
+    "заработок", "кредит без отказа", "займ",
+    "только сегодня", "бесплатно жми", "выиграли",
+]
+
+
+def load_env(path: str | None = None) -> dict:
+    env_path = Path(path) if path else BASE / ".env"
+    result = {}
+    if not env_path.exists():
+        return result
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        result[k.strip()] = v.strip()
+    return result
+
+
+def build_client(session_path: str | None = None):
+    from telethon import TelegramClient
+    sp = str(session_path or SESSION_PATH)
+    # api_hash not stored — authorized session does not need it for reads
+    return TelegramClient(sp, API_ID, "a" * 32)
+
+
+def extract_links(text: str) -> list[str]:
+    return URL_RE.findall(text or "")
+
+
+def is_relevant_for_document_skill(
+    message_text: str,
+    file_name: str | None = None,
+    links: list[str] | None = None,
+) -> bool:
+    low = (message_text or "").lower()
+    if any(n in low for n in NOISE_MARKERS):
+        return False
+    if any(kw in low for kw in TECHNADZOR_KEYWORDS):
+        return True
+    fname_low = (file_name or "").lower()
+    if any(ext in fname_low for ext in DOCUMENT_EXTENSIONS):
+        return True
+    for link in (links or []):
+        if any(ext in link.lower() for ext in DOCUMENT_EXTENSIONS):
+            return True
+    return False
+
+
+def build_source_record(msg_id: int, msg_date: str, text: str,
+                        media_type: str | None, file_name: str | None,
+                        links: list[str], channel: str) -> dict:
+    return {
+        "source": f"@{channel.lstrip('@')}",
+        "message_id": msg_id,
+        "message_date": msg_date,
+        "text": (text or "")[:1500],
+        "media_type": media_type,
+        "file_name": file_name,
+        "links": links,
+        "source_ref": f"https://t.me/{channel.lstrip('@')}/{msg_id}",
+    }
+
+
+async def check_source_access(source: str, client) -> dict:
+    try:
+        entity = await client.get_entity(source.lstrip("@"))
+        return {
+            "ok": True,
+            "id": entity.id,
+            "title": getattr(entity, "title", ""),
+            "username": getattr(entity, "username", ""),
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+async def scan_source(source: str, client, limit: int = 1000) -> dict:
+    from telethon.tl.types import (
+        MessageMediaDocument, MessageMediaPhoto, MessageMediaWebPage
+    )
+
+    records: list[dict] = []
+    total = skipped_empty = skipped_noise = detected_docs = detected_links = 0
+
+    async for msg in client.iter_messages(source.lstrip("@"), limit=limit or None):
+        total += 1
+        text = (msg.message or "").strip()
+        if not text and not msg.media:
+            skipped_empty += 1
+            continue
+
+        low = text.lower()
+        if any(n in low for n in NOISE_MARKERS):
+            skipped_noise += 1
+            continue
+
+        links = extract_links(text)
+        file_name = None
+        media_type = None
+
+        if isinstance(msg.media, MessageMediaDocument):
+            doc = msg.media.document
+            for attr in getattr(doc, "attributes", []):
+                if hasattr(attr, "file_name") and attr.file_name:
+                    file_name = attr.file_name
+            media_type = "document"
+            detected_docs += 1
+        elif isinstance(msg.media, MessageMediaPhoto):
+            media_type = "photo"
+        elif isinstance(msg.media, MessageMediaWebPage):
+            wp = msg.media.webpage
+            if hasattr(wp, "url") and wp.url:
+                links.append(wp.url)
+            media_type = "webpage"
+
+        if links:
+            detected_links += 1
+
+        date_str = msg.date.isoformat() if msg.date else ""
+        record = build_source_record(
+            msg.id, date_str, text, media_type, file_name,
+            links, source.lstrip("@")
+        )
+        records.append(record)
+
+    return {
+        "total_fetched": total,
+        "skipped_empty": skipped_empty,
+        "skipped_noise": skipped_noise,
+        "detected_docs": detected_docs,
+        "detected_links": detected_links,
+        "records": records,
+    }
+
+
+async def download_relevant_documents(
+    client, msg, output_dir: Path
+) -> str | None:
+    from telethon.tl.types import MessageMediaDocument
+    if not isinstance(msg.media, MessageMediaDocument):
+        return None
+    doc = msg.media.document
+    file_name = f"doc_{msg.id}"
+    for attr in getattr(doc, "attributes", []):
+        if hasattr(attr, "file_name") and attr.file_name:
+            file_name = attr.file_name
+    ext = Path(file_name).suffix.lower()
+    if ext not in DOCUMENT_EXTENSIONS:
+        return None
+    out_path = output_dir / file_name
+    if out_path.exists():
+        return str(out_path)
+    try:
+        await client.download_media(msg, file=str(out_path))
+        return str(out_path)
+    except Exception as e:
+        logger.warning("download failed msg=%s err=%s", msg.id, e)
+        return None
+
+
+async def run_source_scan(
+    source: str = "@tnz_msk",
+    limit: int = 1000,
+    download_docs: bool = False,
+    docs_output_dir: Path | None = None,
+) -> dict:
+    client = build_client()
+    await client.connect()
+
+    if not await client.is_user_authorized():
+        await client.disconnect()
+        return {"ok": False, "error": "session_not_authorized"}
+
+    access = await check_source_access(source, client)
+    if not access["ok"]:
+        await client.disconnect()
+        return {"ok": False, "error": access.get("error")}
+
+    scan = await scan_source(source, client, limit=limit)
+    downloaded: list[str] = []
+
+    if download_docs and docs_output_dir:
+        docs_output_dir.mkdir(parents=True, exist_ok=True)
+        from telethon.tl.types import MessageMediaDocument
+        async for msg in client.iter_messages(source.lstrip("@"), limit=limit or None):
+            if not isinstance(msg.media, MessageMediaDocument):
+                continue
+            text = msg.message or ""
+            links = extract_links(text)
+            doc = msg.media.document
+            fname = ""
+            for attr in getattr(doc, "attributes", []):
+                if hasattr(attr, "file_name") and attr.file_name:
+                    fname = attr.file_name
+            if is_relevant_for_document_skill(text, fname, links):
+                path = await download_relevant_documents(client, msg, docs_output_dir)
+                if path:
+                    downloaded.append(path)
+
+    await client.disconnect()
+
+    return {
+        "ok": True,
+        "source": source,
+        "access": access,
+        "scan": scan,
+        "downloaded_documents": downloaded,
+        "scanned_at": datetime.now(timezone.utc).isoformat(),
+    }
+# === END_TELEGRAM_SOURCE_SKILL_EXTRACTOR_V1 ===
+
+====================================================================================================
+END_FILE: core/telegram_source_skill_extractor.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/temp_cleanup.py
@@ -9075,501 +9341,5 @@ exec /root/.areal-neva-core/.venv/bin/python3 /root/.areal-neva-core/tools/full_
 
 ====================================================================================================
 END_FILE: tools/full_context_aggregator_guard.sh
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/gen_act_3rd_visit.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 83687b2e49384e5c1f23f7eab1ee2db3efe54ca062e11d57c4262ae47d16b4ae
-====================================================================================================
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Генератор акта осмотра № 3 — ангар Киевское шоссе, 04.05.2026
-Standalone-скрипт. Запуск:
-  cd /root/.areal-neva-core && .venv/bin/python3 tools/gen_act_3rd_visit.py
-"""
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Загружаем .env
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
-except Exception:
-    pass
-
-import asyncio
-import base64
-import json
-import re
-import time
-from pathlib import Path
-from datetime import datetime
-
-# ─── Константы объекта ─────────────────────────────────────────────────────
-
-FOLDER_ID   = "1sS1A6iHQHUwjqZGF43wdyRjoLwwAHPse"
-FOLDER_URL  = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
-CHAT_ID     = "-1003725299009"
-TOPIC_ID    = 5
-
-ACT_NUMBER      = "04-05/26"
-VISIT_DATE      = "04.05.2026"
-OBJECT_DESCR    = "Металлокаркасное здание (ангар), Киевское шоссе"
-PLACE           = "Объект на Киевском шоссе"
-PREV_ACT_REF    = "в развитие акта № 12-03/26 от 12.03.2026"
-
-BATCH_SIZE    = 1    # по одному фото — избегаем 502 на больших payload
-MAX_PARALLEL  = 5   # одновременных Vision запросов
-OUTPUT_DIR    = Path(__file__).resolve().parent.parent / "outputs" / "technadzor_p6h"
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# ─── Vision промпт ─────────────────────────────────────────────────────────
-
-VISION_PROMPT = """\
-Ты специалист технического надзора. Объект — металлокаркасное здание (ангар).
-Перед тобой несколько фото строительного объекта — пронумерованы по порядку, начиная с фото 1.
-
-Задача: по каждому фото выяви дефекты и строительные нарушения.
-
-Возможные категории дефектов:
-- опорные узлы колонн: подливка, зазоры, анкера, опорные плиты
-- сварные соединения: непровар, поры, прожог, наплывы, незачищенные швы
-- антикоррозионная защита: отсутствие покрытия, повреждение, ржавчина
-- основание и водоотведение: замачивание, загрязнение, лужи, отсутствие уклонов
-- узлы крепления покрытия: болтовые соединения, смещение элементов
-- связи и укосины: неправильное примыкание, отсутствие жёсткости
-- прочие: всё остальное
-
-Верни ТОЛЬКО JSON-массив. Каждый элемент:
-{
-  "photo_no": <номер фото в пачке, целое число>,
-  "title": "краткое название дефекта на русском",
-  "description": "подробное описание что именно видно на фото",
-  "section_hint": "опорные узлы / сварка / антикоррозия / основание / крепления / связи / прочее",
-  "why": "почему это технически плохо, к чему ведёт",
-  "consequence": "что произойдёт если не устранить",
-  "fix": "конкретные действия по устранению",
-  "verify": "что проверить или запросить у подрядчика",
-  "confidence": "high / medium / low"
-}
-
-Если на фото нет нарушений — пропусти это фото (не добавляй в массив).
-Если фото нечёткое или непонятное — добавь запись с confidence=low и укажи что именно непонятно.
-Верни ТОЛЬКО JSON-массив, без заголовков и пояснений.
-"""
-
-
-# ─── Drive helpers ──────────────────────────────────────────────────────────
-
-def get_drive_service():
-    from core.technadzor_drive_index import _service
-    return _service()
-
-
-def list_photos_in_folder(svc, folder_id: str) -> list[dict]:
-    """Вернуть все изображения из папки, отсортированные по имени."""
-    from core.technadzor_drive_index import _list_folder
-    files = _list_folder(svc, folder_id)
-    photos = [f for f in files if (f.get("mimeType") or "").startswith("image/")]
-    photos.sort(key=lambda x: x.get("name") or "")
-    return photos
-
-
-def download_photo(svc, file_id: str, filename: str) -> Path | None:
-    """Скачать файл в локальный кэш."""
-    from core.technadzor_drive_index import download_to_local
-    return download_to_local(file_id, filename)
-
-
-# ─── Vision ─────────────────────────────────────────────────────────────────
-
-_vision_sem = None  # asyncio.Semaphore, инициализируется в main
-
-
-async def run_single_vision(local_path: str, fname: str, photo_no: int, total: int) -> list[dict]:
-    """Анализ одного фото через существующую Vision функцию."""
-    global _vision_sem
-    async with _vision_sem:
-        from core.technadzor_engine import _p6f_tnz_vision_via_openrouter
-        vision, vstatus = await _p6f_tnz_vision_via_openrouter(local_path)
-        if vstatus != "OK" and vstatus != "PARTIAL":
-            print(f"    [{photo_no}/{total}] {fname}: Vision {vstatus}")
-            return []
-        defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
-        summary = (vision.get("summary") or "") if isinstance(vision, dict) else ""
-        # Если нет structured defects — превращаем summary в defect
-        if not defects and summary:
-            defects = [{"title": "Замечание по фото", "description": summary[:500]}]
-        for d in defects:
-            d["file_name"] = fname
-            d["photo_no"] = photo_no
-        ok_str = "✓" if defects else "·"
-        print(f"    [{photo_no}/{total}] {fname}: {ok_str} {len(defects)} замеч.", flush=True)
-        return defects
-
-
-# ─── PDF сборка ──────────────────────────────────────────────────────────────
-
-def build_pdf(all_defects: list[dict], out_path: Path) -> bool:
-    """Собрать PDF акта из агрегированных дефектов."""
-    from core.technadzor_engine import (
-        _p6h_group_defects_by_section,
-        _p6h_build_pdf_act,
-        _p6h_norms_for_section,
-    )
-
-    grouped = _p6h_group_defects_by_section(all_defects)
-
-    # Секции с нормами и списком фото
-    sections_payload = []
-    section_norms_index = {}
-    for sec_title, defects in grouped:
-        texts = [str(d.get("description") or d.get("title") or "") for d in defects]
-        norms = _p6h_norms_for_section(sec_title, texts)
-        photos_block = list(dict.fromkeys(
-            d.get("file_name", "") for d in defects if d.get("file_name")
-        ))
-        sections_payload.append({
-            "title": sec_title,
-            "defects": defects,
-            "norms": norms,
-            "photos_block": photos_block,
-        })
-        section_norms_index[sec_title] = norms
-
-    # Рекомендации / последствия
-    recs = list(dict.fromkeys(
-        str(d.get("fix") or "").strip()
-        for d in all_defects if d.get("fix")
-    ))[:20]
-    cons = list(dict.fromkeys(
-        str(d.get("consequence") or d.get("why") or "").strip()
-        for d in all_defects if (d.get("consequence") or d.get("why"))
-    ))[:10]
-
-    # Таблица нарушений
-    vtable = []
-    for sec_title, defects in grouped:
-        norm_id = ""
-        nlist = section_norms_index.get(sec_title) or []
-        if nlist:
-            norm_id = nlist[0].get("norm_id", "")
-        for d in defects:
-            v  = str(d.get("title") or d.get("description") or sec_title)[:200]
-            ph = str(d.get("file_name") or "")
-            vtable.append((v, norm_id or "норма не подтверждена", ph))
-
-    payload = {
-        "act_number":      ACT_NUMBER,
-        "date_str":        VISIT_DATE,
-        "place":           PLACE,
-        "object_descr":    OBJECT_DESCR,
-        "method":          "визуальный неразрушающий контроль с выездом на объект",
-        "performer":       "",
-        "specialist":      "Кузнецов Илья Владимирович",
-        "photos_link":     FOLDER_URL,
-        "general_purpose": (
-            f"Осмотр выполнен методом визуального неразрушающего контроля с выездом на объект. "
-            f"Текущий осмотр выполнен {PREV_ACT_REF}. "
-            f"Цель осмотра — проверка выполнения замечаний из предыдущего акта, "
-            f"выявление новых дефектов и отклонений, определение рекомендаций к устранению "
-            f"и возможных последствий при сохранении текущего состояния. "
-            f"Проектная и рабочая исполнительная документация на момент осмотра "
-            f"к проверке не представлена."
-        ),
-        "sections":         sections_payload,
-        "recommendations":  recs if recs else [
-            "Привести выявленные узлы и покрытия к нормативному состоянию по СП 16.13330.2017, СП 70.13330.2012",
-            "Восстановить антикоррозионную защиту всех незащищённых металлических конструкций",
-            "Обеспечить отвод воды от основания и опорных узлов",
-            "Выполнить фотофиксацию после устранения всех выявленных замечаний",
-            "Предоставить исполнительную документацию по выполненным работам",
-        ],
-        "consequences":     cons if cons else [
-            "Снижение несущей способности и эксплуатационной надёжности конструкций",
-            "Прогрессирующее развитие коррозионных поражений",
-            "Риск аварийного развития дефектов при эксплуатационных нагрузках",
-        ],
-        "violations_table": vtable[:40],
-    }
-
-    try:
-        _p6h_build_pdf_act(payload, out_path)
-        return True
-    except Exception as e:
-        print(f"  ❌ Ошибка генерации PDF: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-# ─── Загрузка на Drive ───────────────────────────────────────────────────────
-
-def upload_pdf_to_drive(pdf_path: Path, pdf_name: str) -> str:
-    """Загрузить PDF в topic_5 (корень). Вернуть ссылку или пустую строку."""
-    try:
-        from core.technadzor_drive_index import upload_client_pdf_to_folder
-        result = upload_client_pdf_to_folder(
-            pdf_path, pdf_name,
-            chat_id=CHAT_ID, topic_id=TOPIC_ID,
-            target_folder_name=None,  # в корень topic_5
-        )
-        return (result or {}).get("link", "") or (result or {}).get("webViewLink", "")
-    except Exception as e:
-        print(f"  ⚠️  Drive upload ошибка: {e}")
-        return ""
-
-
-# ─── Главный цикл ────────────────────────────────────────────────────────────
-
-async def main():
-    t0 = time.time()
-    print("=" * 60)
-    print("АКТ ОСМОТРА № 04-05/26 — ангар Киевское шоссе")
-    print("Третий выезд, 04.05.2026")
-    print("=" * 60)
-    print(f"Папка фото: {FOLDER_URL}\n")
-
-    # 1. Список фото
-    print("1. Получаю список фото из Drive...")
-    try:
-        svc = get_drive_service()
-        photos = list_photos_in_folder(svc, FOLDER_ID)
-    except Exception as e:
-        print(f"  ❌ Ошибка Drive: {e}")
-        return
-
-    print(f"   Найдено: {len(photos)} фото")
-    if not photos:
-        print("   Фото не найдено — выход")
-        return
-
-    # 2. Скачиваем все фото
-    print(f"\n2. Скачиваю {len(photos)} фото из Drive...")
-    local_photos = []
-    for photo in photos:
-        p = download_photo(svc, photo["id"], photo["name"])
-        if p:
-            local_photos.append((str(p), photo["name"]))
-        else:
-            print(f"  ✗ {photo['name']} — не скачалось")
-    print(f"   Скачано: {len(local_photos)} фото")
-
-    # 3. Vision — параллельно, MAX_PARALLEL одновременно
-    global _vision_sem
-    _vision_sem = asyncio.Semaphore(MAX_PARALLEL)
-    total = len(local_photos)
-    print(f"\n3. Vision анализ ({total} фото, до {MAX_PARALLEL} параллельно)...")
-
-    tasks = [
-        run_single_vision(path, fname, i + 1, total)
-        for i, (path, fname) in enumerate(local_photos)
-    ]
-    results = await asyncio.gather(*tasks)
-    all_defects = [d for sublist in results for d in sublist]
-
-    elapsed = int(time.time() - t0)
-    print(f"\n   Vision завершён за {elapsed}с. Всего замечаний: {len(all_defects)}")
-
-    if not all_defects:
-        print("  ⚠️  Vision не выявил замечаний — генерирую акт с пустыми разделами")
-
-    # 4. Генерация PDF
-    ts = datetime.now().strftime("%d_%m_%Y")
-    pdf_name = f"Акт_осмотра_ангар_Киевское_шоссе_{ts}.pdf"
-    pdf_path = OUTPUT_DIR / pdf_name
-
-    print(f"\n3. Генерирую PDF: {pdf_name}")
-    ok = build_pdf(all_defects, pdf_path)
-    if not ok:
-        print("  ❌ PDF не создан")
-        return
-
-    size_kb = pdf_path.stat().st_size // 1024
-    print(f"   ✅ PDF готов — {size_kb} KB")
-    print(f"   Путь: {pdf_path}")
-
-    # 5. Загрузка на Drive
-    print("\n4. Загружаю PDF на Drive (topic_5)...")
-    link = upload_pdf_to_drive(pdf_path, pdf_name)
-    if link:
-        print(f"   ✅ Drive: {link}")
-    else:
-        print(f"   ⚠️  Drive upload не выполнен, файл доступен локально")
-
-    # Итог
-    total = int(time.time() - t0)
-    print("\n" + "=" * 60)
-    print(f"ГОТОВО за {total // 60}м {total % 60}с")
-    print(f"PDF: {pdf_path}")
-    if link:
-        print(f"Drive: {link}")
-    print("=" * 60)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-
-# ─── P6H_VISION_RESIZE_V1 ───────────────────────────────────────────────────
-# Append-only override.
-# Оригиналы нетронуты. Temp только в /tmp. Model не меняется.
-# Если resize не получился → STOP, оригинал 8MB не отправляется.
-# Если Vision падает → показать vstatus → STOP, без fallback.
-
-import hashlib as _p6h_hashlib
-import tempfile as _p6h_tempfile
-
-
-def prepare_image_for_openrouter_vision(src_path: str) -> Path:
-    from PIL import Image as _PIL
-    src = Path(src_path)
-    h = _p6h_hashlib.md5(src_path.encode()).hexdigest()[:8]
-    tmp = Path(_p6h_tempfile.gettempdir()) / f"tnz_v_{h}.jpg"
-    with _PIL.open(src) as img:
-        img = img.convert("RGB")
-        w, ht = img.size
-        if max(w, ht) > 1600:
-            ratio = 1600 / max(w, ht)
-            img = img.resize((int(w * ratio), int(ht * ratio)), _PIL.LANCZOS)
-        img.save(str(tmp), "JPEG", quality=75, optimize=True)
-    return tmp
-
-
-async def run_single_vision(local_path: str, fname: str, photo_no: int, total: int) -> list[dict]:
-    global _vision_sem
-    async with _vision_sem:
-        orig_size = Path(local_path).stat().st_size if Path(local_path).exists() else 0
-
-        try:
-            tmp = prepare_image_for_openrouter_vision(local_path)
-        except Exception as e:
-            print(f"    [{photo_no}/{total}] {fname}: ✗ resize STOP: {e}")
-            return []
-
-        resized_size = tmp.stat().st_size
-        model = (os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash")
-        print(f"    [{photo_no}/{total}] {fname}: orig={orig_size//1024}KB resized={resized_size//1024}KB model={model}", flush=True)
-
-        from core.technadzor_engine import _p6f_tnz_vision_via_openrouter
-        vision, vstatus = await _p6f_tnz_vision_via_openrouter(str(tmp))
-
-        try:
-            tmp.unlink()
-        except Exception:
-            pass
-
-        if vstatus not in ("OK", "PARTIAL"):
-            print(f"    [{photo_no}/{total}] {fname}: ✗ vstatus={vstatus} — STOP")
-            return []
-
-        defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
-        summary = (vision.get("summary") or "") if isinstance(vision, dict) else ""
-        if not defects and summary:
-            defects = [{"title": "Замечание по фото", "description": summary[:500]}]
-        for d in defects:
-            d["file_name"] = fname
-            d["photo_no"] = photo_no
-        ok_str = "✓" if defects else "·"
-        print(f"    [{photo_no}/{total}] {fname}: {ok_str} {len(defects)} замеч.", flush=True)
-        return defects
-
-# ─── END P6H_VISION_RESIZE_V1 ────────────────────────────────────────────────
-
-# ─── P6H_VISION_GUARD_STANDALONE_V1 ─────────────────────────────────────────
-# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2 §33
-# Standalone-скрипт не должен запускать Vision без явного разрешения владельца
-
-_GEN_ACT_VISION_ALLOWED = os.getenv("EXTERNAL_PHOTO_ANALYSIS_ALLOWED", "").strip().lower() in ("1", "true", "yes")
-
-if _GEN_ACT_VISION_ALLOWED:
-    print("INFO: EXTERNAL_PHOTO_ANALYSIS_ALLOWED=True — Vision включён", flush=True)
-    try:
-        from core.technadzor_engine import _p6h_allow_external_vision
-        _p6h_allow_external_vision()
-    except Exception as _e:
-        print(f"WARN: _p6h_allow_external_vision failed: {_e}", flush=True)
-else:
-    print("INFO: EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False (default) — Vision заблокирован по канону §33", flush=True)
-    print("INFO: Для включения Vision установить в .env: EXTERNAL_PHOTO_ANALYSIS_ALLOWED=true", flush=True)
-    print("INFO: Скрипт продолжит работу без Vision — разбор по голосу/тексту/документам", flush=True)
-# ─── END P6H_VISION_GUARD_STANDALONE_V1 ──────────────────────────────────────
-
-====================================================================================================
-END_FILE: tools/gen_act_3rd_visit.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/live_canon_test_runner.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4086fa3c6738a509a59a1901c1c5628394a66b03c0001f3298eadefac488b033
-====================================================================================================
-#!/usr/bin/env python3
-# === LIVE_CANON_TEST_RUNNER_V1 ===
-from __future__ import annotations
-
-import asyncio
-import json
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-BASE = Path("/root/.areal-neva-core")
-REPORT = BASE / "docs/REPORTS/LIVE_CANON_TEST_REPORT.md"
-
-# === LIVE_CANON_TEST_RUNNER_PYTHONPATH_FIX_V1 ===
-if str(BASE) not in sys.path:
-    sys.path.insert(0, str(BASE))
-# === END_LIVE_CANON_TEST_RUNNER_PYTHONPATH_FIX_V1 ===
-
-def ok(name, value):
-    return {"name": name, "ok": bool(value), "value": value}
-
-async def main():
-    checks = []
-
-    from core.engine_contract import validate_engine_result
-    checks.append(ok("UNIFIED_ENGINE_RESULT_VALIDATOR_BAD", not validate_engine_result("файл скачан", input_type="drive_file").get("ok")))
-    checks.append(ok("UNIFIED_ENGINE_RESULT_VALIDATOR_GOOD", validate_engine_result({"summary": "PDF создан", "drive_link": "https://drive.google.com/test"}, input_type="drive_file").get("ok")))
-
-    from core.format_registry import classify_file
-    checks.append(ok("DWG_KIND_DRAWING", classify_file("a.dwg").get("kind") == "drawing"))
-    checks.append(ok("DXF_KIND_DRAWING", classify_file("a.dxf").get("kind") == "drawing"))
-    checks.append(ok("HF_KIND_BINARY", classify_file("a.hf").get("kind") == "binary"))
-
-    from core.template_workflow import _load_index
-    checks.append(ok("TEMPLATE_INDEX_LOAD", isinstance(_load_index(), dict)))
-
-    from core.normative_source_engine import search_normative_sources
-    checks.append(ok("NORMATIVE_SOURCE_SEARCH", len(search_normative_sources("трещина бетон")) >= 1))
-
-    from core.capability_router_dispatch import build_execution_plan
-    checks.append(ok("CAPABILITY_ESTIMATE", build_execution_plan(user_text="смета xlsx").get("engine") == "estimate"))
-    checks.append(ok("CAPABILITY_DWG", build_execution_plan(file_name="a.dwg").get("engine") == "dwg_project"))
-
-    passed = sum(1 for c in checks if c["ok"])
-    total = len(checks)
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(
-        "# LIVE_CANON_TEST_REPORT\n\n"
-        + f"created_at: {datetime.now(timezone.utc).isoformat()}\n"
-        + f"passed: {passed}/{total}\n\n"
-        + "\n".join(f"- [{'OK' if c['ok'] else 'FAIL'}] {c['name']} | {c['value']}" for c in checks)
-        + "\n",
-        encoding="utf-8",
-    )
-    print(json.dumps({"ok": passed == total, "passed": passed, "total": total, "report": str(REPORT)}, ensure_ascii=False))
-
-if __name__ == "__main__":
-    asyncio.run(main())
-# === END_LIVE_CANON_TEST_RUNNER_V1 ===
-
-====================================================================================================
-END_FILE: tools/live_canon_test_runner.py
 FILE_CHUNK: 1/1
 ====================================================================================================

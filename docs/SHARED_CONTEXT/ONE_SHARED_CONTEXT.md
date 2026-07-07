@@ -1,13 +1,13 @@
 # MODEL_BOOTSTRAP_CONTEXT
 
 SYSTEM: AREAL-NEVA ORCHESTRA
-GENERATED_AT_UTC: 2026-07-07T15:53:53.513697+00:00
-GIT_SHA_BEFORE_COMMIT: 0587311f30ba848edc0de80b3eb570ab0b17856c
+GENERATED_AT_UTC: 2026-07-07T16:23:54.177053+00:00
+GIT_SHA_BEFORE_COMMIT: 6720ac212228938db58f80474f167bfefc49159c
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
 NO_TRUNCATION: TRUE
 TEXT_FILES_INCLUDED_FULLY: TRUE
 BIG_FILES_SPLIT_TO_PARTS: TRUE
-MANIFEST_SHA256: c0a4c48f0e62a6cc546aeeef97c621176cbff5b8e4b46aab5c2abad11b3ac02a
+MANIFEST_SHA256: 1f0fc108bc2c61807182e447ce7309f460d485a9a5e9efa3b5545c3dd520e511
 
 RAW_THIS_FILE:
 https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md
@@ -97,6 +97,7 @@ https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHAR
 - PART_019: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_019.md
 - PART_020: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_020.md
 - PART_021: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_021.md
+- PART_022: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_022.md
 
 ## PRIORITY_OF_TRUTH
 1. Live user output + terminal

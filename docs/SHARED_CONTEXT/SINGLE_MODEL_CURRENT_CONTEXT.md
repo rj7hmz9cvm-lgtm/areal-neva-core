@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-07T15:53:54.851141+00:00
-GIT_SHA: 0587311f30ba848edc0de80b3eb570ab0b17856c
+GENERATED_AT: 2026-07-07T16:23:54.849574+00:00
+GIT_SHA: 6720ac212228938db58f80474f167bfefc49159c
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,10 +16,10 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 2 | 16 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 19 |
 | 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
-| 500 | VEB_POISK | BROKEN | 0 | 21 |
+| 500 | VEB_POISK | BROKEN | 0 | 17 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
 ### ЧТО INSTALLED НО НЕ VERIFIED (факт из NOT_CLOSED)
@@ -70,8 +70,8 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 2
-failed_24h: 16
+active: 0
+failed_24h: 19
 commits_last_7d: 6
 recent_commits:
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
@@ -87,9 +87,9 @@ markers_missing: 10
 - TOPIC2_DRIVE_UPLOAD_PDF_OK
 - TOPIC2_TELEGRAM_DELIVERED
 last_failed:
-- 104db1d2 | STALE_TIMEOUT
-- d42f1165 | NO_VALID_ARTIFACT
-- 3ec46f70 | NO_VALID_ARTIFACT
+- 5e523179 | STALE_TIMEOUT
+- 9d7440b6 | STALE_TIMEOUT
+- e65b555f | STALE_TIMEOUT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
@@ -127,7 +127,7 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 ### topic_500 VEB_POISK
 role: Интернет-поиск
 active: 0
-failed_24h: 21
+failed_24h: 17
 commits_last_7d: 0
 last_failed:
 - 936241de | SEARCH_OUTPUT_INVALID_FALSE_VERIFIED

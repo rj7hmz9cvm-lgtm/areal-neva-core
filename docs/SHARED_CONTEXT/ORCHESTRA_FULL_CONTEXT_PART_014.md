@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T15:53:53.494679+00:00
-git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
-part: 14/21
+generated_at_utc: 2026-07-07T16:23:54.166281+00:00
+git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: d78f317d4ace8c877ac808e835923b15ec980d27049554dbb7d8ba7e2bfc7c91
+SHA256_FULL_FILE: 21cd618a8ec5addbd1b83cc58c696c399c90e990bf996b171ab3bcf3514e6176
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1090,6 +1090,46 @@ def parse_price_choice(text: str) -> Dict[str, Any]:
                 pass
 
     return {"choice": choice, "percent_adjustment": percent, "manual_values": manual_values, "raw": text}
+
+
+def _topic2_volume_extract_requested_v1(text: str) -> bool:
+    low = _low(text)
+    return any(x in low for x in ("объем", "объём", "обьем", "вытащи", "вытащить", "извлеки", "извлечь")) and any(
+        x in low for x in ("ар", "кр", "проект", "pdf", "файл")
+    )
+
+
+def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
+    facts = list((parsed or {}).get("project_bundle_facts") or [])
+    specs = list((parsed or {}).get("pdf_bundle_specs") or [])
+    if not specs:
+        specs = list((parsed or {}).get("pdf_spec_rows") or [])
+    ar_keys = {"building_dimensions", "building_area", "building_height", "wall_panel", "roof_panel", "floors"}
+    lines = ["Объёмы из АР/КР извлечены из текущего bundle.", "", "АР:"]
+    ar_count = 0
+    for f in facts:
+        if not isinstance(f, dict) or f.get("key") not in ar_keys:
+            continue
+        ar_count += 1
+        lines.append("- {} | стр. {} | {}".format(_s(f.get("value")), _s(f.get("page")), _s(f.get("source_file"))))
+    if not ar_count:
+        lines.append("- явные объёмы АР не найдены")
+    lines.extend(["", "КР:"])
+    kr_count = 0
+    for row in specs:
+        if not isinstance(row, dict):
+            continue
+        name = _s(row.get("name"))
+        qty = row.get("qty", row.get("qty_raw", ""))
+        unit = _s(row.get("unit"))
+        if not name:
+            continue
+        kr_count += 1
+        lines.append("- {}: {} {} | стр. {} | {}".format(name, _s(qty), unit, _s(row.get("page")), _s(row.get("source_file"))))
+    if not kr_count:
+        lines.append("- явные табличные объёмы КР не найдены")
+    lines.extend(["", "Следующий шаг: после подтверждения соберу смету и найду цены."])
+    return "\n".join(lines)
 
 
 def _numbers_from_price_text(price_text: str, keywords: Tuple[str, ...]) -> List[float]:
@@ -2668,6 +2708,15 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
 
     parsed = _parse_request(raw_input)
     parsed = _topic2_hydrate_multifile_project_pdfs_v1(conn, task, parsed, raw_input)
+    if _topic2_volume_extract_requested_v1(raw_input) and parsed.get("project_bundle"):
+        text = _topic2_bundle_volumes_message_v1(parsed)
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "AWAITING_CONFIRMATION", "result": text, "error_message": ""}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_VOLUMES_EXTRACTED")
+        return True
 
     # Canon: clarification in task_history belongs to the same active task cycle.
     # It is context for current parsing/search gates, not a separate new task.
@@ -6222,54 +6271,6 @@ def _t2ar_project_rows_message_v1(parsed):
 try:
     _T2AR_PREV_ORIENT_ALLOWED_V1 = _t2_no_template_orient_allowed_v1
     def _t2_no_template_orient_allowed_v1(parsed):  # noqa: F811
-        raw = _low((parsed or {}).get("raw") or "") + " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
-        if any(x in raw for x in ("считай по найденным позициям", "считать по найденным позициям", "только найденные позиции")):
-            return True
-        return _T2AR_PREV_ORIENT_ALLOWED_V1(parsed)
-except Exception:
-    pass
-
-
-_T2AR_PREV_MISSING_QUESTION_V1 = _missing_question
-
-
-def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
-    rows = (parsed or {}).get("pdf_spec_rows") or []
-    project_rows = _t2ar_project_rows_from_pdf_v1(parsed)
-    if _t2_no_template_area_only_rows_v1(rows) and project_rows and not _t2_no_template_orient_allowed_v1(parsed):
-        return _t2ar_project_rows_message_v1(parsed)
-    return _T2AR_PREV_MISSING_QUESTION_V1(parsed)
-
-
-_T2AR_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
-
-
-def _t2ar_keywords_for_price_v1(name):
-    low = _low(name)
-    words = [w for w in re.split(r"[^0-9a-zа-яё]+", low) if len(w) >= 3]
-    keep = [w for w in words if w not in ("лист", "проем", "проема", "площадь", "поверхности")]
-    return tuple(keep[:6]) or tuple(words[:3])
-
-
-def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
-    project_rows = list((parsed or {}).get("pdf_project_rows") or [])
-    if not project_rows:
-        project_rows = _t2ar_project_rows_from_pdf_v1(parsed)
-    if project_rows and _t2_no_template_orient_allowed_v1(parsed):
-        items = []
-        for r in project_rows:
-            it = dict(r)
-            vals = _numbers_from_price_text(price_text or "", _t2ar_keywords_for_price_v1(it.get("name", "")))
-            it["price"] = _choose_value(vals, choice) if vals else 0.0
-            if not vals:
-                it["note"] = (it.get("note", "") + "; PRICE_MISSING").strip("; ")
-            items.append(it)
-        orig_build = globals().get("_build_estimate_items")
-        base_create = globals().get("_T2TR_ORIG_CREATE_XLSX") or _T2AR_PREV_CREATE_XLSX_V1
-        def _t2ar_build_from_project(_parsed, _price_text, _choice):
-            return items
-        globals()["_build_estimate_items"] = _t2ar_build_from_project
-        try:
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

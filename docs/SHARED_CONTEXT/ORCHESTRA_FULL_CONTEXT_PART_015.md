@@ -1,14 +1,62 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T15:53:53.497640+00:00
-git_sha_before_commit: 0587311f30ba848edc0de80b3eb570ab0b17856c
-part: 15/21
+generated_at_utc: 2026-07-07T16:23:54.166983+00:00
+git_sha_before_commit: 6720ac212228938db58f80474f167bfefc49159c
+part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: d78f317d4ace8c877ac808e835923b15ec980d27049554dbb7d8ba7e2bfc7c91
+SHA256_FULL_FILE: 21cd618a8ec5addbd1b83cc58c696c399c90e990bf996b171ab3bcf3514e6176
 ====================================================================================================
+        raw = _low((parsed or {}).get("raw") or "") + " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
+        if any(x in raw for x in ("считай по найденным позициям", "считать по найденным позициям", "только найденные позиции")):
+            return True
+        return _T2AR_PREV_ORIENT_ALLOWED_V1(parsed)
+except Exception:
+    pass
+
+
+_T2AR_PREV_MISSING_QUESTION_V1 = _missing_question
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    rows = (parsed or {}).get("pdf_spec_rows") or []
+    project_rows = _t2ar_project_rows_from_pdf_v1(parsed)
+    if _t2_no_template_area_only_rows_v1(rows) and project_rows and not _t2_no_template_orient_allowed_v1(parsed):
+        return _t2ar_project_rows_message_v1(parsed)
+    return _T2AR_PREV_MISSING_QUESTION_V1(parsed)
+
+
+_T2AR_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+
+
+def _t2ar_keywords_for_price_v1(name):
+    low = _low(name)
+    words = [w for w in re.split(r"[^0-9a-zа-яё]+", low) if len(w) >= 3]
+    keep = [w for w in words if w not in ("лист", "проем", "проема", "площадь", "поверхности")]
+    return tuple(keep[:6]) or tuple(words[:3])
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    project_rows = list((parsed or {}).get("pdf_project_rows") or [])
+    if not project_rows:
+        project_rows = _t2ar_project_rows_from_pdf_v1(parsed)
+    if project_rows and _t2_no_template_orient_allowed_v1(parsed):
+        items = []
+        for r in project_rows:
+            it = dict(r)
+            vals = _numbers_from_price_text(price_text or "", _t2ar_keywords_for_price_v1(it.get("name", "")))
+            it["price"] = _choose_value(vals, choice) if vals else 0.0
+            if not vals:
+                it["note"] = (it.get("note", "") + "; PRICE_MISSING").strip("; ")
+            items.append(it)
+        orig_build = globals().get("_build_estimate_items")
+        base_create = globals().get("_T2TR_ORIG_CREATE_XLSX") or _T2AR_PREV_CREATE_XLSX_V1
+        def _t2ar_build_from_project(_parsed, _price_text, _choice):
+            return items
+        globals()["_build_estimate_items"] = _t2ar_build_from_project
+        try:
             return base_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
         finally:
             globals()["_build_estimate_items"] = orig_build
@@ -8630,271 +8678,5 @@ def send_artifact_to_telegram(
 
 ====================================================================================================
 END_FILE: core/telegram_artifact_fallback.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/telegram_source_skill_extractor.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2f9e18163498265ad703ced0637bf33a83779fdfc4b7304974bb64d091a5f797
-====================================================================================================
-#!/usr/bin/env python3
-# === TELEGRAM_SOURCE_SKILL_EXTRACTOR_V1 ===
-# Read-only Telethon-based extractor for public Telegram sources.
-# Collects message metadata, links, and document references.
-# Does NOT save raw history to memory.db or create core.db tasks.
-from __future__ import annotations
-
-import asyncio
-import logging
-import os
-import re
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
-
-logger = logging.getLogger("telegram_source_skill_extractor")
-
-BASE = Path(__file__).parent.parent
-SESSION_PATH = BASE / "sessions" / "user.session"
-API_ID = 27925449
-
-URL_RE = re.compile(r"https?://[^\s\)\]\>\"']+")
-
-DOCUMENT_EXTENSIONS = {
-    ".pdf", ".docx", ".doc", ".xlsx", ".xls",
-    ".pptx", ".ppt", ".zip", ".rar", ".dwg", ".dxf",
-}
-
-TECHNADZOR_KEYWORDS = [
-    "акт", "дефект", "предписание", "заключение", "протокол",
-    "осмотр", "проверка", "замечание", "нарушение", "устранение",
-    "приёмка", "приемка", "скрытые работы", "исполнительная",
-    "норматив", "снип", "гост", "сп ", "фото", "документ",
-    "отчёт", "отчет", "смета", "спецификация", "чертёж", "чертеж",
-    "технадзор", "стройконтроль", "авторский надзор",
-    "кровля", "фасад", "перекрытие", "колонна", "фундамент",
-    "бетон", "арматура", "сварка", "металл", "кладка", "газобетон",
-    "отделка", "стяжка", "штукатурка", "электрика", "вентиляция",
-    "водоснабжение", "канализация", "охрана труда",
-]
-
-NOISE_MARKERS = [
-    "реклама", "продам", "куплю", "скидка", "акция",
-    "подпишись", "переходи по ссылке", "розыгрыш",
-    "заработок", "кредит без отказа", "займ",
-    "только сегодня", "бесплатно жми", "выиграли",
-]
-
-
-def load_env(path: str | None = None) -> dict:
-    env_path = Path(path) if path else BASE / ".env"
-    result = {}
-    if not env_path.exists():
-        return result
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        k, _, v = line.partition("=")
-        result[k.strip()] = v.strip()
-    return result
-
-
-def build_client(session_path: str | None = None):
-    from telethon import TelegramClient
-    sp = str(session_path or SESSION_PATH)
-    # api_hash not stored — authorized session does not need it for reads
-    return TelegramClient(sp, API_ID, "a" * 32)
-
-
-def extract_links(text: str) -> list[str]:
-    return URL_RE.findall(text or "")
-
-
-def is_relevant_for_document_skill(
-    message_text: str,
-    file_name: str | None = None,
-    links: list[str] | None = None,
-) -> bool:
-    low = (message_text or "").lower()
-    if any(n in low for n in NOISE_MARKERS):
-        return False
-    if any(kw in low for kw in TECHNADZOR_KEYWORDS):
-        return True
-    fname_low = (file_name or "").lower()
-    if any(ext in fname_low for ext in DOCUMENT_EXTENSIONS):
-        return True
-    for link in (links or []):
-        if any(ext in link.lower() for ext in DOCUMENT_EXTENSIONS):
-            return True
-    return False
-
-
-def build_source_record(msg_id: int, msg_date: str, text: str,
-                        media_type: str | None, file_name: str | None,
-                        links: list[str], channel: str) -> dict:
-    return {
-        "source": f"@{channel.lstrip('@')}",
-        "message_id": msg_id,
-        "message_date": msg_date,
-        "text": (text or "")[:1500],
-        "media_type": media_type,
-        "file_name": file_name,
-        "links": links,
-        "source_ref": f"https://t.me/{channel.lstrip('@')}/{msg_id}",
-    }
-
-
-async def check_source_access(source: str, client) -> dict:
-    try:
-        entity = await client.get_entity(source.lstrip("@"))
-        return {
-            "ok": True,
-            "id": entity.id,
-            "title": getattr(entity, "title", ""),
-            "username": getattr(entity, "username", ""),
-        }
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
-
-
-async def scan_source(source: str, client, limit: int = 1000) -> dict:
-    from telethon.tl.types import (
-        MessageMediaDocument, MessageMediaPhoto, MessageMediaWebPage
-    )
-
-    records: list[dict] = []
-    total = skipped_empty = skipped_noise = detected_docs = detected_links = 0
-
-    async for msg in client.iter_messages(source.lstrip("@"), limit=limit or None):
-        total += 1
-        text = (msg.message or "").strip()
-        if not text and not msg.media:
-            skipped_empty += 1
-            continue
-
-        low = text.lower()
-        if any(n in low for n in NOISE_MARKERS):
-            skipped_noise += 1
-            continue
-
-        links = extract_links(text)
-        file_name = None
-        media_type = None
-
-        if isinstance(msg.media, MessageMediaDocument):
-            doc = msg.media.document
-            for attr in getattr(doc, "attributes", []):
-                if hasattr(attr, "file_name") and attr.file_name:
-                    file_name = attr.file_name
-            media_type = "document"
-            detected_docs += 1
-        elif isinstance(msg.media, MessageMediaPhoto):
-            media_type = "photo"
-        elif isinstance(msg.media, MessageMediaWebPage):
-            wp = msg.media.webpage
-            if hasattr(wp, "url") and wp.url:
-                links.append(wp.url)
-            media_type = "webpage"
-
-        if links:
-            detected_links += 1
-
-        date_str = msg.date.isoformat() if msg.date else ""
-        record = build_source_record(
-            msg.id, date_str, text, media_type, file_name,
-            links, source.lstrip("@")
-        )
-        records.append(record)
-
-    return {
-        "total_fetched": total,
-        "skipped_empty": skipped_empty,
-        "skipped_noise": skipped_noise,
-        "detected_docs": detected_docs,
-        "detected_links": detected_links,
-        "records": records,
-    }
-
-
-async def download_relevant_documents(
-    client, msg, output_dir: Path
-) -> str | None:
-    from telethon.tl.types import MessageMediaDocument
-    if not isinstance(msg.media, MessageMediaDocument):
-        return None
-    doc = msg.media.document
-    file_name = f"doc_{msg.id}"
-    for attr in getattr(doc, "attributes", []):
-        if hasattr(attr, "file_name") and attr.file_name:
-            file_name = attr.file_name
-    ext = Path(file_name).suffix.lower()
-    if ext not in DOCUMENT_EXTENSIONS:
-        return None
-    out_path = output_dir / file_name
-    if out_path.exists():
-        return str(out_path)
-    try:
-        await client.download_media(msg, file=str(out_path))
-        return str(out_path)
-    except Exception as e:
-        logger.warning("download failed msg=%s err=%s", msg.id, e)
-        return None
-
-
-async def run_source_scan(
-    source: str = "@tnz_msk",
-    limit: int = 1000,
-    download_docs: bool = False,
-    docs_output_dir: Path | None = None,
-) -> dict:
-    client = build_client()
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        await client.disconnect()
-        return {"ok": False, "error": "session_not_authorized"}
-
-    access = await check_source_access(source, client)
-    if not access["ok"]:
-        await client.disconnect()
-        return {"ok": False, "error": access.get("error")}
-
-    scan = await scan_source(source, client, limit=limit)
-    downloaded: list[str] = []
-
-    if download_docs and docs_output_dir:
-        docs_output_dir.mkdir(parents=True, exist_ok=True)
-        from telethon.tl.types import MessageMediaDocument
-        async for msg in client.iter_messages(source.lstrip("@"), limit=limit or None):
-            if not isinstance(msg.media, MessageMediaDocument):
-                continue
-            text = msg.message or ""
-            links = extract_links(text)
-            doc = msg.media.document
-            fname = ""
-            for attr in getattr(doc, "attributes", []):
-                if hasattr(attr, "file_name") and attr.file_name:
-                    fname = attr.file_name
-            if is_relevant_for_document_skill(text, fname, links):
-                path = await download_relevant_documents(client, msg, docs_output_dir)
-                if path:
-                    downloaded.append(path)
-
-    await client.disconnect()
-
-    return {
-        "ok": True,
-        "source": source,
-        "access": access,
-        "scan": scan,
-        "downloaded_documents": downloaded,
-        "scanned_at": datetime.now(timezone.utc).isoformat(),
-    }
-# === END_TELEGRAM_SOURCE_SKILL_EXTRACTOR_V1 ===
-
-====================================================================================================
-END_FILE: core/telegram_source_skill_extractor.py
 FILE_CHUNK: 1/1
 ====================================================================================================
