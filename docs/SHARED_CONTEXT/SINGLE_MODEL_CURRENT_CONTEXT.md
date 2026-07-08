@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-08T20:00:52.342959+00:00
-GIT_SHA: 7c94079bf06d080258ed7b75bfa5e2f7b6c09bee
+GENERATED_AT: 2026-07-08T20:05:02.675576+00:00
+GIT_SHA: bd0f37460cd91b45e5c087c27c103d1effa9489a
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -77,15 +77,15 @@ recent_commits:
 - 95e659fb|Save 2026-07-07 topic2 search live session
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
-markers_missing: 11
+markers_missing: 14
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
 - TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_PRICE_CHOICE_CONFIRMED
 - TOPIC2_LOGISTICS_CONFIRMED
-- TOPIC2_DRIVE_UPLOAD_XLSX_OK
-- TOPIC2_DRIVE_UPLOAD_PDF_OK
+- TOPIC2_XLSX_CREATED
+- TOPIC2_PDF_CREATED
 last_failed:
 - ad69b7c1 | STALE_TIMEOUT
 - 341cde94 | STALE_TIMEOUT
@@ -94,7 +94,7 @@ blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 11
+NEXT_ACTION: live-test / close missing markers: 14
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
