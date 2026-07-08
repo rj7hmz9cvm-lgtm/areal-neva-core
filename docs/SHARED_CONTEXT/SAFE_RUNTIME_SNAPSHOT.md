@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-08T12:29:23.580608+00:00
-git_sha_before_commit: 5d2b372a14bd4c0e3c4fc3c1c598f7be38e5c0e4
+generated_at_utc: 2026-07-08T12:30:01.674476+00:00
+git_sha_before_commit: 822e44ce2338c38ee67ddf5b64530245d7d87acf
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+822e44ce FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 5d2b372a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 9a352d11 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c8638379 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ d41fa0f0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 4e467e29 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 97368483 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 908edcb0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-765628f2 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 5d2b372a14bd4c0e3c4fc3c1c598f7be38e5c0e4
-Author: Ila <ilakuznecov@mac.local>
-Date:   Wed Jul 8 15:00:08 2026 +0300
+commit 822e44ce2338c38ee67ddf5b64530245d7d87acf
+Author: root <root@graceful-olive.ptr.network>
+Date:   Wed Jul 8 15:29:29 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,7 +82,7 @@ Date:   Wed Jul 8 15:00:08 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  10 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   6 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
@@ -105,23 +105,23 @@ Date:   Wed Jul 8 15:00:08 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 160 ++++++++++-----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 +++----
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |  62 ++++++------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  14 ++-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 108 ++++++++++-----------
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  60 ++++++------
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   8 +-
  .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 251 insertions(+), 251 deletions(-)
+ 73 files changed, 254 insertions(+), 276 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
