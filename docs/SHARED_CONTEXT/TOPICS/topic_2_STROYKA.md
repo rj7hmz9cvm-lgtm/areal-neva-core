@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-08T18:35:02.822177+00:00
-GIT_SHA: 644557001d36434e82ebd3c31c416c3d17f9e978
+GENERATED_AT: 2026-07-08T19:00:31.649939+00:00
+GIT_SHA: 02a141d856fe1257f6948a0ae986f9ba61e4d805
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -31,7 +31,6 @@ FAILED_LAST_24H: 1
 - f5f758c8|docs: refresh single model context after topic2 handoff
 - d690605f|topic2: save canonical live repair handoff
 - 844fafb2|topic2: close PDF estimate confirmation flow
-- c8a9f1c6|Topic2 canonical estimate live repair
 
 ## MARKERS_LAST_24H
 - created:NEW

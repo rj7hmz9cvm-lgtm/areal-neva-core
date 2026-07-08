@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-08T18:35:03.503412+00:00
-GIT_SHA: 644557001d36434e82ebd3c31c416c3d17f9e978
+GENERATED_AT: 2026-07-08T19:00:32.294209+00:00
+GIT_SHA: 02a141d856fe1257f6948a0ae986f9ba61e4d805
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -72,7 +72,7 @@ DATE_UNKNOWN
 role: Сметы
 active: 0
 failed_24h: 1
-commits_last_7d: 7
+commits_last_7d: 6
 recent_commits:
 - 95e659fb|Save 2026-07-07 topic2 search live session
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
