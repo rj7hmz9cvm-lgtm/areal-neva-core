@@ -1,7 +1,7 @@
 # direction: technical_supervision
 
-GENERATED_AT: 2026-07-08T12:30:02.407298+00:00
-GIT_SHA: 822e44ce2338c38ee67ddf5b64530245d7d87acf
+GENERATED_AT: 2026-07-08T12:59:29.937959+00:00
+GIT_SHA: 3250690a3fab1e84a332177ee8d3b785643c79eb
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: technical_supervision
@@ -18,5 +18,5 @@ ALIASES: ['технадзор', 'наруш', 'дефект', 'осмотр', '�
 STRONG_ALIASES: []
 
 ## BOUND_TOPICS_STATUS
-- topic_5: BROKEN
+- topic_5: UNKNOWN
 

@@ -1,15 +1,15 @@
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-08T12:30:02.054309+00:00
-GIT_SHA: 822e44ce2338c38ee67ddf5b64530245d7d87acf
+GENERATED_AT: 2026-07-08T12:59:29.612338+00:00
+GIT_SHA: 3250690a3fab1e84a332177ee8d3b785643c79eb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
 ROLE: Технадзор
 DIRECTIONS_BOUND: technical_supervision
-CURRENT_STATUS: BROKEN
+CURRENT_STATUS: UNKNOWN
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 6
+FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 21
@@ -29,14 +29,6 @@ FAILED_LAST_24H: 6
 
 ## MARKERS_LAST_24H
 - created:NEW
-- reply_sent:topic5_direct_visit_material_buffered
-- PATCH_TOPIC5_DIRECT_VISIT_MATERIAL_DRIVE_FILE_V1:BUFFERED
-- reply_sent:topic5_violation_question_answer
-- PATCH_TOPIC5_VIOLATION_QUESTION_NOT_COMMENT_V1:HANDLED
-- reply_sent:topic5_full_canon_context_saved
-- topic5_full_canon_context_saved
-- state:FAILED
-- reply_sent:stale_failed
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды

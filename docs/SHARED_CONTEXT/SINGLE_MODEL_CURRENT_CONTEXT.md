@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-08T12:30:02.622828+00:00
-GIT_SHA: 822e44ce2338c38ee67ddf5b64530245d7d87acf
+GENERATED_AT: 2026-07-08T12:59:30.161154+00:00
+GIT_SHA: 3250690a3fab1e84a332177ee8d3b785643c79eb
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -17,7 +17,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 5 |
-| 5 | TEKHNADZOR | BROKEN | 0 | 6 |
+| 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
 
@@ -77,13 +77,15 @@ recent_commits:
 - 95e659fb|Save 2026-07-07 topic2 search live session
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
-markers_missing: 6
+markers_missing: 10
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
+- TOPIC2_TEMPLATE_SELECTED
+- TOPIC2_PRICE_ENRICHMENT_DONE
+- TOPIC2_PRICE_CHOICE_CONFIRMED
 - TOPIC2_LOGISTICS_CONFIRMED
-- TOPIC2_XLSX_CREATED
-- TOPIC2_MESSAGE_THREAD_ID_OK
-- TOPIC2_DONE_CONTRACT_OK
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
+- TOPIC2_DRIVE_UPLOAD_PDF_OK
 last_failed:
 - ad69b7c1 | STALE_TIMEOUT
 - 341cde94 | STALE_TIMEOUT
@@ -92,12 +94,12 @@ blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 6
+NEXT_ACTION: live-test / close missing markers: 10
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
 active: 0
-failed_24h: 6
+failed_24h: 0
 commits_last_7d: 0
 last_failed:
 - 7300d5f5 | STALE_TIMEOUT
