@@ -1,7 +1,7 @@
 # DIRECTION_STATUS_INDEX
 
-GENERATED_AT: 2026-07-08T09:00:02.661313+00:00
-GIT_SHA: 810a985820a2bc9485e11c89ff5dcd2ee9d430d6
+GENERATED_AT: 2026-07-08T09:28:30.205774+00:00
+GIT_SHA: 8acca6bd15d65ccea63e0c32e4836b92dfaa1baa
 Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 
 | direction | enabled | engine | topic_ids | bound_status |
@@ -10,7 +10,7 @@ Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 | orchestration_core | True | ai_router | [3008] | 3008:UNKNOWN |
 | telegram_automation | True | telegram_pipeline | [] | - |
 | memory_archive | True | context_search_archive_engine | [] | - |
-| internet_search | True | search_supplier | [500] | 500:BROKEN |
+| internet_search | True | search_supplier | [500] | 500:UNKNOWN |
 | product_search | True | search_supplier | [] | - |
 | auto_parts_search | True | search_supplier | [961] | 961:UNKNOWN |
 | construction_search | True | search_supplier | [] | - |

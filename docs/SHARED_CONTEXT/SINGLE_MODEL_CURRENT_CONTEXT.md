@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-08T09:00:02.868695+00:00
-GIT_SHA: 810a985820a2bc9485e11c89ff5dcd2ee9d430d6
+GENERATED_AT: 2026-07-08T09:28:30.392568+00:00
+GIT_SHA: 8acca6bd15d65ccea63e0c32e4836b92dfaa1baa
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -19,7 +19,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 5 |
 | 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
-| 500 | VEB_POISK | BROKEN | 0 | 5 |
+| 500 | VEB_POISK | UNKNOWN | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
 ### ЧТО INSTALLED НО НЕ VERIFIED (факт из NOT_CLOSED)
@@ -127,7 +127,7 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 ### topic_500 VEB_POISK
 role: Интернет-поиск
 active: 0
-failed_24h: 5
+failed_24h: 0
 commits_last_7d: 0
 last_failed:
 - 936241de | SEARCH_OUTPUT_INVALID_FALSE_VERIFIED
