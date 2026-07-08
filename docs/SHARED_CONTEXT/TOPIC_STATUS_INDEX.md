@@ -1,7 +1,7 @@
 # TOPIC_STATUS_INDEX
 
-GENERATED_AT: 2026-07-08T08:00:02.926510+00:00
-GIT_SHA: c92fdde2863c22556c01d7651d444b6b468f404f
+GENERATED_AT: 2026-07-08T08:28:12.737979+00:00
+GIT_SHA: b437d5111d176a4144e83cccb68e9949121bd293
 
 | topic_id | name | role | status | active | failed_24h | source |
 |----------|------|------|--------|--------|------------|--------|
@@ -10,7 +10,7 @@ GIT_SHA: c92fdde2863c22556c01d7651d444b6b468f404f
 | 5 | TEKHNADZOR | Технадзор | BROKEN | 0 | 6 | TOPICS/topic_5_TEKHNADZOR.md |
 | 11 | VIDEO | Видео | UNKNOWN | 0 | 0 | TOPICS/topic_11_VIDEO.md |
 | 210 | PROEKTIROVANIE | КЖ КМ | UNKNOWN | 0 | 0 | TOPICS/topic_210_PROEKTIROVANIE.md |
-| 500 | VEB_POISK | Интернет-поиск | BROKEN | 0 | 11 | TOPICS/topic_500_VEB_POISK.md |
+| 500 | VEB_POISK | Интернет-поиск | BROKEN | 0 | 8 | TOPICS/topic_500_VEB_POISK.md |
 | 794 | DEVOPS | Сервер DevOps | UNKNOWN | 0 | 0 | TOPICS/topic_794_DEVOPS.md |
 | 961 | AVTOZAPCHASTI | Автозапчасти | UNKNOWN | 0 | 0 | TOPICS/topic_961_AVTOZAPCHASTI.md |
 | 3008 | KODY_MOZGOV | Мозги оркестра | UNKNOWN | 0 | 0 | TOPICS/topic_3008_KODY_MOZGOV.md |
