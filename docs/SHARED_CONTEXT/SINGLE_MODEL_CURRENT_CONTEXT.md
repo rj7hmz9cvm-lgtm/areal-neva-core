@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-07T23:55:17.334224+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.511708+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 16 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 15 |
 | 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | BROKEN | 0 | 11 |
@@ -71,21 +71,21 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 0
-failed_24h: 16
+failed_24h: 15
 commits_last_7d: 7
 recent_commits:
 - 95e659fb|Save 2026-07-07 topic2 search live session
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
-markers_missing: 14
+markers_missing: 12
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
-- TOPIC2_PRICE_CHOICE_CONFIRMED
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
 - TOPIC2_PDF_CREATED
+- TOPIC2_PDF_CYRILLIC_OK
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
 last_failed:
 - ad69b7c1 | STALE_TIMEOUT
 - 341cde94 | STALE_TIMEOUT
@@ -94,7 +94,7 @@ blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 14
+NEXT_ACTION: live-test / close missing markers: 12
 
 ### topic_5 TEKHNADZOR
 role: Технадзор

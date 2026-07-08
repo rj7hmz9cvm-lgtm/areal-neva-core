@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-07T23:55:16.743548+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.004314+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -9,7 +9,7 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 16
+FAILED_LAST_24H: 15
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
@@ -34,36 +34,36 @@ FAILED_LAST_24H: 16
 - c8a9f1c6|Topic2 canonical estimate live repair
 
 ## MARKERS_LAST_24H
-- created:NEW
-- clarified:Всё хорошо спасибо за задачу выполнено
-- cancelled
-- continued:Отмена задач
-- continued:Отмени задачу задача завершена
-- clarified:Посмотри фото там есть все размеры
-- TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-- TOPIC2_DIAGNOSTIC_CHILD_CLOSED_AFTER_TECHNADZOR_ROUTE_FIX
-- TOPIC2_PRICE_SOURCE_MISSING:арматура А500
-- TOPIC2_PRICE_SOURCE_MISSING:материал стен (монолит)
-- TOPIC2_PRICE_SOURCE_MISSING:доставка (бетон)
-- TOPIC2_PRICE_SOURCE_MISSING:манипулятор/кран
-- TOPIC2_PRICE_SOURCE_MISSING:разгрузка
-- TOPIC2_PRICE_SOURCE_MISSING:**Примечание:** Цены на бетон и работу взяты из откр
-- TOPIC2_REVISION_REQUEUED_FOR_WORKER:d1022463-25c8-4f75-9490-6be9a61865dd
-- TOPIC2_REVISION_FACTS_APPLIED:d1022463-25c8-4f75-9490-6be9a61865dd
-- TOPIC2_MANUAL_WORK_PRICE_REQUIRED:monolith:4500
-- TOPIC2_MISSING_MATERIAL_PRICE_SOURCE_REQUIRED:sand,gravel
-- clarified:Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интер
-- PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1:RESTORED_FROM_ARTIFACT_HISTORY
-- clarified:да мне нужна смета по позициям указанным в данном документе это монтаж
-- confirmed:DONE
-- confirmed:ок
-- clarified:Нужно взять из проекта все спецификации и сравнить с предыдущим расчёт
-- clarified:ну как дела?
 - reply_sent:duplicate_file_question
 - TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND
 - PATCH_GLOBAL_DUPLICATE_FILE_OFFER_REPLY_V1:INTENT:description:FROM:b7f12c67-dup-
 - PATCH_GLOBAL_DUPLICATE_FILE_OFFER_REPLY_V1:MERGED_TO:b7f12c67-dup-live-20260707-
 - reply_sent:duplicate_file_offer_choice
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
+- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
+- TOPIC2_INPUT_GATE_DOMAIN:drainage_network
+- TOPIC2_INPUT_GATE_DRAINAGE_BLOCK
+- TOPIC2_STALE_HOUSE_CONTEXT_BLOCKED
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-004
+- TOPIC2_CURRENT_FILE_SOURCE_OF_TRUTH:mikea_rp3.pdf
+- TOPIC2_INPUT_GATE_HANDLED:state=WAITING_CLARIFICATION:domain=drainage_network
+- TOPIC2_INPUT_GATE_SENT:12075
+- reply_sent:waiting_clarification
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-005
+- TOPIC2_INPUT_GATE_SENT:12078
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-006
+- TOPIC2_INPUT_GATE_SENT:12081
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-007
+- TOPIC2_INPUT_GATE_SENT:12084
+- state:FAILED
+- reply_sent:stale_failed
+- TOPIC2_INPUT_GATE_FILE_MENU_BYPASS:description
+- STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:handled
+- reply_sent:invalid_result
+- result:Начинаю расчёт сметы по схеме дренажа/ливнёвки из файла "Открыть Микеа 3 
+- reply_sent:result
+- result:Начинаю расчёт по схеме дренажа/ливнёвки из файла "Открыть Микеа 3 РП 3 (
+- result:Файл "Открыть Микеа 3 РП 3 (1) (3) (3).pdf" идентифицирован как схема дре
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -139,8 +139,6 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
-- TOPIC2_PRICE_CHOICE_CONFIRMED
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
 - TOPIC2_PDF_CREATED

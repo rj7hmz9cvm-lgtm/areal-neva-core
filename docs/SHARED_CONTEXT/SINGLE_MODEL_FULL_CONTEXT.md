@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-07T23:55:17.123424+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.338734+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 16 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 15 |
 | 5 | TEKHNADZOR | BROKEN | 0 | 6 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -4454,8 +4454,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-07T23:55:16.702221+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:01.962379+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4482,7 +4482,7 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- created:NEW
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -4532,7 +4532,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 16
+ACTIVE: 0  FAILED_24H: 15
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -5324,8 +5324,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-07T23:55:16.743548+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.004314+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -5333,7 +5333,7 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 16
+FAILED_LAST_24H: 15
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
@@ -5358,36 +5358,36 @@ FAILED_LAST_24H: 16
 - c8a9f1c6|Topic2 canonical estimate live repair
 
 ## MARKERS_LAST_24H
-- created:NEW
-- clarified:Всё хорошо спасибо за задачу выполнено
-- cancelled
-- continued:Отмена задач
-- continued:Отмени задачу задача завершена
-- clarified:Посмотри фото там есть все размеры
-- TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2
-- TOPIC2_DIAGNOSTIC_CHILD_CLOSED_AFTER_TECHNADZOR_ROUTE_FIX
-- TOPIC2_PRICE_SOURCE_MISSING:арматура А500
-- TOPIC2_PRICE_SOURCE_MISSING:материал стен (монолит)
-- TOPIC2_PRICE_SOURCE_MISSING:доставка (бетон)
-- TOPIC2_PRICE_SOURCE_MISSING:манипулятор/кран
-- TOPIC2_PRICE_SOURCE_MISSING:разгрузка
-- TOPIC2_PRICE_SOURCE_MISSING:**Примечание:** Цены на бетон и работу взяты из откр
-- TOPIC2_REVISION_REQUEUED_FOR_WORKER:d1022463-25c8-4f75-9490-6be9a61865dd
-- TOPIC2_REVISION_FACTS_APPLIED:d1022463-25c8-4f75-9490-6be9a61865dd
-- TOPIC2_MANUAL_WORK_PRICE_REQUIRED:monolith:4500
-- TOPIC2_MISSING_MATERIAL_PRICE_SOURCE_REQUIRED:sand,gravel
-- clarified:Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интер
-- PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1:RESTORED_FROM_ARTIFACT_HISTORY
-- clarified:да мне нужна смета по позициям указанным в данном документе это монтаж
-- confirmed:DONE
-- confirmed:ок
-- clarified:Нужно взять из проекта все спецификации и сравнить с предыдущим расчёт
-- clarified:ну как дела?
 - reply_sent:duplicate_file_question
 - TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND
 - PATCH_GLOBAL_DUPLICATE_FILE_OFFER_REPLY_V1:INTENT:description:FROM:b7f12c67-dup-
 - PATCH_GLOBAL_DUPLICATE_FILE_OFFER_REPLY_V1:MERGED_TO:b7f12c67-dup-live-20260707-
 - reply_sent:duplicate_file_offer_choice
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
+- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
+- TOPIC2_INPUT_GATE_DOMAIN:drainage_network
+- TOPIC2_INPUT_GATE_DRAINAGE_BLOCK
+- TOPIC2_STALE_HOUSE_CONTEXT_BLOCKED
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-004
+- TOPIC2_CURRENT_FILE_SOURCE_OF_TRUTH:mikea_rp3.pdf
+- TOPIC2_INPUT_GATE_HANDLED:state=WAITING_CLARIFICATION:domain=drainage_network
+- TOPIC2_INPUT_GATE_SENT:12075
+- reply_sent:waiting_clarification
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-005
+- TOPIC2_INPUT_GATE_SENT:12078
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-006
+- TOPIC2_INPUT_GATE_SENT:12081
+- TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:b7f12c67-dup-live-20260707-007
+- TOPIC2_INPUT_GATE_SENT:12084
+- state:FAILED
+- reply_sent:stale_failed
+- TOPIC2_INPUT_GATE_FILE_MENU_BYPASS:description
+- STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:handled
+- reply_sent:invalid_result
+- result:Начинаю расчёт сметы по схеме дренажа/ливнёвки из файла "Открыть Микеа 3 
+- reply_sent:result
+- result:Начинаю расчёт по схеме дренажа/ливнёвки из файла "Открыть Микеа 3 РП 3 (
+- result:Файл "Открыть Микеа 3 РП 3 (1) (3) (3).pdf" идентифицирован как схема дре
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5463,8 +5463,6 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
-- TOPIC2_PRICE_CHOICE_CONFIRMED
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
 - TOPIC2_PDF_CREATED
@@ -6053,8 +6051,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-07T23:55:16.792257+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.047233+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -6173,8 +6171,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-07T23:55:16.827298+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.078437+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6783,8 +6781,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-07T23:55:16.862048+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.119532+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6811,7 +6809,7 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- created:NEW
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -7350,8 +7348,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-07T23:55:16.909768+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.164983+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -7379,8 +7377,6 @@ FAILED_LAST_24H: 11
 
 ## MARKERS_LAST_24H
 - created:NEW
-- continued:Выполни мне последний поиск снова но с реальными ссы
-- continued:Реальными ссылками
 - PATCH_GLOBAL_HISTORICAL_MEMORY_RECALL_V1:core_tasks=e97fd869,7369d892,666bdb72
 - state:IN_PROGRESS
 - state:FAILED
@@ -7408,6 +7404,8 @@ FAILED_LAST_24H: 11
 - created:NEW_RERUN_TOPIC500_AFTER_DEEPSEEK_BLOCK
 - created:NEW_RERUN_TOPIC500_COREDB_DEDUPE
 - ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK
+- TOPIC500_CONFIRM_RECOVERY_DONE_FROM_TASK:0a856447-6221-4e6d-9bb6-4ce6caaaed25
+- TOPIC500_SUPERSEDED_SEARCH_RESULT_CLOSED_BY_CONFIRMED_RERUN:ad502435-8f05-460b-b
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -7482,8 +7480,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-07T23:55:16.947881+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.198033+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7578,8 +7576,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-07T23:55:16.991035+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.233783+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7671,8 +7669,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-07T23:55:17.034109+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.265867+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7775,8 +7773,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-07T23:55:17.073692+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.296439+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7884,8 +7882,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-07T23:55:17.113064+00:00
-GIT_SHA: 265d59cc80c9e68349bb0b43b2310b4fe05e6edd
+GENERATED_AT: 2026-07-08T00:00:02.331260+00:00
+GIT_SHA: 8fa23d7f14c940cb4c2aa9c8d149ed392c30c09b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
