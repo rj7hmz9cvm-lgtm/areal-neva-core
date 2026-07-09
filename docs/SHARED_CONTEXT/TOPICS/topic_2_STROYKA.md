@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-08T23:35:02.554884+00:00
-GIT_SHA: e799c9c3f7dbdfbd12895bfb196118a9f063389e
+GENERATED_AT: 2026-07-09T00:01:41.785929+00:00
+GIT_SHA: cac150aabcfea26368b10f9b1093d5b80399592b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -33,36 +33,7 @@ FAILED_LAST_24H: 0
 - 844fafb2|topic2: close PDF estimate confirmation flow
 
 ## MARKERS_LAST_24H
-- created:NEW
-- clarified:Все что у меня есть я тебе отправил
-- clarified:Да, считать по найденным проектным позициям. Цены на материалы, изгото
-- clarified:да
-- clarified:3
-- clarified:1
-- clarified:Это же ангар это видно из проекта а там один этаж зачем ты спрашиваешь
-- clarified:Всё есть технической документации
-- clarified:Отмена задач
-- clarified:Отмена завершая задачу
-- cancelled
-- clarified:Отмена говорю всё завершить перестань
-- clarified:Ебанат блядь всё отмена
-- LIVE_TEST_TOPIC2_BUNDLE_CREATED_BY_CODEX
-- LIVE_TEST_TOPIC2_BUNDLE_FRESH_ENGINE_CREATED
-- LIVE_TEST_TOPIC2_BUNDLE_VOLUME_EXTRACT_CREATED
-- LIVE_TEST_CAD_PDF_MODE_VOLUME_GATE_CREATED
-- LIVE_TEST_CAD_PDF_MODE_ONE_MESSAGE_VOLUMES_CREATED
-- TOPIC2_NORMALIZED_DEDUP_LIVE_TEST_SENT
-- TOPIC2_PROJECT_BUNDLE_READY
-- TOPIC2_PROJECT_POSITIONS_EXTRACTED
-- TOPIC2_VOLUME_FACTS_NORMALIZED
-- TOPIC2_CONSTRUCTION_ITEMS_DEDUPED
-- TOPIC2_TOTALS_BY_MATERIAL_CALCULATED
-- TOPIC2_MISSING_ITEMS_REPORTED
-- TOPIC2_PUBLIC_OUTPUT_UNITS_NORMALIZED
-- TOPIC2_PUBLIC_OUTPUT_INTERNAL_KEYS_HIDDEN
-- TOPIC2_PUBLIC_OUTPUT_TOTALS_GROUPED
-- clarified:Всё я доволен задачей завершена
-- clarified:2
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
