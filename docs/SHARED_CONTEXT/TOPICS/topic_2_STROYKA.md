@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-09T20:10:02.447319+00:00
-GIT_SHA: 12e73d3271d823952db6c7e5ca2007d0ba977ba6
+GENERATED_AT: 2026-07-09T20:35:23.207107+00:00
+GIT_SHA: 13b93944be491364038f5f9f77f30d985c1b4e59
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -26,7 +26,6 @@ FAILED_LAST_24H: 0
 
 ## COMMITS_LAST_14D
 - 95e659fb|Save 2026-07-07 topic2 search live session
-- c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 
 ## MARKERS_LAST_24H
 - (none)
