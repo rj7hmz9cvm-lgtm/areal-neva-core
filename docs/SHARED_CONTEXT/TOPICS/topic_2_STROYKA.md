@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-09T05:02:22.647518+00:00
-GIT_SHA: 1e4394e02ac02e273b45aa78ce67a9bd75648a79
+GENERATED_AT: 2026-07-09T05:05:02.707831+00:00
+GIT_SHA: 41575740b6fa5a10a2c89e2e55e26eaa55accd7e
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -30,7 +30,6 @@ FAILED_LAST_24H: 0
 - ed4c3c7b|topic2: append live rules and save repair state
 - f5f758c8|docs: refresh single model context after topic2 handoff
 - d690605f|topic2: save canonical live repair handoff
-- 844fafb2|topic2: close PDF estimate confirmation flow
 
 ## MARKERS_LAST_24H
 - (none)
