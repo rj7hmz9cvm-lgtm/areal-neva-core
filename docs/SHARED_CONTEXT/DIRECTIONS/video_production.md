@@ -1,7 +1,7 @@
 # direction: video_production
 
-GENERATED_AT: 2026-07-09T01:31:51.878692+00:00
-GIT_SHA: bc832f09aa976b8a26a4276c946d4d15ec4c263d
+GENERATED_AT: 2026-07-09T01:35:02.387928+00:00
+GIT_SHA: 65b70e6929205a0d1933e11926763a9e83ec8ba8
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: video_production
