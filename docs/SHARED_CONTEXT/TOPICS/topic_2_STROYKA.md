@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-09T07:02:31.631426+00:00
-GIT_SHA: 9fd57f8f10adbb907bd232ac88c9e927a4d81f58
+GENERATED_AT: 2026-07-09T07:05:02.008585+00:00
+GIT_SHA: aef629b94de8c163c031dee016011b722b82ab34
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -29,7 +29,6 @@ FAILED_LAST_24H: 0
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
 - f5f758c8|docs: refresh single model context after topic2 handoff
-- d690605f|topic2: save canonical live repair handoff
 
 ## MARKERS_LAST_24H
 - (none)
