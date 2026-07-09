@@ -1,7 +1,7 @@
 # direction: estimates
 
-GENERATED_AT: 2026-07-09T13:34:23.791307+00:00
-GIT_SHA: ba37937fa4c8ad1d96abcd107751aaa13d734ff6
+GENERATED_AT: 2026-07-09T13:35:02.970455+00:00
+GIT_SHA: c5db727acc62e18bd5c91c4e2675897434609abe
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: estimates
