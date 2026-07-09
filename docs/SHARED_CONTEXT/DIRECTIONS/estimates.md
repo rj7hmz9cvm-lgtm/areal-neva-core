@@ -1,7 +1,7 @@
 # direction: estimates
 
-GENERATED_AT: 2026-07-09T23:35:34.739999+00:00
-GIT_SHA: efd0e8d06c3e0972f9786323b26ea32ffb1ba6a3
+GENERATED_AT: 2026-07-09T23:40:02.544956+00:00
+GIT_SHA: dc753cec5e70779c192dcce6adc796ceddc650af
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: estimates
@@ -18,5 +18,5 @@ ALIASES: ['смет', 'расценк', 'ведомост', 'объем рабо
 STRONG_ALIASES: []
 
 ## BOUND_TOPICS_STATUS
-- topic_2: IDLE_NO_FAILURES_NOT_VERIFIED
+- topic_2: UNKNOWN
 
