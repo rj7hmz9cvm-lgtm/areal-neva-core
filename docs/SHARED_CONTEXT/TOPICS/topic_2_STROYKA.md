@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-10T10:45:02.647986+00:00
-GIT_SHA: 044e53ef8ca769e8ab92c9d94607db982b1a6fb3
+GENERATED_AT: 2026-07-10T10:50:02.611314+00:00
+GIT_SHA: 8d801e0e510d8af85d1fa8b3ec13b8b36e51bbaa
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -13,7 +13,7 @@ FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 154
+- CANCELLED: 155
 - DONE: 247
 - FAILED: 166
 
@@ -28,7 +28,19 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE
+- FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
+- TOPIC2_FILE_INTAKE_LOCAL_PATH_OK
+- TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
+- TOPIC2_PDF_SPEC_EMPTY
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
+- clarified:Ты берёшь информацию всю полностью которая есть в проекте никакой боль
+- TOPIC2_CLARIFIED_HISTORY_MERGED_BEFORE_GATES
+- clarified:Считать только по найденным позициям согласно проекта ничего лишнего н
+- clarified:да по проекту
+- TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count=3
+- cancelled
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -41,7 +53,7 @@ FAILED_LAST_24H: 0
 - - topic_2: "Доделай мне нормально эту задачу"
 
 ## RUNTIME_FILE_CATALOG_SUMMARY
-total_files: 62
+total_files: 66
 chats: 1
 
 ## DRIVE_UPLOAD_CONTRACT
