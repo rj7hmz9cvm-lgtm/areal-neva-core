@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-10T00:05:50.482144+00:00
-git_sha_before_commit: 33e0862965fc5bd09a4155b85f0095710e428918
+generated_at_utc: 2026-07-10T00:10:01.855596+00:00
+git_sha_before_commit: 07e99c7abb428304493ab1ad7657542b70889ace
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+07e99c7a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 33e08629 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 dc753cec FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 efd0e8d0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ b6390322 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 80383297 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 b0a21872 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 93bbde39 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-01f76f4b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 33e0862965fc5bd09a4155b85f0095710e428918
-Author: Ila <ilakuznecov@mac.local>
-Date:   Fri Jul 10 02:40:07 2026 +0300
+commit 07e99c7abb428304493ab1ad7657542b70889ace
+Author: root <root@graceful-olive.ptr.network>
+Date:   Fri Jul 10 03:05:56 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -58,7 +58,7 @@ Date:   Fri Jul 10 02:40:07 2026 +0300
  docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   6 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
  .../DIRECTIONS/google_drive_storage.md             |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
@@ -78,11 +78,11 @@ Date:   Fri Jul 10 02:40:07 2026 +0300
  .../DIRECTIONS/telegram_automation.md              |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   6 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  20 +--
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
@@ -105,14 +105,14 @@ Date:   Fri Jul 10 02:40:07 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 160 ++++++++++-----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  10 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  56 ++++----
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 200 ++++++++++-----------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   8 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
@@ -120,8 +120,8 @@ Date:   Fri Jul 10 02:40:07 2026 +0300
  .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 73 files changed, 261 insertions(+), 263 deletions(-)
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
+ 73 files changed, 276 insertions(+), 276 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
