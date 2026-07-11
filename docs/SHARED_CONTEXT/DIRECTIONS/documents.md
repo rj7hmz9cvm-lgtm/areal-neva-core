@@ -1,7 +1,7 @@
 # direction: documents
 
-GENERATED_AT: 2026-07-11T13:46:22.065521+00:00
-GIT_SHA: 1d74609127cd2c4e9aee24e9784e24c4fb32b991
+GENERATED_AT: 2026-07-11T13:50:02.758902+00:00
+GIT_SHA: e64ba11d5baf96ee493ddfb2d6a3dbfe95ee0958
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: documents
