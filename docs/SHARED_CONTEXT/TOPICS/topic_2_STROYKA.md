@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-11T23:50:02.443323+00:00
-GIT_SHA: 668bf75b846131c302080b568136fa343b5e6960
+GENERATED_AT: 2026-07-12T00:18:51.552186+00:00
+GIT_SHA: c17f4022689dd883d4ae3770326256cee84d8b33
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -28,11 +28,7 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- created:NEW
-- clarified:Ты берёшь информацию всю полностью которая есть в проекте никакой боль
-- clarified:Считать только по найденным позициям согласно проекта ничего лишнего н
-- clarified:да по проекту
-- cancelled
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
