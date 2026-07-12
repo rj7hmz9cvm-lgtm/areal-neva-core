@@ -1,7 +1,7 @@
 # direction: internet_search
 
-GENERATED_AT: 2026-07-12T03:20:02.410031+00:00
-GIT_SHA: db1c9316739b85226a67232be2a3f9a884b5daec
+GENERATED_AT: 2026-07-12T03:49:14.772451+00:00
+GIT_SHA: ed895dc998d098b49801f9ad36298684cc05901a
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: internet_search
