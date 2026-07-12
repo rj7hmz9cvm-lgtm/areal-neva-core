@@ -1,7 +1,7 @@
 # direction: construction_search
 
-GENERATED_AT: 2026-07-12T08:20:02.398419+00:00
-GIT_SHA: 5d1ec30e57e4c2a2fefb18cc339a534a43aaee87
+GENERATED_AT: 2026-07-12T08:49:54.054778+00:00
+GIT_SHA: 43b205e416d634ae2d8700d3734504d942143710
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: construction_search
