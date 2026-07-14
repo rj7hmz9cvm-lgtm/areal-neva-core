@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-14T01:25:21.318326+00:00
-git_sha_before_commit: 18883d6e8cffbc5ab2afe64a4bcda0e94abd5437
+generated_at_utc: 2026-07-14T01:30:02.157962+00:00
+git_sha_before_commit: 644a66a2dcbe6fee4e74c57e1797567e1c93c407
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+644a66a2 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 18883d6e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c0385026 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 a45ed75b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ c40161fd FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c226393a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 370e916c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 512348e0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-7b805060 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 18883d6e8cffbc5ab2afe64a4bcda0e94abd5437
-Author: Ila <ilakuznecov@mac.local>
-Date:   Tue Jul 14 04:00:07 2026 +0300
+commit 644a66a2dcbe6fee4e74c57e1797567e1c93c407
+Author: root <root@graceful-olive.ptr.network>
+Date:   Tue Jul 14 04:25:27 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -105,9 +105,9 @@ Date:   Tue Jul 14 04:00:07 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 160 ++++++++++-----------
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 200 ++++++++++-----------
  .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 +++----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++---
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
@@ -121,7 +121,7 @@ Date:   Tue Jul 14 04:00:07 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 249 insertions(+), 249 deletions(-)
+ 73 files changed, 269 insertions(+), 269 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -374,9 +374,6 @@ PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=fc03d3ed-876d-470c
   "timestamp": datetime.datetime.utcnow().isoformat(),
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-07 23:07:00,174 INFO DAEMON: STT ok transcript_len=97
-2026-07-07 23:07:00,279 INFO DAEMON: Task ad69b7c1-8d6c-4007-bb05-f9ce0cfc63bc created state=NEW topic_id=2
-2026-07-07 23:07:00,280 INFO DAEMON: Update id=262222478 is handled. Duration 700 ms by bot id=8216054898
 2026-07-07 23:07:32,042 INFO DAEMON: STT env check groq=True
 2026-07-07 23:07:32,042 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_12362.ogg size=86262 model=whisper-large-v3-turbo
 2026-07-07 23:07:32,326 INFO DAEMON: STT http_status=200
@@ -404,3 +401,6 @@ PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=fc03d3ed-876d-470c
 2026-07-10 13:49:12,838 INFO DAEMON: Update id=262222490 is handled. Duration 91 ms by bot id=8216054898
 2026-07-10 13:49:34,782 INFO DAEMON: Update id=262222491 is handled. Duration 72 ms by bot id=8216054898
 2026-07-10 13:49:51,009 INFO DAEMON: Update id=262222492 is handled. Duration 73 ms by bot id=8216054898
+2026-07-14 04:25:35,681 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
+2026-07-14 04:25:35,695 WARNING DAEMON: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8216054898)
+2026-07-14 04:26:12,504 INFO DAEMON: Connection established (tryings = 1, bot id = 8216054898)
