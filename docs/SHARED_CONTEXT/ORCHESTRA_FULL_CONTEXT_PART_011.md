@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-15T11:58:30.611980+00:00
-git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
+generated_at_utc: 2026-07-15T12:28:31.506718+00:00
+git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
 part: 11/22
 
 
@@ -2500,7 +2500,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4d7a770f09442f2ed23e46a97b5547cff003138ee03252bc4c0aecf0e0f7cc6a
+SHA256_FULL_FILE: fb7ff71c90dab8679b773f73c7179bf24bb6acb60c53ad86462ed247e7a15133
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -4625,6 +4625,229 @@ def extract_project_pdf_bundle(files: List[str], topic_id: int = 0, **kwargs) ->
         result["missing_items"] = []
     return result
 # === END_PATCH_TOPIC2_ARCHICAD_SUMMARY_TABLE_V1 ===
+
+# === PATCH_TOPIC2_ARCHICAD_PROJECT_ISOLATION_V2 ===
+# A new ARCHICAD project is parsed only from its own PDF.  The summary sheet is
+# evidence for structural quantities, not proof that every estimate quantity is
+# present.
+_TOPIC2_ARCHICAD_PREV_POSITIONS_V2 = extract_project_positions_bundle
+
+
+def _topic2_archicad_project_positions_v2(file_path: str, topic_id: int = 2) -> Dict[str, Any]:
+    try:
+        import fitz  # type: ignore
+        doc = fitz.open(str(file_path))
+    except Exception as exc:
+        return {"ok": False, "errors": [str(exc)], "positions": []}
+
+    project_facts: List[Dict[str, Any]] = []
+    properties: List[Dict[str, Any]] = []
+    positions: List[Dict[str, Any]] = []
+    quantities: List[Dict[str, Any]] = []
+    totals: List[Dict[str, Any]] = []
+    evidence: List[Dict[str, Any]] = []
+    summary_rows: List[Dict[str, Any]] = []
+    summary_words: List[Dict[str, Any]] = []
+    summary_page = 0
+    all_page_text: List[Tuple[int, str]] = []
+
+    try:
+        for page_index in range(len(doc)):
+            words: List[Dict[str, Any]] = []
+            for word in doc[page_index].get_text("words") or []:
+                if len(word) < 5:
+                    continue
+                text = _topic2_archicad_text_v1(word[4])
+                if not text:
+                    continue
+                words.append({
+                    "x0": float(word[0]), "y0": float(word[1]),
+                    "x1": float(word[2]), "y1": float(word[3]), "text": text,
+                })
+            page_text = _bundle_norm_v1(" ".join(row["text"] for row in words))
+            all_page_text.append((page_index + 1, page_text))
+            if "ведомость расхода стали на элемент" in page_text.lower():
+                summary_page = page_index + 1
+                summary_words = words
+        summary_rows = _topic2_archicad_summary_rows_v1(file_path)
+    finally:
+        doc.close()
+
+    source_name = os.path.basename(str(file_path))
+    if all_page_text:
+        first_page = all_page_text[0][1]
+        title = "Индивидуальный жилой дом" if "индивидуальный жилой дом" in first_page.lower() else ""
+        address_match = re.search(r"Адрес участка:\s*(.+?)(?:Санкт-Петербург|2026\s*г\.)", first_page, re.I)
+        if title:
+            project_facts.append({
+                "name": "Объект", "value": title, "source_file": source_name,
+                "page": 1, "method": "ARCHICAD_TEXT_LAYER", "text": first_page[:900],
+            })
+        if address_match:
+            project_facts.append({
+                "name": "Адрес", "value": _bundle_norm_v1(address_match.group(1)),
+                "source_file": source_name, "page": 1,
+                "method": "ARCHICAD_TEXT_LAYER", "text": first_page[:900],
+            })
+    project_facts.append({
+        "name": "Страниц обработано", "value": len(all_page_text), "unit": "стр.",
+        "source_file": source_name, "page": 0, "method": "ARCHICAD_TEXT_LAYER_ALL_PAGES",
+        "text": f"Обработано страниц: {len(all_page_text)}",
+    })
+
+    for page_no, page_text in all_page_text:
+        low = page_text.lower().replace("ё", "е")
+        if "несущих монолитных железобетонных конструкций" in low:
+            project_facts.append({
+                "name": "Раздел проекта", "value": "Несущие монолитные железобетонные конструкции",
+                "source_file": source_name, "page": page_no,
+                "method": "ARCHICAD_TEXT_LAYER", "text": page_text[:900],
+            })
+        for grade, water, frost in re.findall(r"Бетон\s+[ВB](\d+(?:[.,]\d+)?)\s*,?\s*W(\d+)\s*,?\s*,?\s*F(\d+)", page_text, re.I):
+            value = f"В{grade.replace(',', '.')} W{water} F{frost}"
+            if not any(row.get("value") == value for row in properties):
+                properties.append({
+                    "name": "Класс бетона", "value": value, "source_file": source_name,
+                    "page": page_no, "method": "ARCHICAD_TEXT_LAYER", "text": page_text[:900],
+                })
+        for mark, thickness in re.findall(r"Плит[аы]\s+(ФП1|ПП2|ПП3|ПП4)[^\n]{0,120}?толщиной\s+(\d+)\s*мм", page_text, re.I):
+            key = f"Толщина {mark.upper()}"
+            if not any(row.get("name") == key for row in properties):
+                properties.append({
+                    "name": key, "value": float(thickness), "unit": "мм",
+                    "source_file": source_name, "page": page_no,
+                    "method": "ARCHICAD_TEXT_LAYER", "text": page_text[:900],
+                })
+
+    by_element: Dict[str, Dict[str, Any]] = {}
+    for row in summary_rows:
+        raw_name = _s(row.get("name"))
+        if raw_name.startswith("Арматура по ведомости: "):
+            element = raw_name.split(": ", 1)[1]
+            by_element.setdefault(element, {})["rebar_mass_kg"] = float(row.get("qty") or 0)
+        elif raw_name.startswith("Бетон по проектной ведомости: "):
+            element = raw_name.split(": ", 1)[1]
+            by_element.setdefault(element, {})["concrete_volume_m3"] = float(row.get("qty") or 0)
+
+    for element, values in by_element.items():
+        item = {
+            "position_type": "project_structural_element", "name": element,
+            "source_file": source_name, "page": summary_page,
+            "sheet": "Ведомость расхода стали", "table_name": "Ведомость расхода стали на элемент",
+            "row_text": element, "method": "ARCHICAD_TEXT_LAYER_COORDINATES",
+            "confidence": "direct", **values,
+        }
+        positions.append(item)
+        if values.get("rebar_mass_kg") is not None:
+            quantities.append({
+                "name": "Арматура", "item": element, "value": values["rebar_mass_kg"], "unit": "кг",
+                "quantity_kind": "mass_kg", "source_file": source_name, "page": summary_page,
+                "method": "ARCHICAD_TEXT_LAYER_COORDINATES", "text": element,
+            })
+        if values.get("concrete_volume_m3") is not None:
+            quantities.append({
+                "name": "Бетон", "item": element, "value": values["concrete_volume_m3"], "unit": "м³",
+                "quantity_kind": "volume_m3", "source_file": source_name, "page": summary_page,
+                "method": "ARCHICAD_TEXT_LAYER_COORDINATES", "text": element,
+            })
+
+    numeric = []
+    for word in summary_words:
+        number = _topic2_archicad_number_v1(word.get("text"))
+        if number is not None:
+            numeric.append((word, number))
+
+    total_line = [(word, number) for word, number in numeric if 438 <= word["y0"] <= 457]
+    rebar_bands = (
+        (170, 210, "А500С Ø8"), (210, 255, "А500С Ø12"), (255, 300, "А500С Ø16"),
+        (340, 375, "А240 Ø8"), (380, 425, "А240 Ø10"), (425, 460, "А240 Ø16"),
+    )
+    for x0, x1, label in rebar_bands:
+        values = [number for word, number in total_line if x0 <= word["x0"] < x1]
+        if values:
+            quantities.append({
+                "name": "Арматура по классу и диаметру", "item": label, "value": values[0], "unit": "кг",
+                "quantity_kind": "mass_kg", "source_file": source_name, "page": summary_page,
+                "method": "ARCHICAD_TEXT_LAYER_COORDINATES", "text": f"Итого {label}: {values[0]} кг",
+                "estimate_row_kind": "rollup_total",
+            })
+
+    for name, x0, x1, unit in (
+        ("Арматура всего", 465, 510, "кг"),
+        ("Бетон всего", 510, 550, "м³"),
+    ):
+        values = [number for word, number in total_line if x0 <= word["x0"] < x1]
+        if values:
+            totals.append({
+                "name": name, "value": values[0], "unit": unit,
+                "source_file": source_name, "page": summary_page,
+                "method": "ARCHICAD_TEXT_LAYER_COORDINATES",
+            })
+
+    for y0, mark in ((535, "ГБ 150"), (558, "ГБ 400")):
+        count = [number for word, number in numeric if 175 <= word["x0"] < 230 and abs(word["y0"] - y0) <= 5]
+        volume = [number for word, number in numeric if 260 <= word["x0"] < 330 and abs(word["y0"] - y0) <= 5]
+        if count and volume:
+            positions.append({
+                "position_type": "masonry_material", "name": mark, "count_pcs": int(count[0]),
+                "volume_m3": volume[0], "source_file": source_name, "page": summary_page,
+                "sheet": "Ведомость расхода стали", "table_name": "Блоки строительные",
+                "row_text": f"{mark}: {int(count[0])} шт; {volume[0]} м³",
+                "method": "ARCHICAD_TEXT_LAYER_COORDINATES", "confidence": "direct",
+            })
+            quantities.extend((
+                {"name": "Блоки строительные", "item": mark, "value": int(count[0]), "unit": "шт", "quantity_kind": "count_pcs", "source_file": source_name, "page": summary_page, "method": "ARCHICAD_TEXT_LAYER_COORDINATES", "text": mark},
+                {"name": "Блоки строительные", "item": mark, "value": volume[0], "unit": "м³", "quantity_kind": "volume_m3", "source_file": source_name, "page": summary_page, "method": "ARCHICAD_TEXT_LAYER_COORDINATES", "text": mark},
+            ))
+
+    if summary_page:
+        evidence.append({
+            "source_file": source_name, "page": summary_page,
+            "sheet": "Ведомость расхода стали", "table_name": "Ведомость расхода стали на элемент",
+            "text": "Координатно разобраны строки элементов, итоги арматуры/бетона и ведомость блоков",
+            "method": "ARCHICAD_TEXT_LAYER_COORDINATES",
+        })
+
+    missing_items: List[str] = []
+    if not summary_page or not positions:
+        missing_items.append("steel_concrete_summary_table")
+    if not any(row.get("position_type") == "masonry_material" for row in positions):
+        missing_items.append("masonry_schedule")
+    # These layers/operations are named in the album, but no complete quantity
+    # schedule was found.  They must be clarified or calculated before pricing.
+    joined = "\n".join(text for _, text in all_page_text).lower().replace("ё", "е")
+    expected_missing = (
+        ("опалуб", "formwork_area_m2"),
+        ("щебеноч", "crushed_stone_base_volume_m3"),
+        ("гидроизоляц", "waterproofing_area_m2"),
+        ("пенополист", "insulation_area_m2"),
+    )
+    for marker, missing_key in expected_missing:
+        if marker in joined:
+            missing_items.append(missing_key)
+
+    result = {
+        "ok": bool(summary_page and positions), "result_type": "PROJECT_POSITIONS_RESULT",
+        "topic_id": topic_id, "project_facts": project_facts, "facts": project_facts,
+        "properties": properties, "positions": positions, "quantities": quantities,
+        "direct_quantities": quantities, "calculated_quantities": [], "derived_quantities": [],
+        "totals": totals, "totals_by_material": totals, "missing_items": list(dict.fromkeys(missing_items)),
+        "source_evidence": evidence, "normalization_evidence": evidence,
+        "VOLUMES_COMPLETE": not missing_items,
+        "POSITIONS_EXTRACTION_COMPLETE": not missing_items,
+        "source": "ARCHICAD_PROJECT_COORDINATE_PARSER_V2",
+        "files": [{"source_file": source_name, "pages_seen": len(all_page_text), "section": "PROJECT"}],
+    }
+    return result
+
+
+def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dict[str, Any]:  # noqa: F811
+    if len(files or []) == 1 and files[0] and os.path.exists(str(files[0])):
+        current = _topic2_archicad_project_positions_v2(str(files[0]), topic_id=topic_id)
+        if current.get("ok"):
+            return current
+    return _TOPIC2_ARCHICAD_PREV_POSITIONS_V2(files, topic_id=topic_id)
+# === END_PATCH_TOPIC2_ARCHICAD_PROJECT_ISOLATION_V2 ===
 
 ====================================================================================================
 END_FILE: core/pdf_spec_extractor.py

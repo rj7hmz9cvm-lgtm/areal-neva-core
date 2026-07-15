@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-15T11:58:30.605308+00:00
-git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
+generated_at_utc: 2026-07-15T12:28:31.502578+00:00
+git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
 part: 5/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/5
-SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
+SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -4125,7 +4125,11 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 (str(task_id),),
             ).fetchall()
             _df_hist = "\\n".join(str(r[0] or "") for r in _df_hist_rows)
-            if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist:
+            _df_isolated_replay = any(marker in _df_hist for marker in (
+                "TOPIC2_CORRECTIVE_REPLAY_AS_NEW_PROJECT",
+                "TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED",
+            ))
+            if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist and not _df_isolated_replay:
                 _df_can_fast_final = True
                 try:
                     _df_pending_loader = globals().get("_t2fdsg_load_pending")
@@ -7191,12 +7195,6 @@ def _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id):
     return True
 
 async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
-    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
-    input_type = _p6_s_20260504(_p6_row_get_20260504(task, "input_type", "text"), 50)
-
-    if chat_id is None:
-        chat_id = _p6_row_get_20260504(task, "chat_id", None)
-    if topic_id is None:
 
 ====================================================================================================
 END_FILE: task_worker.py

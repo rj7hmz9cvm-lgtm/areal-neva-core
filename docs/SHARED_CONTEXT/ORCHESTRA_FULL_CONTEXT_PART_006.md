@@ -1,14 +1,20 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-15T11:58:30.607234+00:00
-git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
+generated_at_utc: 2026-07-15T12:28:31.503143+00:00
+git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
 part: 6/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/5
-SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
+SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
 ====================================================================================================
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p6_s_20260504(_p6_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p6_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
         topic_id = _p6_row_get_20260504(task, "topic_id", 0)
     try:
         topic_id = int(topic_id or 0)
@@ -7780,14 +7786,6 @@ if _T2FP_ORIG_HANDLE_NEW and not getattr(_T2FP_ORIG_HANDLE_NEW, "_t2fp_wrapped",
 # === PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
 # Root cause: PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1 intercepts topic_2 tasks via
 # _handle_drive_file and _p6e67_try_merge, routing them to _t2fer_run_final_estimate
-# (simplified v2 path → handle_topic2_estimate_final_close → "Позиций: 1").
-# Fix: wrap _t2fer_run_final_estimate so topic_2 calls go to full P2/P3 pipeline instead.
-import logging as _t2rfp_log
-import inspect as _t2rfp_inspect
-_T2RFP_LOG = _t2rfp_log.getLogger("task_worker")
-
-_T2RFP_ORIG = globals().get("_t2fer_run_final_estimate")
-
 
 ====================================================================================================
 END_FILE: task_worker.py

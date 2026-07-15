@@ -1,14 +1,21 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-15T11:58:30.608887+00:00
-git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
+generated_at_utc: 2026-07-15T12:28:31.504650+00:00
+git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
 part: 8/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/5
-SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
+SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
 ====================================================================================================
+                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_SO_ERR:%s", _e)
+                except Exception:
+                    pass
+            return _t2cf_orig_send_once(conn, task_id, chat_id, text, reply_to, kind)
+        globals()["_send_once"] = _send_once
+
+    if _t2cf_orig_send_once_ex:
         def _send_once_ex(conn, task_id, chat_id, text, reply_to=None, kind="result", *args, **kwargs):
             try:
                 if isinstance(text, str) and _t2cf_should_sanitize(text):
@@ -7484,13 +7491,6 @@ try:
                     conn.commit()
                 except Exception:
                     pass
-                bypass = globals().get("_ghmr_prev_handle_new")
-                if bypass:
-                    return await bypass(conn, task, chat_id, topic_id)
-        except Exception:
-            pass
-        if _t2apbmr_prev_handle_new:
-            return await _t2apbmr_prev_handle_new(conn, task, chat_id, topic_id)
 
 ====================================================================================================
 END_FILE: task_worker.py
@@ -7500,8 +7500,15 @@ FILE_CHUNK: 4/5
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 5/5
-SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
+SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
 ====================================================================================================
+                bypass = globals().get("_ghmr_prev_handle_new")
+                if bypass:
+                    return await bypass(conn, task, chat_id, topic_id)
+        except Exception:
+            pass
+        if _t2apbmr_prev_handle_new:
+            return await _t2apbmr_prev_handle_new(conn, task, chat_id, topic_id)
         return None
 
     if _t2apbmr_prev_handle_new:
@@ -7756,6 +7763,58 @@ except Exception as _t2rasr_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_READY_ARTIFACT_STATE_RECOVERY_V1 ===
+
+
+# === PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1 ===
+# A price-choice reply must not replace a drive-file task's JSON/file context.
+try:
+    _T2DPC_PREV_PREPARE = globals().get("_t2sc_prepare_parent_for_generation")
+
+    if _T2DPC_PREV_PREPARE:
+        def _t2sc_prepare_parent_for_generation(conn, parent_id, choice, child_id=""):  # noqa: F811
+            row = conn.execute(
+                "SELECT input_type FROM tasks WHERE id=? LIMIT 1",
+                (str(parent_id),),
+            ).fetchone()
+            input_type = ""
+            try:
+                input_type = str(row["input_type"] or "")
+            except Exception:
+                try:
+                    input_type = str(row[0] or "")
+                except Exception:
+                    pass
+            if input_type == "drive_file":
+                _t2sc_hist_once(conn, parent_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + str(choice))
+                _t2sc_hist_once(
+                    conn,
+                    parent_id,
+                    "PATCH_TOPIC2_SINGLE_CANON_PRICE_FLOW_V1:price_choice_bound:" + str(child_id),
+                )
+                _t2sc_hist_once(
+                    conn,
+                    parent_id,
+                    "PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1:RAW_INPUT_PRESERVED",
+                )
+                conn.execute(
+                    "UPDATE tasks SET state='IN_PROGRESS', result='', error_message=?, "
+                    "updated_at=datetime('now') WHERE id=?",
+                    ("TOPIC2_PRICE_CHOICE_CONFIRMED_REPROCESS:" + str(choice), str(parent_id)),
+                )
+                return
+            return _T2DPC_PREV_PREPARE(conn, parent_id, choice, child_id)
+
+        globals()["_t2sc_prepare_parent_for_generation"] = _t2sc_prepare_parent_for_generation
+        logger.info("PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1 installed")
+except Exception as _t2dpc_install_err:
+    try:
+        logger.exception(
+            "PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1_INSTALL_ERR:%s",
+            _t2dpc_install_err,
+        )
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1 ===
 
 
 if __name__ == "__main__":

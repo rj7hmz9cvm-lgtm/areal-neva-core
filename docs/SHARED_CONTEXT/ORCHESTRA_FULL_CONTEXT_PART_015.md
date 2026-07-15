@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T11:58:30.615593+00:00
-git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
+generated_at_utc: 2026-07-15T12:28:31.509154+00:00
+git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 5aa07ff596034c4e47c28156189082fb141c4b1244a2a07789f4ba4f8361aa7d
+SHA256_FULL_FILE: ca3d6e31dc337d1a58f93329361e49f6507892c6f6ed64f6099fec262dd2b1df
 ====================================================================================================
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
             return template_items
@@ -3802,6 +3802,121 @@ def _quality_gate_xlsx(xlsx_path: str, items: List[Dict[str, Any]], py_total: fl
     except Exception as exc:
         return False, "ARCHIVE_BLANK_XLSX_VALIDATE_ERROR:" + _s(exc)[:120]
 # === END_PATCH_TOPIC2_ARCHIVE_ONLY_PRICE_AND_COMPLETION_V1 ===
+
+# === PATCH_TOPIC2_NEW_PROJECT_PDF_ISOLATION_V2 ===
+# A newly uploaded project PDF is an isolated project context.  It must pass the
+# project-volume completeness gate before prices, templates or final artifacts.
+_TOPIC2_NEW_PROJECT_PREV_HANDLER_V2 = maybe_handle_stroyka_estimate
+
+
+def _topic2_project_incomplete_message_v2(bundle: Dict[str, Any]) -> str:
+    facts = list(bundle.get("project_facts") or [])
+    positions = list(bundle.get("positions") or [])
+    totals = list(bundle.get("totals") or [])
+    missing = list(bundle.get("missing_items") or [])
+    object_name = next((_s(row.get("value")) for row in facts if _low(row.get("name")) == "объект"), "проект")
+    pages = next((_s(row.get("value")) for row in facts if "страниц" in _low(row.get("name"))), "")
+    lines = [
+        "Принял PDF как новый отдельный проект.",
+        f"Объект: {object_name}",
+    ]
+    if pages:
+        lines.append(f"Обработано страниц: {pages}")
+    lines.extend(["", "Подтверждено по ведомостям проекта:"])
+    for row in totals:
+        value = row.get("value")
+        unit = _s(row.get("unit"))
+        if value not in (None, ""):
+            lines.append(f"- {_s(row.get('name'))}: {value:g} {unit}" if isinstance(value, (int, float)) else f"- {_s(row.get('name'))}: {value} {unit}")
+    masonry = [row for row in positions if _s(row.get("position_type")) == "masonry_material"]
+    for row in masonry:
+        lines.append(f"- {_s(row.get('name'))}: {int(row.get('count_pcs') or 0)} шт, {float(row.get('volume_m3') or 0):g} м³")
+    structural = [row for row in positions if _s(row.get("position_type")) == "project_structural_element"]
+    lines.append(f"- Конструктивные элементы: {len(structural)} позиций с объёмом бетона и массой арматуры")
+
+    labels = {
+        "formwork_area_m2": "площадь опалубки",
+        "crushed_stone_base_volume_m3": "объём щебёночного основания",
+        "waterproofing_area_m2": "площадь гидроизоляции",
+        "insulation_area_m2": "площадь утепления",
+        "steel_concrete_summary_table": "сводная ведомость бетона и арматуры",
+        "masonry_schedule": "ведомость кладочных блоков",
+    }
+    lines.extend(["", "До сметы не подтверждены отдельной ведомостью:"])
+    for item in missing:
+        lines.append(f"- {labels.get(_s(item), _s(item))}")
+    lines.extend([
+        "",
+        "Цены и смету пока не запускаю, чтобы не подмешивать старые позиции и не выдумывать объёмы.",
+        "Уточни: рассчитать отсутствующие объёмы по геометрии чертежей или считать только позиции из подтверждённых ведомостей?",
+    ])
+    return "\n".join(lines)
+
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    try:
+        task_id = _s(_row_get(task, "id", ""))
+        chat_id = _s(_row_get(task, "chat_id", ""))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        input_type = _low(_s(_row_get(task, "input_type", "")))
+        raw_input = _s(_row_get(task, "raw_input", ""))
+        if topic_id == TOPIC_ID_STROYKA and input_type in ("drive_file", "file", "document"):
+            meta: Dict[str, Any] = {}
+            try:
+                meta = json.loads(raw_input) if raw_input.strip().startswith("{") else {}
+            except Exception:
+                meta = {}
+            file_name = _s(meta.get("file_name"))
+            mime_type = _low(meta.get("mime_type"))
+            caption = _s(meta.get("caption"))
+            is_pdf = file_name.lower().endswith(".pdf") or "pdf" in mime_type
+            is_estimate = any(word in _low(caption + " " + raw_input) for word in ("смет", "стоимость", "посчитать"))
+            if task_id and is_pdf and is_estimate:
+                import glob as _t2np_glob
+                paths = _t2np_glob.glob(str(BASE / "runtime" / "drive_files" / f"{task_id}_*"))
+                current_path = next((path for path in paths if path.lower().endswith(".pdf") and os.path.getsize(path) > 1000), "")
+                if current_path:
+                    from core.pdf_spec_extractor import extract_project_positions_bundle as _t2np_extract
+                    bundle = _t2np_extract([current_path], topic_id=TOPIC_ID_STROYKA) or {}
+                    if bundle.get("ok") and not bundle.get("POSITIONS_EXTRACTION_COMPLETE"):
+                        text = _topic2_project_incomplete_message_v2(bundle)
+                        pending = {
+                            "version": "TOPIC2_NEW_PROJECT_PDF_ISOLATION_V2",
+                            "status": "WAITING_PROJECT_VOLUME_CLARIFICATION",
+                            "task_id": task_id, "chat_id": chat_id, "topic_id": topic_id,
+                            "source_file": current_path, "project_bundle": bundle,
+                            "created_at": _now(),
+                        }
+                        _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+                        _memory_save(chat_id, f"topic_2_project_bundle_{task_id}", pending)
+                        _history_safe(conn, task_id, "TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED")
+                        _history_safe(conn, task_id, f"TOPIC2_PROJECT_ALL_PAGES_SCANNED:{(bundle.get('files') or [{}])[0].get('pages_seen', 0)}")
+                        _history_safe(conn, task_id, f"TOPIC2_PROJECT_POSITIONS_EXTRACTED:{len(bundle.get('positions') or [])}")
+                        _history_safe(conn, task_id, "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO")
+                        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUME_GATE")
+                        _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUME_GATE")
+                        send_res = await _send_text(
+                            chat_id, text,
+                            _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None),
+                            topic_id,
+                        )
+                        kwargs = {
+                            "state": "WAITING_CLARIFICATION", "result": text,
+                            "error_message": "TOPIC2_PROJECT_VOLUMES_INCOMPLETE",
+                        }
+                        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+                        _update_task_safe(conn, task_id, **kwargs)
+                        return True
+    except Exception as exc:
+        try:
+            _history_safe(conn, _s(_row_get(task, "id", "")), "TOPIC2_NEW_PROJECT_PDF_ISOLATION_ERR:" + _s(exc)[:180])
+        except Exception:
+            pass
+        if logger:
+            logger.exception("TOPIC2_NEW_PROJECT_PDF_ISOLATION_ERR")
+    return await _TOPIC2_NEW_PROJECT_PREV_HANDLER_V2(conn, task, logger)
+# === END_PATCH_TOPIC2_NEW_PROJECT_PDF_ISOLATION_V2 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

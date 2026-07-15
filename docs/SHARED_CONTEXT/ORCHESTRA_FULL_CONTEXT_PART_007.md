@@ -1,14 +1,22 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-15T11:58:30.607982+00:00
-git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
+generated_at_utc: 2026-07-15T12:28:31.503924+00:00
+git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
 part: 7/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/5
-SHA256_FULL_FILE: 0a7095a9174b99b761390c04f342fa3113fd1a328ef9ac6ac0359d93d6a1b1f2
+SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
 ====================================================================================================
+# (simplified v2 path → handle_topic2_estimate_final_close → "Позиций: 1").
+# Fix: wrap _t2fer_run_final_estimate so topic_2 calls go to full P2/P3 pipeline instead.
+import logging as _t2rfp_log
+import inspect as _t2rfp_inspect
+_T2RFP_LOG = _t2rfp_log.getLogger("task_worker")
+
+_T2RFP_ORIG = globals().get("_t2fer_run_final_estimate")
+
 if _T2RFP_ORIG and not getattr(_T2RFP_ORIG, "_t2rfp_wrapped", False):
     async def _t2fer_run_final_estimate(conn, task, reason):
         try:
@@ -7515,13 +7523,6 @@ try:
                         text = _t2cf_sanitize(text)
             except Exception as _e:
                 try:
-                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_SO_ERR:%s", _e)
-                except Exception:
-                    pass
-            return _t2cf_orig_send_once(conn, task_id, chat_id, text, reply_to, kind)
-        globals()["_send_once"] = _send_once
-
-    if _t2cf_orig_send_once_ex:
 
 ====================================================================================================
 END_FILE: task_worker.py
