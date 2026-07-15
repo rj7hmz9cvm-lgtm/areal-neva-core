@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-15T11:30:02.371413+00:00",
-  "git_sha_before_commit": "6849116b0e740a2af6443f13cf7878cb0f41c881",
+  "generated_at_utc": "2026-07-15T11:58:30.623117+00:00",
+  "git_sha_before_commit": "74fb9a0f50074e192743cbfea8491861bc04c664",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 434,
@@ -2041,9 +2041,9 @@
       "path": "core/pdf_spec_extractor.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 85921,
-      "sha256": "ae9c361266d55ddec81bf8c8dccf25b8ebf9b26375adcefcae916f600965ddab",
-      "chars": 81777,
+      "size_bytes": 94267,
+      "sha256": "4d7a770f09442f2ed23e46a97b5547cff003138ee03252bc4c0aecf0e0f7cc6a",
+      "chars": 89865,
       "chunks": 1
     },
     {
@@ -2194,9 +2194,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 507762,
-      "sha256": "48e25637bf4a8331dafef0a3c55e47fdc3fc8853e02bb642bf90ce7c32fcdadd",
-      "chars": 459332,
+      "size_bytes": 525068,
+      "sha256": "5aa07ff596034c4e47c28156189082fb141c4b1244a2a07789f4ba4f8361aa7d",
+      "chars": 475679,
       "chunks": 2
     },
     {
@@ -3481,7 +3481,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34841,
+      "size_bytes": 34850,
       "sha256": "",
       "chars": 0,
       "chunks": 0

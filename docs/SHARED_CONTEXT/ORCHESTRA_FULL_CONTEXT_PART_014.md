@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-15T11:30:02.364785+00:00
-git_sha_before_commit: 6849116b0e740a2af6443f13cf7878cb0f41c881
+generated_at_utc: 2026-07-15T11:58:30.614675+00:00
+git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 48e25637bf4a8331dafef0a3c55e47fdc3fc8853e02bb642bf90ce7c32fcdadd
+SHA256_FULL_FILE: 5aa07ff596034c4e47c28156189082fb141c4b1244a2a07789f4ba4f8361aa7d
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -2078,10 +2078,11 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     sheet_name = pending.get("sheet_name")
     _sheet_fallback = pending.get("sheet_fallback", False)
     choice = parse_price_choice(confirm_text)
+    archive_price_mode = _topic2_archive_price_mode_v1(parsed.get("raw") or "")
 
     # PATCH_TOPIC2_FINAL_REQUIRES_ONLINE_PRICES_V1
     # Canon: final topic_2 estimate with internet prices must not close on empty/stale online_prices.
-    if not str(online_prices or '').strip():
+    if not archive_price_mode and not str(online_prices or '').strip():
         try:
             _history_safe(conn, task_id, 'CODEX_RESTART_AFTER_ONLINE_PRICE_EMPTY_FINAL')
             online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
@@ -2106,7 +2107,7 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         _t2_delivery_distance = float(parsed.get('distance_km') or 0)
     except Exception:
         _t2_delivery_distance = 0.0
-    if _t2_delivery_distance > 0 and not _numbers_from_price_text(online_prices, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')):
+    if not archive_price_mode and _t2_delivery_distance > 0 and not _numbers_from_price_text(online_prices, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')):
         try:
             _history_safe(conn, task_id, 'CODEX_RESTART_AFTER_DELIVERY_PRICE_MISSING')
             online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
@@ -3093,6 +3094,14 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     }
     _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
 
+    if _topic2_archive_price_mode_v1(raw_input):
+        pending["status"] = "ARCHIVE_PRICE_CONFIRMED"
+        _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+        _history_safe(conn, task_id, "TOPIC2_INTERNET_SEARCH_DISABLED_BY_USER")
+        _history_safe(conn, task_id, "TOPIC2_ARCHIVE_PRICE_MODE_CONFIRMED")
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:archive_latest_or_blank")
+        return await _generate_and_send(conn, task, pending, "archive_latest_or_blank", logger=logger)
+
     text = _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices)
     send_res = await _send_text(chat_id, text, reply_to, topic_id)
     kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
@@ -3440,6 +3449,8 @@ _STV3_EXPLICIT_PRICE_WORDS = (
 )
 
 def parse_price_choice(text: str) -> Dict[str, Any]:
+    if _low(str(text or "")).strip() == "archive_latest_or_blank":
+        return {"choice": "archive_latest_or_blank", "confirmed": True}
     result = _stv3_orig_ppc(text)
     t = _low(str(text or "")).replace("[voice]", "").strip()
     explicit = any(x in t for x in _STV3_EXPLICIT_PRICE_WORDS)
@@ -6219,20 +6230,6 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
         template_items = _t2tr_add_required_blocks(template_items, parsed, price_text, choice)
         orig_build = globals().get('_build_estimate_items')
 
-        def _t2tr_build_from_template(_parsed, _price_text, _choice):
-            return template_items
-
-        globals()['_build_estimate_items'] = _t2tr_build_from_template
-        try:
-            return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
-        finally:
-            globals()['_build_estimate_items'] = orig_build
-    return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
-# === END_PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
-
-# === PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
-# If a project PDF has only AR/TЭП rows but a canonical full-house template is selected,
-# do not stop the task. The template matrix is the calculation basis; PDF facts are inputs.
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

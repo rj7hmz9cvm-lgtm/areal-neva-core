@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-15T11:30:02.362954+00:00
-git_sha_before_commit: 6849116b0e740a2af6443f13cf7878cb0f41c881
+generated_at_utc: 2026-07-15T11:58:30.611980+00:00
+git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
 part: 11/22
 
 
@@ -2500,7 +2500,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ae9c361266d55ddec81bf8c8dccf25b8ebf9b26375adcefcae916f600965ddab
+SHA256_FULL_FILE: 4d7a770f09442f2ed23e46a97b5547cff003138ee03252bc4c0aecf0e0f7cc6a
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -4420,6 +4420,211 @@ def extract_project_pdf_bundle(files: List[str], topic_id: int = 0, **kwargs) ->
         "source": "HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1",
     }
 # === END_HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1 ===
+
+# === PATCH_TOPIC2_ARCHICAD_SUMMARY_TABLE_V1 ===
+# ARCHICAD/PDFTron may expose Russian text as CP1251 bytes decoded as Latin-1.
+# Read the native text layer first and extract only explicit summary-table facts.
+def _topic2_archicad_text_v1(value: Any) -> str:
+    text = _s(value)
+    if not text:
+        return ""
+    hints = sum(text.count(ch) for ch in "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ")
+    cyrillic = sum(1 for ch in text if "А" <= ch <= "я" or ch in "Ёё")
+    if hints < 1 or cyrillic > hints:
+        return _bundle_norm_v1(text)
+
+    out: List[str] = []
+    latin1_run: List[str] = []
+
+    def flush() -> None:
+        if not latin1_run:
+            return
+        chunk = "".join(latin1_run)
+        latin1_run.clear()
+        try:
+            out.append(chunk.encode("latin-1").decode("cp1251"))
+        except Exception:
+            out.append(chunk)
+
+    for char in text:
+        if ord(char) <= 255:
+            latin1_run.append(char)
+        else:
+            flush()
+            out.append(char)
+    flush()
+    repaired = "".join(out)
+    repaired_cyrillic = sum(1 for ch in repaired if "А" <= ch <= "я" or ch in "Ёё")
+    return _bundle_norm_v1(repaired if repaired_cyrillic > cyrillic else text)
+
+
+def _topic2_archicad_number_v1(value: Any) -> Optional[float]:
+    text = _s(value).replace("\xa0", " ").strip()
+    if not re.fullmatch(r"-?\d+(?:[.,]\d+)?", text):
+        return None
+    try:
+        return float(text.replace(",", "."))
+    except Exception:
+        return None
+
+
+def _topic2_archicad_summary_rows_v1(file_path: str) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    try:
+        import fitz  # type: ignore
+        doc = fitz.open(str(file_path))
+    except Exception:
+        return rows
+
+    try:
+        for page_index in range(len(doc)):
+            raw_words = doc[page_index].get_text("words") or []
+            words = []
+            for word in raw_words:
+                if len(word) < 5:
+                    continue
+                words.append({
+                    "x0": float(word[0]),
+                    "y0": float(word[1]),
+                    "x1": float(word[2]),
+                    "y1": float(word[3]),
+                    "text": _topic2_archicad_text_v1(word[4]),
+                })
+            page_text = _bundle_norm_v1(" ".join(w["text"] for w in words)).lower()
+            if "ведомость расхода стали на элемент" not in page_text:
+                continue
+
+            labels: Dict[float, List[Dict[str, Any]]] = {}
+            for word in words:
+                if word["x0"] >= 175 or not (150 <= word["y0"] <= 460):
+                    continue
+                key = round(word["y0"] / 2.5) * 2.5
+                labels.setdefault(key, []).append(word)
+
+            numeric = []
+            for word in words:
+                number = _topic2_archicad_number_v1(word["text"])
+                if number is not None:
+                    numeric.append((word, number))
+
+            found_elements = 0
+            for label_y, label_words in sorted(labels.items()):
+                name = _bundle_norm_v1(" ".join(w["text"] for w in sorted(label_words, key=lambda item: item["x0"])))
+                low_name = _bundle_norm_v1(name).lower()
+                if not name or low_name in {"итого", "марка", "элемента"}:
+                    continue
+                if not any(ch.isalpha() for ch in name):
+                    continue
+                steel = [number for word, number in numeric if 460 <= word["x0"] < 510 and abs(word["y0"] - label_y) <= 5]
+                concrete = [number for word, number in numeric if 510 <= word["x0"] < 550 and abs(word["y0"] - label_y) <= 5]
+                if not steel or not concrete:
+                    continue
+                found_elements += 1
+                evidence = f"Ведомость расхода стали, строка {name}"
+                rows.append({
+                    "section": "КР",
+                    "name": f"Арматура по ведомости: {name}",
+                    "unit": "кг",
+                    "qty": round(float(steel[0]), 3),
+                    "source_file": os.path.basename(str(file_path)),
+                    "page": page_index + 1,
+                    "source": "ARCHICAD_TEXT_LAYER",
+                    "note": evidence,
+                })
+                rows.append({
+                    "section": "КР",
+                    "name": f"Бетон по проектной ведомости: {name}",
+                    "unit": "м³",
+                    "qty": round(float(concrete[0]), 3),
+                    "source_file": os.path.basename(str(file_path)),
+                    "page": page_index + 1,
+                    "source": "ARCHICAD_TEXT_LAYER",
+                    "note": evidence,
+                })
+
+            block_rows = 0
+            if "блоки строительные" in page_text:
+                block_labels: Dict[float, List[Dict[str, Any]]] = {}
+                for word in words:
+                    if word["x0"] < 150 and word["y0"] > 500:
+                        key = round(word["y0"] / 2.5) * 2.5
+                        block_labels.setdefault(key, []).append(word)
+                for label_y, label_words in sorted(block_labels.items()):
+                    name = _bundle_norm_v1(" ".join(w["text"] for w in sorted(label_words, key=lambda item: item["x0"])))
+                    if not re.search(r"\bГБ\s*\d+\b", name, re.I):
+                        continue
+                    volume = [number for word, number in numeric if 260 <= word["x0"] < 330 and abs(word["y0"] - label_y) <= 4]
+                    if not volume:
+                        continue
+                    block_rows += 1
+                    rows.append({
+                        "section": "АР",
+                        "name": f"Блоки строительные {name}",
+                        "unit": "м³",
+                        "qty": round(float(volume[0]), 3),
+                        "source_file": os.path.basename(str(file_path)),
+                        "page": page_index + 1,
+                        "source": "ARCHICAD_TEXT_LAYER",
+                        "note": f"Ведомость блоков, строка {name}",
+                    })
+
+            if found_elements or block_rows:
+                break
+    finally:
+        doc.close()
+
+    deduped: List[Dict[str, Any]] = []
+    seen = set()
+    for row in rows:
+        key = (_bundle_norm_v1(row.get("name")).lower(), _s(row.get("unit")), row.get("qty"), row.get("page"))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
+
+
+_TOPIC2_ARCHICAD_PREV_EXTRACT_SPEC_V1 = extract_spec
+
+
+def extract_spec(file_path: str, **kwargs) -> Dict[str, Any]:  # noqa: F811
+    base = _TOPIC2_ARCHICAD_PREV_EXTRACT_SPEC_V1(file_path, **kwargs) or {}
+    if base.get("rows"):
+        return base
+    rows = _topic2_archicad_summary_rows_v1(file_path)
+    if not rows:
+        return base
+    return {
+        "rows": rows,
+        "count": len(rows),
+        "error": "",
+        "errors": [],
+        "stub": False,
+        "source": "PDF_SPEC_ARCHICAD_SUMMARY_TABLE_V1",
+        "pages_scanned": "all",
+    }
+
+
+_TOPIC2_ARCHICAD_PREV_BUNDLE_V1 = extract_project_pdf_bundle
+
+
+def extract_project_pdf_bundle(files: List[str], topic_id: int = 0, **kwargs) -> Dict[str, Any]:  # noqa: F811
+    result = dict(_TOPIC2_ARCHICAD_PREV_BUNDLE_V1(files, topic_id=topic_id, **kwargs) or {})
+    if not (result.get("facts") or result.get("specs") or result.get("volumes")):
+        result["VOLUMES_COMPLETE"] = False
+    extra_rows: List[Dict[str, Any]] = []
+    for file_path in files or []:
+        if file_path and os.path.exists(str(file_path)):
+            extra_rows.extend(_topic2_archicad_summary_rows_v1(str(file_path)))
+    if extra_rows:
+        result["ok"] = True
+        result["specs"] = extra_rows
+        result["volumes"] = extra_rows
+        result["source"] = "PDF_SPEC_ARCHICAD_SUMMARY_TABLE_V1"
+        result["VOLUMES_COMPLETE"] = True
+        result["missing_items"] = []
+    return result
+# === END_PATCH_TOPIC2_ARCHICAD_SUMMARY_TABLE_V1 ===
 
 ====================================================================================================
 END_FILE: core/pdf_spec_extractor.py

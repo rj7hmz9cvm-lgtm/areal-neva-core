@@ -1,14 +1,28 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T11:30:02.365565+00:00
-git_sha_before_commit: 6849116b0e740a2af6443f13cf7878cb0f41c881
+generated_at_utc: 2026-07-15T11:58:30.615593+00:00
+git_sha_before_commit: 74fb9a0f50074e192743cbfea8491861bc04c664
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 48e25637bf4a8331dafef0a3c55e47fdc3fc8853e02bb642bf90ce7c32fcdadd
+SHA256_FULL_FILE: 5aa07ff596034c4e47c28156189082fb141c4b1244a2a07789f4ba4f8361aa7d
 ====================================================================================================
+        def _t2tr_build_from_template(_parsed, _price_text, _choice):
+            return template_items
+
+        globals()['_build_estimate_items'] = _t2tr_build_from_template
+        try:
+            return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+        finally:
+            globals()['_build_estimate_items'] = orig_build
+    return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+# === END_PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
+
+# === PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
+# If a project PDF has only AR/TЭП rows but a canonical full-house template is selected,
+# do not stop the task. The template matrix is the calculation basis; PDF facts are inputs.
 _T2AOT_ORIG_MISSING_QUESTION = _missing_question
 
 
@@ -1069,6 +1083,11 @@ def _topic2_final_ready_confirm_phrase_v1(text: str) -> bool:
         return True
     return any(x in low for x in (
         "задача завершена",
+        "задачей завершена",
+        "задача закрыта",
+        "задачей закрыта",
+        "доволен задачей",
+        "доволен результатом",
         "задачу завершить",
         "задачу закрыть",
         "хорошая работа",
@@ -1190,7 +1209,7 @@ async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
               AND COALESCE(topic_id,0)=?
               AND state='AWAITING_CONFIRMATION'
               AND id<>?
-              AND COALESCE(result,'') LIKE '%Смета готова%'
+              AND (COALESCE(result,'') LIKE '%Смета готова%' OR COALESCE(result,'') LIKE '%Смета по извлечённым позициям готова%')
               AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
             ORDER BY updated_at DESC, created_at DESC
             LIMIT 1
@@ -1204,7 +1223,8 @@ async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
     parent_raw = _s(parent["raw_input"])
     parent_result = _s(parent["result"])
     parent_low = _low(parent_result)
-    if not ("смета готов" in parent_low and ("xlsx" in parent_low or "pdf" in parent_low or "drive.google.com" in parent_low or "docs.google.com" in parent_low)):
+    estimate_final = "смета готов" in parent_low or "смета по извлечённым позициям готова" in parent_low
+    if not (estimate_final and ("xlsx" in parent_low or "pdf" in parent_low or "drive.google.com" in parent_low or "docs.google.com" in parent_low)):
         return False
 
     _history_safe(conn, parent_id, "TOPIC2_EXPLICIT_CONFIRM:ready_done_phrase")
@@ -3445,6 +3465,343 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_FILE_CONTEXT_NO_TEMPLATE_PRICES_V1 ===
+
+# === PATCH_TOPIC2_ARCHIVE_ONLY_PRICE_AND_COMPLETION_V1 ===
+def _topic2_archive_price_mode_v1(text: str) -> bool:
+    low = _low(text or "")
+    archive_requested = any(x in low for x in ("архив", "архивных данных", "памяти", "кэш", "cache"))
+    internet_forbidden = any(x in low for x in (
+        "без интернета",
+        "интернет не использовать",
+        "интернет не нужен",
+        "не делать в интернете",
+        "не искать в интернете",
+        "поиск в интернете не",
+        "поиск по материалам не делать",
+    ))
+    return archive_requested and internet_forbidden
+
+
+_TOPIC2_ARCHIVE_PREV_PRICE_INTENT_V1 = _topic2_price_search_explicit_intent_v1
+
+
+def _topic2_price_search_explicit_intent_v1(text: str) -> bool:  # noqa: F811
+    if _topic2_archive_price_mode_v1(text):
+        return True
+    low = _low(text or "")
+    if any(x in low for x in ("без интернета", "не искать в интернете", "поиск в интернете не", "интернет не использовать")):
+        return False
+    return _TOPIC2_ARCHIVE_PREV_PRICE_INTENT_V1(text)
+
+
+_TOPIC2_ARCHIVE_PREV_CONFIRMED_ROWS_V1 = _t2ff_confirmed_current_rows_v1
+
+
+def _t2ff_confirmed_current_rows_v1(parsed, confirm_text=""):  # noqa: F811
+    if _TOPIC2_ARCHIVE_PREV_CONFIRMED_ROWS_V1(parsed, confirm_text):
+        return True
+    text = _low(confirm_text or "") + " " + _low((parsed or {}).get("raw") or "")
+    return any(x in text for x in (
+        "посчитать стоимость работ и материалов",
+        "считать стоимость работ и материалов",
+        "рассчитать стоимость работ и материалов",
+        "смета по проекту",
+    ))
+
+
+def _topic2_archive_unit_v1(value: Any) -> str:
+    return _low(value or "").replace("м3", "м³").replace("м2", "м²").replace("м.п.", "п.м").strip()
+
+
+def _topic2_archive_category_v1(name: str) -> str:
+    low = _low(name or "")
+    if "бетон" in low:
+        grade = re.search(r"[вb]\s*(\d+(?:[.,]\d+)?)", low, re.I)
+        return "concrete:" + (grade.group(1).replace(",", ".") if grade else "")
+    if "арматур" in low:
+        cls = re.search(r"[аa](240|500[сc])", low, re.I)
+        return "rebar:" + (cls.group(1).replace("c", "с") if cls else "")
+    if any(x in low for x in ("газобет", "блоки строительные", "гб ")):
+        thickness = re.search(r"(?:гб|газобет\w*)\s*(\d{2,3})", low, re.I)
+        return "blocks:" + (thickness.group(1) if thickness else "")
+    if any(x in low for x in ("достав", "логист", "транспорт")):
+        return "logistics"
+    return ""
+
+
+def _topic2_archive_catalog_v1() -> List[Dict[str, Any]]:
+    root = BASE / "runtime" / "stroyka_estimates"
+    if not root.exists():
+        return []
+    try:
+        from openpyxl import load_workbook as _topic2_archive_lwb
+    except Exception:
+        return []
+    files = sorted(root.rglob("*.xlsx"), key=lambda path: path.stat().st_mtime, reverse=True)[:80]
+    catalog: List[Dict[str, Any]] = []
+    for path in files:
+        try:
+            wb = _topic2_archive_lwb(path, data_only=True, read_only=True)
+            for ws in wb.worksheets:
+                headers = {_low(ws.cell(1, col).value or ""): col for col in range(1, min(ws.max_column, 20) + 1)}
+                name_col = headers.get("наименование")
+                unit_col = headers.get("ед изм") or headers.get("ед. изм.")
+                work_col = headers.get("цена работ")
+                material_col = headers.get("цена материалов")
+                if not (name_col and unit_col and work_col and material_col):
+                    continue
+                source_col = headers.get("источник цены")
+                supplier_col = headers.get("поставщик")
+                url_col = headers.get("url")
+                checked_col = headers.get("checked_at")
+                for row_idx in range(2, ws.max_row + 1):
+                    name = _s(ws.cell(row_idx, name_col).value)
+                    unit = _topic2_archive_unit_v1(ws.cell(row_idx, unit_col).value)
+                    category = _topic2_archive_category_v1(name)
+                    if not name or not unit or not category:
+                        continue
+                    try:
+                        work_price = float(ws.cell(row_idx, work_col).value) if ws.cell(row_idx, work_col).value not in (None, "") else None
+                    except Exception:
+                        work_price = None
+                    try:
+                        material_price = float(ws.cell(row_idx, material_col).value) if ws.cell(row_idx, material_col).value not in (None, "") else None
+                    except Exception:
+                        material_price = None
+                    if not ((work_price and work_price > 0) or (material_price and material_price > 0)):
+                        continue
+                    catalog.append({
+                        "name": name,
+                        "unit": unit,
+                        "category": category,
+                        "work_price": work_price,
+                        "material_price": material_price,
+                        "source": _s(ws.cell(row_idx, source_col).value) if source_col else "archive",
+                        "supplier": _s(ws.cell(row_idx, supplier_col).value) if supplier_col else "",
+                        "url": _s(ws.cell(row_idx, url_col).value) if url_col else "",
+                        "checked_at": _s(ws.cell(row_idx, checked_col).value) if checked_col else "",
+                        "archive_file": str(path),
+                    })
+            wb.close()
+        except Exception:
+            continue
+    return catalog
+
+
+def _topic2_archive_match_v1(name: str, unit: str, catalog: List[Dict[str, Any]]) -> Dict[str, Any]:
+    category = _topic2_archive_category_v1(name)
+    norm_unit = _topic2_archive_unit_v1(unit)
+    if not category:
+        return {}
+    candidates = [row for row in catalog if row.get("category") == category and row.get("unit") == norm_unit]
+    if not candidates and category.endswith(":"):
+        prefix = category.split(":", 1)[0] + ":"
+        candidates = [row for row in catalog if _s(row.get("category")).startswith(prefix) and row.get("unit") == norm_unit]
+    if not candidates:
+        return {}
+
+    def one_value(field: str) -> Optional[float]:
+        values = sorted({round(float(row[field]), 4) for row in candidates if row.get(field) not in (None, "") and float(row[field]) > 0})
+        return values[0] if len(values) == 1 else None
+
+    work_price = one_value("work_price")
+    material_price = one_value("material_price")
+    if work_price is None and material_price is None:
+        return {}
+    source_row = candidates[0]
+    return {
+        "work_price": work_price,
+        "material_price": material_price,
+        "source": "archive:" + _s(source_row.get("source") or "saved estimate"),
+        "supplier": _s(source_row.get("supplier")),
+        "url": _s(source_row.get("url")),
+        "checked_at": _s(source_row.get("checked_at")),
+        "archive_file": _s(source_row.get("archive_file")),
+    }
+
+
+_TOPIC2_ARCHIVE_PREV_SEARCH_ONLINE_V1 = _search_prices_online
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    if not _topic2_archive_price_mode_v1((parsed or {}).get("raw") or ""):
+        return await _TOPIC2_ARCHIVE_PREV_SEARCH_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    rows = _t2ff_current_rows_v1(parsed)
+    catalog = _topic2_archive_catalog_v1()
+    price_map = {}
+    lines = ["ARCHIVE_ONLY: интернет-поиск отключён пользователем; неизвестные цены оставлены пустыми"]
+    for row in rows:
+        name = _s(row.get("name"))
+        match = _topic2_archive_match_v1(name, _s(row.get("unit")), catalog)
+        price_map[name] = match
+        if match:
+            lines.append("- {} | работа={} | материал={} | {}".format(
+                name,
+                match.get("work_price") if match.get("work_price") is not None else "PRICE_MISSING",
+                match.get("material_price") if match.get("material_price") is not None else "PRICE_MISSING",
+                match.get("source") or "archive",
+            ))
+    parsed["_topic2_archive_price_map"] = price_map
+    parsed["_topic2_archive_price_catalog_count"] = len(catalog)
+    if conn is not None and task_id is not None:
+        _history_safe(conn, task_id, "TOPIC2_INTERNET_SEARCH_DISABLED_BY_USER")
+        _history_safe(conn, task_id, f"TOPIC2_ARCHIVE_PRICE_CATALOG_READ:{len(catalog)}")
+        _history_safe(conn, task_id, f"TOPIC2_ARCHIVE_PRICE_REUSED:{sum(1 for value in price_map.values() if value)}")
+        _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_DONE:archive_only")
+    return "\n".join(lines)
+
+
+_TOPIC2_ARCHIVE_PREV_BUILD_ITEMS_V1 = _t2ff_build_items_from_rows_v1
+
+
+def _t2ff_build_items_from_rows_v1(parsed, price_text, choice):  # noqa: F811
+    if not _topic2_archive_price_mode_v1((parsed or {}).get("raw") or ""):
+        return _TOPIC2_ARCHIVE_PREV_BUILD_ITEMS_V1(parsed, price_text, choice)
+    rows = _t2ff_current_rows_v1(parsed)
+    price_map = (parsed or {}).get("_topic2_archive_price_map") or {}
+    items = []
+    for row in rows:
+        name = _s(row.get("name"))
+        try:
+            qty = float(row.get("qty") or 0)
+        except Exception:
+            qty = 0.0
+        if not name or qty <= 0:
+            continue
+        match = price_map.get(name) or {}
+        work_price = match.get("work_price")
+        material_price = match.get("material_price")
+        category = _topic2_archive_category_v1(name)
+        section = "Проектные позиции"
+        if category.startswith("concrete") or category.startswith("rebar"):
+            section = "Монолитные конструкции"
+        elif category.startswith("blocks"):
+            section = "Стены"
+        missing = []
+        if work_price is None:
+            missing.append("WORK_PRICE_MISSING")
+        if material_price is None:
+            missing.append("MATERIAL_PRICE_MISSING")
+        note = _s(row.get("note") or row.get("source") or "текущий PDF")
+        if missing:
+            note = (note + "; " + "; ".join(missing)).strip("; ")
+        items.append({
+            "section": section,
+            "name": name[:240],
+            "unit": _s(row.get("unit") or "шт"),
+            "qty": qty,
+            "price": float(work_price or 0) + float(material_price or 0),
+            "work_price": float(work_price or 0),
+            "mat_price": float(material_price or 0),
+            "work_price_missing": work_price is None,
+            "material_price_missing": material_price is None,
+            "kind": "mixed",
+            "note": note[:240],
+            "source": _s(match.get("source") or "PRICE_MISSING"),
+            "supplier": _s(match.get("supplier")),
+            "url": _s(match.get("url")),
+            "checked_at": _s(match.get("checked_at")),
+            "archive_price_mode": True,
+        })
+    try:
+        distance = float((parsed or {}).get("distance_km") or 0)
+    except Exception:
+        distance = 0.0
+    if distance > 0:
+        items.append({
+            "section": "Логистика",
+            "name": f"Логистика до объекта, удалённость {distance:g} км",
+            "unit": "компл",
+            "qty": 1.0,
+            "price": 0.0,
+            "work_price": 0.0,
+            "mat_price": 0.0,
+            "work_price_missing": True,
+            "material_price_missing": True,
+            "kind": "mixed",
+            "note": "Цена отсутствует в однозначно совпадающих архивных данных; оставлена пустой",
+            "source": "PRICE_MISSING",
+            "archive_price_mode": True,
+        })
+    subtotal = sum(item["qty"] * (item["work_price"] + item["mat_price"]) for item in items)
+    if subtotal > 0:
+        overhead = round(subtotal * 0.07, 2)
+        items.append({
+            "section": "Накладные расходы",
+            "name": "Организация работ и накладные расходы",
+            "unit": "компл",
+            "qty": 1.0,
+            "price": overhead,
+            "work_price": overhead,
+            "mat_price": 0.0,
+            "work_price_missing": False,
+            "material_price_missing": False,
+            "kind": "mixed",
+            "note": "7% от подтверждённых архивными ценами позиций",
+            "source": "CANON_OVERHEAD_7_PERCENT",
+            "archive_price_mode": True,
+        })
+    return items
+
+
+_TOPIC2_ARCHIVE_PREV_REWRITE_COLS_V1 = _t2ff_rewrite_work_material_cols_v1
+
+
+def _t2ff_rewrite_work_material_cols_v1(path, items):  # noqa: F811
+    _TOPIC2_ARCHIVE_PREV_REWRITE_COLS_V1(path, items)
+    try:
+        from openpyxl import load_workbook as _topic2_archive_rewrite_lwb
+        wb = _topic2_archive_rewrite_lwb(path, data_only=False)
+        ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
+        row_idx = 2
+        for item in items or []:
+            while row_idx <= ws.max_row and not _s(ws.cell(row_idx, 3).value):
+                row_idx += 1
+            if row_idx > ws.max_row:
+                break
+            if item.get("work_price_missing"):
+                ws.cell(row_idx, 6).value = None
+            if item.get("material_price_missing"):
+                ws.cell(row_idx, 8).value = None
+            ws.cell(row_idx, 11).value = _s(item.get("source") or "PRICE_MISSING")
+            ws.cell(row_idx, 12).value = _s(item.get("supplier"))
+            ws.cell(row_idx, 13).value = _s(item.get("url"))
+            ws.cell(row_idx, 14).value = _s(item.get("checked_at"))
+            ws.cell(row_idx, 15).value = _s(item.get("note"))
+            row_idx += 1
+        wb.save(path)
+        wb.close()
+    except Exception as exc:
+        try:
+            _STV3_LOG.warning("TOPIC2_ARCHIVE_PRICE_XLSX_REWRITE_FAILED: %s", exc)
+        except Exception:
+            pass
+
+
+_TOPIC2_ARCHIVE_PREV_QUALITY_GATE_V1 = _quality_gate_xlsx
+
+
+def _quality_gate_xlsx(xlsx_path: str, items: List[Dict[str, Any]], py_total: float) -> Tuple[bool, str]:  # noqa: F811
+    archive_blank_mode = bool(items) and all(bool(item.get("archive_price_mode")) for item in items)
+    if not archive_blank_mode or py_total > 0:
+        return _TOPIC2_ARCHIVE_PREV_QUALITY_GATE_V1(xlsx_path, items, py_total)
+    if not xlsx_path or not os.path.exists(xlsx_path) or os.path.getsize(xlsx_path) < 5000:
+        return False, "ARCHIVE_BLANK_XLSX_INVALID"
+    if len(items) < 8:
+        return False, f"ARCHIVE_BLANK_TOO_FEW_ITEMS:{len(items)}"
+    try:
+        from openpyxl import load_workbook as _topic2_archive_qg_lwb
+        wb = _topic2_archive_qg_lwb(xlsx_path, data_only=False, read_only=True)
+        ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
+        headers = [_s(ws.cell(1, col).value) for col in range(1, 16)]
+        formula_count = sum(1 for row in ws.iter_rows() for cell in row if isinstance(cell.value, str) and cell.value.startswith("="))
+        wb.close()
+        if len(headers) < 15 or formula_count < 8:
+            return False, "ARCHIVE_BLANK_CANON_COLUMNS_OR_FORMULAS_MISSING"
+        return True, "OK_ARCHIVE_PRICES_MISSING_ALLOWED_BY_USER"
+    except Exception as exc:
+        return False, "ARCHIVE_BLANK_XLSX_VALIDATE_ERROR:" + _s(exc)[:120]
+# === END_PATCH_TOPIC2_ARCHIVE_ONLY_PRICE_AND_COMPLETION_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
