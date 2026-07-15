@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_002
-generated_at_utc: 2026-07-15T16:28:55.307843+00:00
-git_sha_before_commit: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+generated_at_utc: 2026-07-15T16:34:29.072580+00:00
+git_sha_before_commit: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 part: 2/22
 
 
@@ -271,6 +271,165 @@ Start from `core/pdf_spec_extractor.py` only:
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/SESSION_20260707_TOPIC2_SEARCH_OCR_LIVE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/SESSION_20260715_TOPIC2_FULL_CANON_LIVE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 75a4f55ac1e2cc3e0f0155bdad3de2d6d62dcd1f7fd6344fe59c79e2bfcf5767
+====================================================================================================
+# SESSION HANDOFF — 2026-07-15 topic_2 full canonical PDF estimate live cycle
+
+This is a factual handoff record. It is not a new canon and does not replace existing canon text.
+
+## Applied SSOT and canon
+
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+- `config/estimate_template_registry.json`
+
+Applied rules:
+
+- topic_2 is STROYKA, direction `estimates / estimate_unified`;
+- current project/task context only; old tasks and old estimate rows must not be mixed into a new task;
+- missing project facts must block final generation or trigger a precise clarification; invented quantities are forbidden;
+- the canonical estimate output is the 15-column AREAL_CALC structure with XLSX formulas;
+- internet prices must not start without explicit authorization; search route is Sonar/Perplexity only and DeepSeek search fallback is forbidden;
+- final output must contain canonical Telegram text plus Drive XLSX/PDF links;
+- `DONE` is allowed only after explicit owner confirmation bound to the corresponding parent task.
+
+## Scoped tracked runtime changes
+
+Only these tracked runtime files were changed for the saved topic_2 work:
+
+- `core/pdf_spec_extractor.py`
+  - added bounded ARCHICAD/CAD PDF text-layer extraction from words/blocks and page geometry;
+  - added current-project position and geometry extraction from the actual PDF;
+  - retained OCR as fallback instead of the primary path when a usable text layer exists;
+  - returned project positions, quantities, source evidence and completeness flags for the current file.
+- `core/stroyka_estimate_canon.py`
+  - isolated a newly uploaded PDF as a new project context;
+  - blocked old task/template-row substitution;
+  - added current-project volume/completeness gates;
+  - preserved explicit user manual rates, VAT mode, logistics and overhead inputs;
+  - generated canonical 15-column XLSX and Cyrillic PDF through the orchestra;
+  - uploaded XLSX/PDF to Drive and delivered canonical Telegram final text;
+  - added missing required lifecycle markers and explicit completion gating;
+  - added final metadata line with explicit logistics amount.
+- `task_worker.py`
+  - allowed an owner-authorized duplicate file to run as a new isolated topic_2 task;
+  - prevented late duplicate guards from blocking that explicit new-task route;
+  - recognized topic_2 natural estimate choices such as `посчитать смету` without changing neighboring topic behavior;
+  - preserved drive-file/project context while handling follow-up choices.
+
+No task-specific UUID is hard-coded in these runtime files.
+
+## Full live verification
+
+### First accepted audit cycle
+
+- Parent: `7b1df476-c1df-4dfd-a65d-e38b2df645d0`
+- Telegram final message: `12494`
+- Final parent state: `DONE`
+- Explicit completion child: `a36c62ed-5f76-4faa-b852-0d795ab2548c`, state `DONE`
+
+### Full repeat-as-new cycle after audit
+
+- New parent: `d019c976-5e46-475d-bcd7-c9f349eb0ea1`
+- Source file: `ирина ар проект.pdf`
+- Telegram final message: `12496`
+- Explicit completion child: `6968cbd9-e233-4652-8da3-b03e6758f1b4`
+- Parent state after explicit confirmation: `DONE`
+- Completion child state: `DONE`
+- Actually open topic_2 tasks after completion: `0`
+
+The repeat-as-new cycle was processed by the worker and canonical engine. Codex did not manually build or replace the estimate.
+
+## Verified project and artifact facts
+
+- PDF pages scanned: `97`
+- Current-project positions extracted: `14`
+- Estimate rows written: `33`
+- Workbook sheets: `AREAL_CALC`, `смета`, `SOURCE_EVIDENCE`, `MISSING_DATA`, `PRICE_AUDIT`, `PROJECT_INFO`
+- `AREAL_CALC`: `51 x 15`, `33` numbered rows, `103` formulas
+- `смета`: `51 x 15`, `33` numbered rows, `103` formulas
+- Stale terms from old projects in final workbook: `0`
+- Final PDF: `2` pages, Cyrillic text valid, no `/root`, `/tmp` or raw JSON
+- Google Drive metadata readback confirmed a new XLSX and a new PDF for the repeat-as-new cycle.
+
+Final totals:
+
+- Materials: `3 895 920.00 RUB`
+- Works: `2 711 598.40 RUB`
+- Logistics: `280 000.00 RUB`
+- Overhead: `135 579.92 RUB`
+- Without VAT: `7 023 098.32 RUB`
+- VAT 22%: `0.00 RUB` because the current task explicitly requested calculation without VAT
+- Final total: `7 023 098.32 RUB`
+
+Price/search facts:
+
+- explicit manual user rates were used;
+- marker `TOPIC2_PRICE_SEARCH_NOT_REQUESTED_NO_INTERNET` is present;
+- no Sonar, DeepSeek or search-start marker exists for the verified parent;
+- no internet request was made for this task.
+
+## Required marker verification for repeat-as-new parent
+
+Each required marker was present exactly once:
+
+- `TOPIC2_ESTIMATE_SESSION_CREATED`
+- `TOPIC2_CONTEXT_READY`
+- `TOPIC2_TEMPLATE_SELECTED`
+- `TOPIC2_PRICE_ENRICHMENT_DONE`
+- `TOPIC2_PRICE_CHOICE_CONFIRMED`
+- `TOPIC2_LOGISTICS_CONFIRMED`
+- `TOPIC2_XLSX_CREATED`
+- `TOPIC2_PDF_CREATED`
+- `TOPIC2_PDF_CYRILLIC_OK`
+- `TOPIC2_DRIVE_UPLOAD_XLSX_OK`
+- `TOPIC2_DRIVE_UPLOAD_PDF_OK`
+- `TOPIC2_TELEGRAM_DELIVERED`
+- `TOPIC2_MESSAGE_THREAD_ID_OK`
+- `TOPIC2_DONE_CONTRACT_OK`
+
+## Verification commands and results
+
+- `python3 -m py_compile core/pdf_spec_extractor.py core/stroyka_estimate_canon.py core/topic2_input_gate.py task_worker.py` -> `OK`
+- `git diff --check -- core/pdf_spec_extractor.py core/stroyka_estimate_canon.py task_worker.py` -> `OK`
+- `areal-task-worker` -> `active`
+- topic_2 memory keys were synchronized to parent `d019c976-5e46-475d-bcd7-c9f349eb0ea1` after completion.
+
+## Server-only backups
+
+- `backups/topic2_full_live_cycle_20260715_184018/`
+- `backups/github_save_topic2_20260715_20260715_192844/`
+
+Backups, DB files, runtime artifacts and secrets are server-only and are not part of the GitHub save.
+
+## Not touched and not committed
+
+- `.env`, credentials, tokens and sessions
+- `data/core.db`, `data/memory.db`, runtime artifacts and Drive exports
+- systemd unit files and launch commands
+- `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`
+- topic_5, topic_210, topic_500 and other neighboring topic logic
+- unrelated untracked files already present in the working tree
+- no branch was created
+
+## Current status and remaining verification boundary
+
+The current single-PDF project estimate contour is `VERIFIED LIVE` end to end:
+
+`new project -> current PDF extraction -> volume gate -> manual rates/no internet -> canonical XLSX/PDF -> Drive -> Telegram -> explicit confirmation -> DONE -> memory sync`.
+
+This verification does not claim full closure of every topic_2 input form. Separate owner-driven live tests remain for photo-only input, voice continuation, reply/pin continuation, and other multifile/project variants.
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/SESSION_20260715_TOPIC2_FULL_CANON_LIVE.md
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -9957,152 +10116,5 @@ SHA256_FULL_FILE: 62561af47ee2627fb5d014f93bed2baf2f7a5fb1bc89ff905260468f59ebb0
 
 ====================================================================================================
 END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 33ef31ff146aaf4de273ce4167be1563f4b80c5339bddac4cb844e1c9eec6716
-====================================================================================================
-{
-  "chat_id": "UNKNOWN",
-  "chat_name": "AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR",
-  "exported_at": "2026-04-29T19:58:00Z",
-  "source_model": "GPT-5.5 Thinking",
-  "system": "Ubuntu VPS 24.04, Telegram orchestration pipeline, GitHub clean context layer, server holds runtime secrets and local data. Secrets are redacted by export policy.",
-  "architecture": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> ai_router.py/OpenRouter -> reply_sender.py -> Telegram. Aggregator reads chat_exports and docs, then updates docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md on GitHub.",
-  "pipeline": "Task lifecycle discussed as NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED, with FAILED/WAITING_CLARIFICATION/CANCELLED as side states.",
-  "files": [
-    "task_worker.py -> main task worker and result pipeline",
-    "core/file_intake_router.py -> file routing and clarification menu",
-    "core/project_engine.py -> project/design document generation layer",
-    "core/normative_search_engine.py -> normative internet search via OpenRouter/Perplexity",
-    "core/template_manager.py -> template handling",
-    "core/engine_base.py -> artifact/version helper layer",
-    "tools/context_aggregator.py -> GitHub API aggregator for ONE_SHARED_CONTEXT",
-    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md -> aggregated shared context",
-    ".gitignore -> runtime/secret guard"
-  ],
-  "code": "Python 3.12, systemd, SQLite, Git, GitHub API, OpenRouter, Perplexity sonar, Telegram bot services.",
-  "patches": [
-    "EXECUTION_PIPELINE_CLOSE_V44 -> task_worker.py -> grep verified lines 5114-5281 -> status: applied_by_terminal",
-    "FILE_ROUTE_CLOSE_V44 -> core/file_intake_router.py -> grep verified lines 492-544 -> status: applied_by_terminal",
-    "TEMPLATE_CLOSE_V44 -> core/template_manager.py -> grep verified lines 149-193 -> status: applied_by_terminal",
-    "PROJECT_CLOSE_V44 -> core/project_engine.py -> grep verified lines 251-332 -> status: applied_by_terminal",
-    "VERSIONING_CLOSE_V44 -> core/engine_base.py -> grep verified lines 239-244 -> status: applied_by_terminal",
-    "NORMATIVE_SEARCH_ENGINE_V45 -> core/normative_search_engine.py -> grep verified lines 2-124 -> status: applied_by_terminal",
-    "PROJECT_ENGINE_USE_NORMATIVE_SEARCH_V45 -> core/project_engine.py -> grep verified lines 334-356 -> status: applied_by_terminal",
-    "RUNTIME_SECRET_GUARD_20260429 -> .gitignore -> ADDED 16 -> status: applied_by_terminal",
-    "FINAL_CLEAN_GUARD_20260429 -> .gitignore -> ADDED 2 -> status: applied_by_terminal"
-  ],
-  "commands": [
-    "ssh areal 'bash -s' blocks used for diagnostics and patches",
-    "git status -s, git diff --name-only, git log origin/main",
-    "git show origin/main:docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | head -40",
-    "systemctl restart areal-task-worker && sleep 5 && systemctl is-active areal-task-worker",
-    "journalctl -u areal-task-worker -n 20 --no-pager",
-    "python3 heredoc patch scripts",
-    "git add chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json",
-    "bash tools/secret_scan.sh returned SECRET_SCAN_OK",
-    "git commit created local commit 48c8fc9 but push was rejected non-fast-forward"
-  ],
-  "db": "data/core.db and data/memory.db exist on server. search_session and audit_log tables were created/confirmed by DB_OK in V44 patch logs. Runtime DB files are intentionally not committed to GitHub.",
-  "memory": "memory.db remains server runtime memory. GitHub shared memory is ONE_SHARED_CONTEXT.md generated from chat_exports/docs. Local ONE_SHARED_CONTEXT.md was older than origin/main, but origin/main had fresh AGG commits.",
-  "services": [
-    "areal-task-worker: active confirmed after V44/V45 restarts",
-    "areal-gdrive-sync.timer: listed",
-    "areal-rclone-sync.timer: listed"
-  ],
-  "canons": [
-    "Server keeps secrets/runtime/DB/logs/local files",
-    "GitHub contains clean code/docs/canons/chat_exports/shared context only",
-    "No git add .",
-    "No secrets in GitHub; redact tokens/secrets as [REDACTED]",
-    "Diagnostics first before write actions",
-    "Patch protocol: backup -> patch -> py_compile -> restart -> active -> journal",
-    "Mac terminal commands use ssh areal 'bash -s' heredoc style"
-  ],
-  "decisions": [
-    "Do not execute blanket git add . because untracked included .env, credentials.json, token.json, sessions, .venv, data, backups and many bak files",
-    "Add .gitignore as a Git visibility guard, not as server cleanup",
-    "Keep server runtime files in place and only hide dangerous files from Git",
-    "Treat GitHub aggregator as working because origin/main has AGG commits and ONE_SHARED_CONTEXT updated to 2026-04-29T16:00:30Z",
-    "V44/V45 code is installed but live Telegram/Drive tests are still separate"
-  ],
-  "errors": [
-    "zsh parse errors occurred with complex one-line printf/base64 commands -> solution: use heredoc style ssh areal 'bash -s'",
-    "Git push rejected non-fast-forward after local export commit 48c8fc9 -> cause: local branch behind origin/main -> solution needed: integrate origin/main before push or create export via GitHub API/direct connector",
-    "Git worktree dirty with 11 tracked modified files -> cause: server runtime worktree mixed with code changes -> solution: whitelist commits only",
-    "Danger files visible before gitignore -> cause: missing runtime ignore rules -> solution: .gitignore guards added",
-    "secret_scan.sh missing in one earlier diagnostic path, later tools/secret_scan.sh existed and returned SECRET_SCAN_OK"
-  ],
-  "solutions": [
-    "Problem: Git saw secrets/runtime files -> Solution: .gitignore runtime guard -> Status: applied and danger check empty",
-    "Problem: Aggregator status unclear -> Solution: compare origin/main file and logs -> Status: aggregator confirmed working on GitHub",
-    "Problem: Need normative search -> Solution: core/normative_search_engine.py V45 + project_engine wrapper -> Status: applied_by_terminal, SYNTAX_OK, worker active",
-    "Problem: Project/file pipeline code gaps -> Solution: V44 patches -> Status: applied_by_terminal, SYNTAX_OK, worker active"
-  ],
-  "state": "Server runtime remains dirty but protected; GitHub aggregator works; V44/V45 installed; export attempted locally and push rejected due to non-fast-forward; this direct GitHub export file was created through GitHub connector.",
-  "what_working": [
-    "Aggregator pushed ONE_SHARED_CONTEXT to origin/main with commit 3a60ef8 at 2026-04-29T16:00:30Z",
-    "V44 markers verified by grep",
-    "V45 markers verified by grep",
-    "py_compile returned SYNTAX_OK after V44 and V45",
-    "areal-task-worker returned active after restarts",
-    "Danger check became empty after .gitignore rules",
-    "SECRET_SCAN_OK returned before local export commit"
-  ],
-  "what_broken": [
-    "Local git push rejected non-fast-forward because local main is behind origin/main",
-    "Local worktree remains dirty with tracked modified files",
-    "Local docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md is older than origin/main copy"
-  ],
-  "what_not_done": [
-    "No live Telegram/Drive tests for V44/V45 in this chat",
-    "No clean whitelist commit of server code changes yet",
-    "No reconciliation of local branch with origin/main after push rejection",
-    "No cleanup/removal of runtime files from server, by design"
-  ],
-  "current_breakpoint": "Resolve Git synchronization safely: do not use git add .; either pull/rebase/merge only after protecting local changes, or create exports through GitHub API/connector; later perform whitelist commit of clean code files only.",
-  "root_causes": [
-    "Git push rejection -> origin/main ahead of local main -> confirmed by non-fast-forward error and origin AGG commits",
-    "Secret leak risk -> untracked .env/credentials/token/sessions/.venv/data shown before gitignore -> confirmed by git status output",
-    "Aggregator local-vs-remote mismatch -> GitHub API writes origin/main but local file not updated -> confirmed by local timestamp Apr 29 16:04 and origin updated_at 2026-04-29T16:00:30Z"
-  ],
-  "verification": [
-    "V44 grep output showed markers in task_worker.py, core/file_intake_router.py, core/template_manager.py, core/project_engine.py, core/engine_base.py",
-    "V45 grep output showed NORMATIVE_SEARCH_ENGINE_V45 and PROJECT_ENGINE_USE_NORMATIVE_SEARCH_V45 markers",
-    "py_compile output: SYNTAX_OK",
-    "systemctl is-active output: active",
-    "git log origin/main showed 3a60ef8 AGG: ONE_SHARED_CONTEXT 2026-04-29T16:00:30Z",
-    "git show origin/main:docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md showed updated_at 2026-04-29T16:00:30.211754+00:00",
-    "danger check after final .gitignore produced no matching output",
-    "local export commit output: [main 48c8fc9] EXPORT: AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR 2026-04-29",
-    "push output: rejected main -> main (non-fast-forward)"
-  ],
-  "limits": [
-    "Secrets must be redacted and never committed to GitHub",
-    "Files must be created only under chat_exports for chat exports",
-    "No overwrite of existing export files",
-    "No git add .",
-    "Do not touch .env, credentials.json, ai_router.py, reply_sender.py, google_io.py, telegram_daemon.py unless explicitly allowed in a separate patch",
-    "Written code is not equal to installed; installed requires terminal verification"
-  ]
-}
-
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_AND_TECH_CONTOUR__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
-====================================================================================================
-﻿
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_AND_TECH_CONTOUR__2026-04-27.txt
 FILE_CHUNK: 1/1
 ====================================================================================================

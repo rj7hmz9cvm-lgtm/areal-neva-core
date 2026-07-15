@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-07-15T16:28:55.306590+00:00
-git_sha_before_commit: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+generated_at_utc: 2026-07-15T16:34:29.071112+00:00
+git_sha_before_commit: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 part: 1/22
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: da6b87a668dafba6a954e59a6a5f6498f0914d9cb82dc5c3fbd9f84d4b4aa9c4
+SHA256_FULL_FILE: 0d56e0bc4c30a26ec35fbfc6091e96d0a3bc46eeb8e391405521bac796b03999
 ====================================================================================================
 # LATEST HANDOFF — 2026-07-05 topic_2 / STROYKA
 
@@ -559,6 +559,35 @@ Start from `core/pdf_spec_extractor.py` only:
 3. Implement bounded targeted parser for KR specification pages instead of full-page slow OCR loop.
 4. Verify extractor on `287a..._Раздел 4 - КР.pdf` returns project rows from page 26 and truss/foundation schedules inside a bounded time.
 5. Only then rerun the topic_2 task through the orchestra; do not calculate manually in Codex.
+
+---
+
+## Progress 2026-07-15 — topic_2 current-PDF canonical estimate closed live
+
+Full factual record: `docs/HANDOFFS/SESSION_20260715_TOPIC2_FULL_CANON_LIVE.md`.
+
+Verified live for the current single-PDF project contour:
+
+- new parent `d019c976-5e46-475d-bcd7-c9f349eb0ea1` was processed as a new isolated topic_2 task;
+- the orchestra scanned 97 PDF pages, extracted 14 current-project positions and produced 33 estimate rows;
+- both `AREAL_CALC` and `смета` contain 15 columns, 33 numbered rows and 103 formulas;
+- no stale old-project terms were found in the final workbook;
+- Cyrillic PDF, Drive XLSX/PDF delivery and Telegram message `12496` were verified;
+- all 14 required lifecycle markers were present exactly once;
+- explicit completion child `6968cbd9-e233-4652-8da3-b03e6758f1b4` closed only the corresponding parent;
+- parent and child are `DONE`; actually open topic_2 task count is `0`;
+- manual user rates were used and internet/search was not started;
+- topic_2 memory was synchronized after completion.
+
+Tracked runtime scope saved for this work:
+
+- `core/pdf_spec_extractor.py`
+- `core/stroyka_estimate_canon.py`
+- `task_worker.py`
+
+Not touched: `.env`, secrets, DB files, systemd units, launch commands, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, and neighboring topic logic.
+
+Status boundary: the current single-PDF estimate flow is `VERIFIED LIVE`; photo-only, voice, reply/pin and other multifile variants still require their own live tests before full topic_2 closure can be claimed.
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md

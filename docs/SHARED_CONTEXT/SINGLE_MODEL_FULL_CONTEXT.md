@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-15T16:28:55.809572+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.571611+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | UNKNOWN | 0 | 2 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 2 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -635,6 +635,35 @@ Start from `core/pdf_spec_extractor.py` only:
 3. Implement bounded targeted parser for KR specification pages instead of full-page slow OCR loop.
 4. Verify extractor on `287a..._Раздел 4 - КР.pdf` returns project rows from page 26 and truss/foundation schedules inside a bounded time.
 5. Only then rerun the topic_2 task through the orchestra; do not calculate manually in Codex.
+
+---
+
+## Progress 2026-07-15 — topic_2 current-PDF canonical estimate closed live
+
+Full factual record: `docs/HANDOFFS/SESSION_20260715_TOPIC2_FULL_CANON_LIVE.md`.
+
+Verified live for the current single-PDF project contour:
+
+- new parent `d019c976-5e46-475d-bcd7-c9f349eb0ea1` was processed as a new isolated topic_2 task;
+- the orchestra scanned 97 PDF pages, extracted 14 current-project positions and produced 33 estimate rows;
+- both `AREAL_CALC` and `смета` contain 15 columns, 33 numbered rows and 103 formulas;
+- no stale old-project terms were found in the final workbook;
+- Cyrillic PDF, Drive XLSX/PDF delivery and Telegram message `12496` were verified;
+- all 14 required lifecycle markers were present exactly once;
+- explicit completion child `6968cbd9-e233-4652-8da3-b03e6758f1b4` closed only the corresponding parent;
+- parent and child are `DONE`; actually open topic_2 task count is `0`;
+- manual user rates were used and internet/search was not started;
+- topic_2 memory was synchronized after completion.
+
+Tracked runtime scope saved for this work:
+
+- `core/pdf_spec_extractor.py`
+- `core/stroyka_estimate_canon.py`
+- `task_worker.py`
+
+Not touched: `.env`, secrets, DB files, systemd units, launch commands, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, and neighboring topic logic.
+
+Status boundary: the current single-PDF estimate flow is `VERIFIED LIVE`; photo-only, voice, reply/pin and other multifile variants still require their own live tests before full topic_2 closure can be claimed.
 
 
 ================================================================================
@@ -4454,8 +4483,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-15T16:28:55.387807+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.145738+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4531,7 +4560,7 @@ STATUS: SYNCED_LOCAL
 
 ## TOPIC_2_STROYKA
 
-STATUS: UNKNOWN
+STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE: 0  FAILED_24H: 2
 DIRECTIONS_BOUND: Сметы
 
@@ -5324,14 +5353,14 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-15T16:28:55.438786+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.194672+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
-CURRENT_STATUS: UNKNOWN
+CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
 FAILED_LAST_24H: 2
 
@@ -5349,7 +5378,7 @@ FAILED_LAST_24H: 2
 - 5e523179 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
-- (none matching topic)
+- cdd3c08c1|topic2: save 2026-07-15 canonical PDF live closure
 
 ## MARKERS_LAST_24H
 - LIVE_TEST_REPEAT_AS_NEW_AUTHORIZED_BY_OWNER
@@ -6038,8 +6067,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-15T16:28:55.484219+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.245739+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -6141,8 +6170,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-15T16:28:55.520893+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.282774+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6751,8 +6780,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-15T16:28:55.560839+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.325537+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -7318,8 +7347,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-15T16:28:55.605380+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.370988+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -7421,8 +7450,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-15T16:28:55.637779+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.401455+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7517,8 +7546,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-15T16:28:55.676555+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.438741+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7610,8 +7639,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-15T16:28:55.720680+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.481225+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7714,8 +7743,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-15T16:28:55.762775+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.520911+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7823,8 +7852,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-15T16:28:55.802431+00:00
-GIT_SHA: 0bca9d7cd7f4da03e788fe46e7b1cc5bc63a24fe
+GENERATED_AT: 2026-07-15T16:34:29.560755+00:00
+GIT_SHA: cdd3c08c1bbbebc4ebee21cff8e31dc045b03639
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
