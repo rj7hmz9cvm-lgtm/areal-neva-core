@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T13:28:38.633788+00:00
-git_sha_before_commit: aa22ac5a969c7bb0cb60a64c1f9cfb8f4440df92
+generated_at_utc: 2026-07-15T13:58:40.751148+00:00
+git_sha_before_commit: 31bf551ef976323d579d58758721d5731b392f27
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 6a4529d25eb8565ec5f1e83006ec3f5289b46cc1f3ccabd632844735c4a4cf02
+SHA256_FULL_FILE: 51c299099b0cabfe4936a8d5e20a68d4cf9f69006f09520ee564219c78810db9
 ====================================================================================================
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
             return template_items
@@ -2824,13 +2824,39 @@ def _topic2_project_bundle_create_xlsx_v1(task_id, bundle, out_path):
     return out_path
 
 
+def _topic2_project_identity_v3(bundle):
+    facts = list((bundle or {}).get("project_facts") or (bundle or {}).get("facts") or [])
+    object_name = next(
+        (_s(row.get("value")) for row in facts if _low(row.get("name")) == "объект" and _s(row.get("value"))),
+        "",
+    )
+    source_files = [
+        _s(row.get("source_file")) for row in ((bundle or {}).get("files") or [])
+        if isinstance(row, dict) and _s(row.get("source_file"))
+    ]
+    if not source_files:
+        source_files = list(dict.fromkeys(
+            _s(row.get("source_file")) for row in ((bundle or {}).get("positions") or [])
+            if isinstance(row, dict) and _s(row.get("source_file"))
+        ))
+    source_file = source_files[0] if source_files else "текущий проект"
+    title = object_name or Path(source_file).stem or "Текущий проект"
+    slug = re.sub(r"[^0-9A-Za-zА-Яа-яЁё_-]+", "_", title).strip("_") or "Текущий_проект"
+    return {"title": title, "source_file": source_file, "slug": slug}
+
+
 def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link="", pdf_link=""):
     missing = list((bundle or {}).get("missing_items") or [])
     title = "Смета по извлечённым позициям" if missing else "Смета готова"
+    identity = _topic2_project_identity_v3(bundle)
+    rates = dict((bundle or {}).get("manual_rates") or {})
+    logistics_text = "не включена по указанию пользователя" if rates.get("logistics_mode") == "blank" else "включена отдельной строкой"
+    overhead_text = "не включены по указанию пользователя" if rates.get("overhead_mode") == "blank" else "включены отдельной строкой"
     lines = [
         title,
         "",
-        "Файлы: АР + КР",
+        f"Объект: {identity['title']}",
+        f"Файл проекта: {identity['source_file']}",
         f"Позиции: {len((bundle or {}).get('estimate_rows') or [])}",
         (
             "Цены: ручные расценки пользователя, интернет не запускался"
@@ -2856,7 +2882,7 @@ def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link=""
         except Exception:
             pass
     total = mat_total + work_total
-    lines.extend(["", "Итого:", f"Материалы: {mat_total:,.0f} руб", f"Работы: {work_total:,.0f} руб", "Логистика: PRICE_MISSING", "Накладные: PRICE_MISSING", f"Без НДС: {total:,.0f} руб"])
+    lines.extend(["", "Итого:", f"Материалы: {mat_total:,.0f} руб", f"Работы: {work_total:,.0f} руб", f"Логистика: {logistics_text}", f"Накладные: {overhead_text}", f"Без НДС: {total:,.0f} руб"])
     if xlsx_link:
         lines.append(f"Excel: {xlsx_link}")
     if pdf_link:
@@ -2876,8 +2902,11 @@ def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link=""
 async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic_id, reply_to, bundle):
     outdir = BASE / "runtime" / "stroyka_estimates" / task_id
     outdir.mkdir(parents=True, exist_ok=True)
-    xlsx_path = str(outdir / f"topic2_ar_kr_{task_id}.xlsx")
-    pdf_path = str(outdir / f"topic2_ar_kr_{task_id}.pdf")
+    identity = _topic2_project_identity_v3(bundle)
+    xlsx_name = f"{identity['slug']}_смета.xlsx"
+    pdf_name = f"{identity['slug']}_смета.pdf"
+    xlsx_path = str(outdir / xlsx_name)
+    pdf_path = str(outdir / pdf_name)
     if not (bundle or {}).get("current_project_manual_rows_ready"):
         bundle = _topic2_rebuild_billable_rows_v1(conn, task_id, bundle)
         bundle = await _topic2_project_bundle_enrich_prices_v1(conn, task_id, bundle)
@@ -2892,8 +2921,8 @@ async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic
     _history_safe(conn, task_id, "TOPIC2_PDF_CREATED")
     _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_OK")
     _history_safe(conn, task_id, "TOPIC2_PDF_TOTALS_MATCH_XLSX")
-    xlsx_link = await _upload_or_fallback(str(chat_id), int(topic_id or 0), reply_to, xlsx_path, f"topic2_ar_kr_{task_id}.xlsx", "Excel сметы")
-    pdf_link = await _upload_or_fallback(str(chat_id), int(topic_id or 0), reply_to, pdf_path, f"topic2_ar_kr_{task_id}.pdf", "PDF сметы")
+    xlsx_link = await _upload_or_fallback(str(chat_id), int(topic_id or 0), reply_to, xlsx_path, xlsx_name, "Excel сметы")
+    pdf_link = await _upload_or_fallback(str(chat_id), int(topic_id or 0), reply_to, pdf_path, pdf_name, "PDF сметы")
     if xlsx_link and "drive.google.com" in xlsx_link:
         _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK")
     if pdf_link and "drive.google.com" in pdf_link:
@@ -2912,11 +2941,14 @@ async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic
             pass
     grand_total = mat_total + work_total
     missing_prices = [x for x in (bundle or {}).get("price_audit") or [] if _s(x.get("status")) == "PRICE_MISSING"]
+    rates = dict((bundle or {}).get("manual_rates") or {})
+    logistics_text = "не включена по указанию пользователя" if rates.get("logistics_mode") == "blank" else "включена отдельной строкой"
+    overhead_text = "не включены по указанию пользователя" if rates.get("overhead_mode") == "blank" else "включены отдельной строкой"
     result = "\n".join([
         "✅ Смета по извлечённым позициям готова" if missing else "✅ Смета готова",
         "",
-        "Объект: АР + КР",
-        "Файлы: АР + КР",
+        f"Объект: {identity['title']}",
+        f"Файл проекта: {identity['source_file']}",
         f"Позиции: {len((bundle or {}).get('estimate_rows') or [])}",
         (
             "Цены: ручные расценки пользователя, интернет не запускался"
@@ -2930,8 +2962,8 @@ async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic
         "Итого:",
         f"Материалы: {mat_total:,.0f} руб",
         f"Работы: {work_total:,.0f} руб",
-        "Логистика: PRICE_MISSING",
-        "Накладные: PRICE_MISSING",
+        f"Логистика: {logistics_text}",
+        f"Накладные: {overhead_text}",
         f"Без НДС: {grand_total:,.0f} руб",
         f"Цены не найдены: {len(missing_prices)}",
         "",
@@ -3922,6 +3954,50 @@ def _topic2_project_manual_rates_v2(text: str) -> Dict[str, Any]:
         out["monolith_rates_include_formwork_rebar"] = not any(x in low for x in ("не включ", "отдельно"))
     if ("щеб" in low and "гидроизоляц" in low) and any(x in low for x in ("включ", "конечно да", "считать")):
         out["include_project_layers"] = True
+    if "подъезд" in low:
+        out["logistics_access_confirmed"] = True
+        out["logistics_access"] = "no" if re.search(r"подъезд[^\n]{0,20}(?:нет|отсутств)", low) else "yes"
+    if any(token in low for token in ("разгруз", "манипулятор", "кран")):
+        out["logistics_unloading_confirmed"] = True
+        out["logistics_unloading"] = "not_required" if any(
+            token in low for token in ("разгрузка не нужна", "манипулятор не нужен", "без разгрузки")
+        ) else "required"
+    same_blank_line = re.search(
+        r"(?:логист[^\n]{0,50}накладн|накладн[^\n]{0,50}логист)[^\n]{0,50}(?:пуст|не включ|не учитывать)",
+        low,
+    )
+    if same_blank_line:
+        out["logistics_mode"] = "blank"
+        out["overhead_mode"] = "blank"
+    elif "логист" in low and any(token in low for token in ("пуст", "не включ", "не учитывать")):
+        out["logistics_mode"] = "blank"
+    elif "накладн" in low and any(token in low for token in ("пуст", "не включ", "не учитывать")):
+        out["overhead_mode"] = "blank"
+    logistics_deliveries = re.search(
+        r"логист[^\n]{0,50}?(\d+)\s+(?:достав\w*|рейс\w*)\s+(?:по|x|х|×)\s*"
+        r"(\d[\d\s]{2,})(?:\s*(?:руб|р\b))?",
+        low,
+    )
+    if logistics_deliveries:
+        delivery_count = int(logistics_deliveries.group(1))
+        delivery_unit_price = float(logistics_deliveries.group(2).replace(" ", ""))
+        out["logistics_mode"] = "manual_amount"
+        out["logistics_delivery_count"] = delivery_count
+        out["logistics_unit_price"] = delivery_unit_price
+        out["logistics_amount"] = delivery_count * delivery_unit_price
+    else:
+        logistics_amount = re.search(r"логист[^\n]{0,35}?(\d[\d\s]{3,})\s*(?:руб|р\b)", low)
+        if logistics_amount:
+            out["logistics_mode"] = "manual_amount"
+            out["logistics_amount"] = float(logistics_amount.group(1).replace(" ", ""))
+    overhead_amount = re.search(r"накладн[^\n]{0,35}?(\d[\d\s]{3,})\s*(?:руб|р\b)", low)
+    overhead_percent = re.search(r"накладн[^\n]{0,35}?(\d+(?:[.,]\d+)?)\s*%", low)
+    if overhead_amount:
+        out["overhead_mode"] = "manual_amount"
+        out["overhead_amount"] = float(overhead_amount.group(1).replace(" ", ""))
+    elif overhead_percent:
+        out["overhead_mode"] = "percent"
+        out["overhead_percent"] = float(overhead_percent.group(1).replace(",", "."))
     return out
 
 
@@ -4002,6 +4078,43 @@ def _topic2_project_manual_rates_missing_v3(rates: Dict[str, Any]) -> List[str]:
         "monolith_rates_include_formwork_rebar", "include_project_layers",
     )
     return [key for key in required if key not in rates]
+
+
+def _topic2_project_logistics_missing_v3(rates: Dict[str, Any]) -> List[str]:
+    missing = []
+    if not rates.get("logistics_access_confirmed"):
+        missing.append("подъезд для грузовой техники")
+    if not rates.get("logistics_unloading_confirmed"):
+        missing.append("нужна ли разгрузка/манипулятор")
+    if "logistics_mode" not in rates:
+        missing.append("логистику: указать сумму или оставить пустой")
+    if "overhead_mode" not in rates:
+        missing.append("накладные расходы: указать сумму/процент или оставить пустыми")
+    return missing
+
+
+def _topic2_project_logistics_prompt_v3(rates: Dict[str, Any]) -> str:
+    missing = _topic2_project_logistics_missing_v3(rates)
+    lines = [
+        "Перед финальной сметой осталось подтвердить логистику и накладные расходы для текущего проекта (20 км от Санкт-Петербурга).",
+    ]
+    if rates.get("logistics_mode") == "manual_amount":
+        if rates.get("logistics_delivery_count") and rates.get("logistics_unit_price") is not None:
+            lines.append(
+                "Принял логистику: "
+                f"{int(rates['logistics_delivery_count'])} доставок × "
+                f"{float(rates['logistics_unit_price']):g} = "
+                f"{float(rates['logistics_amount']):g} руб."
+            )
+        else:
+            lines.append(f"Принял логистику: {float(rates['logistics_amount']):g} руб.")
+    lines.extend([
+        "Уточните одним сообщением:",
+        *[f"- {item}" for item in missing],
+        "",
+        "Интернет-поиск не запускаю.",
+    ])
+    return "\n".join(lines)
 
 
 def _topic2_current_project_source_v3(row: Dict[str, Any], calculation: str = "") -> Dict[str, Any]:
@@ -4113,6 +4226,49 @@ def _topic2_current_project_manual_rows_v3(bundle: Dict[str, Any], rates: Dict[s
             _topic2_current_project_source_v3(quantity), key,
         )
 
+    clarification_source = {
+        "source_type": "USER_CLARIFICATION",
+        "source_file": "Telegram",
+        "page": "",
+        "table_name": "Текущее уточнение пользователя",
+        "row_text": "Логистика и накладные расходы",
+        "calculation": "Ручная сумма/процент пользователя",
+        "confidence": "confirmed",
+    }
+    if rates.get("logistics_mode") == "manual_amount":
+        logistics_source = dict(clarification_source)
+        if rates.get("logistics_delivery_count") and rates.get("logistics_unit_price") is not None:
+            logistics_source["calculation"] = (
+                f"{int(rates['logistics_delivery_count'])} доставок × "
+                f"{float(rates['logistics_unit_price']):g} руб = "
+                f"{float(rates['logistics_amount']):g} руб"
+            )
+        add_row(
+            "09 Логистика", "Логистика по текущему проекту", "компл.", 1,
+            rates.get("logistics_amount"), None, logistics_source,
+            "current_project.logistics",
+        )
+    if rates.get("overhead_mode") == "manual_amount":
+        add_row(
+            "10 Накладные расходы", "Накладные расходы", "компл.", 1,
+            rates.get("overhead_amount"), None, clarification_source,
+            "current_project.overhead",
+        )
+    elif rates.get("overhead_mode") == "percent":
+        base_total = sum(
+            float(row.get("qty") or 0)
+            * (float(row.get("work_unit_price") or 0) + float(row.get("material_unit_price") or 0))
+            for row in rows
+        )
+        overhead_amount = base_total * float(rates.get("overhead_percent") or 0) / 100.0
+        percent_source = dict(clarification_source)
+        percent_source["calculation"] = f"{base_total:g} руб × {float(rates.get('overhead_percent') or 0):g}%"
+        add_row(
+            "10 Накладные расходы", "Накладные расходы", "компл.", 1,
+            overhead_amount, None, percent_source,
+            "current_project.overhead",
+        )
+
     audit = []
     for row_no, row in enumerate(rows, 1):
         for kind, price_key, status_key, source_key in (
@@ -4148,6 +4304,7 @@ def _topic2_current_project_manual_rows_v3(bundle: Dict[str, Any], rates: Dict[s
     prepared["POSITIONS_EXTRACTION_COMPLETE"] = True
     prepared["current_project_manual_rows_ready"] = True
     prepared["price_mode"] = "USER_CONFIRMED_MANUAL_NO_INTERNET"
+    prepared["manual_rates"] = dict(rates)
     return prepared
 
 
@@ -4188,6 +4345,39 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                                 item for item in unresolved_project_items if item != "formwork_area_m2"
                             ]
                         missing_manual_rates = _topic2_project_manual_rates_missing_v3(manual_rates)
+                        missing_logistics = _topic2_project_logistics_missing_v3(manual_rates)
+                        if (
+                            scope_confirmed
+                            and not unresolved_project_items
+                            and not missing_manual_rates
+                            and missing_logistics
+                        ):
+                            text = _topic2_project_logistics_prompt_v3(manual_rates)
+                            pending = {
+                                "version": "TOPIC2_NEW_PROJECT_PDF_ISOLATION_V3",
+                                "status": "WAITING_LOGISTICS_CONFIRMATION",
+                                "task_id": task_id, "chat_id": chat_id, "topic_id": topic_id,
+                                "source_file": current_path, "project_bundle": bundle,
+                                "volume_basis": "CURRENT_PROJECT_DRAWINGS",
+                                "manual_rates": manual_rates,
+                                "created_at": _now(),
+                            }
+                            _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+                            _history_safe(conn, task_id, "TOPIC2_LOGISTICS_CONFIRMATION_REQUIRED")
+                            _history_safe(conn, task_id, "TOPIC2_FINAL_BLOCKED_UNTIL_LOGISTICS_CONFIRMATION")
+                            send_res = await _send_text(
+                                chat_id, text,
+                                _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None),
+                                topic_id,
+                            )
+                            kwargs = {
+                                "state": "WAITING_CLARIFICATION", "result": text,
+                                "error_message": "TOPIC2_LOGISTICS_CONFIRMATION_REQUIRED",
+                            }
+                            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                                kwargs["bot_message_id"] = send_res.get("bot_message_id")
+                            _update_task_safe(conn, task_id, **kwargs)
+                            return True
                         if scope_confirmed and not unresolved_project_items and not missing_manual_rates:
                             prepared_bundle = _topic2_current_project_manual_rows_v3(bundle, manual_rates)
                             estimate_rows = list(prepared_bundle.get("estimate_rows") or [])

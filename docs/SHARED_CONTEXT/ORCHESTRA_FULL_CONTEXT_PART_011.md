@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-15T13:28:38.630140+00:00
-git_sha_before_commit: aa22ac5a969c7bb0cb60a64c1f9cfb8f4440df92
+generated_at_utc: 2026-07-15T13:58:40.748797+00:00
+git_sha_before_commit: 31bf551ef976323d579d58758721d5731b392f27
 part: 11/22
 
 
@@ -2500,7 +2500,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 647c7f8a7cc6eacb883ef5d9d83f4ed1a3e8485e7f36b481226f0ee292830f9d
+SHA256_FULL_FILE: d05c2bca3e7918134fd0f2f35fd45bb914bc10e1466c7bece6ab7d17cadfc3c6
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -4952,6 +4952,30 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
             for index, words in page_words.items()
         }
         page_width = {index + 1: float(page.rect.width) for index, page in enumerate(doc)}
+        page_axial_dimensions = {}
+        for index, page in enumerate(doc, 1):
+            horizontal = []
+            vertical = []
+            for block in (page.get_text("dict") or {}).get("blocks", []):
+                for line in block.get("lines", []):
+                    text = _topic2_archicad_text_v1("".join(
+                        _s(span.get("text")) for span in line.get("spans", [])
+                    ))
+                    compact = text.replace(" ", "")
+                    if not re.fullmatch(r"\d{3,6}", compact):
+                        continue
+                    value_m = float(compact) / 1000.0
+                    direction = tuple(line.get("dir") or (0, 0))
+                    if len(direction) != 2:
+                        continue
+                    if abs(float(direction[0])) >= 0.98 and abs(float(direction[1])) <= 0.05:
+                        horizontal.append(value_m)
+                    elif abs(float(direction[1])) >= 0.98 and abs(float(direction[0])) <= 0.05:
+                        vertical.append(value_m)
+            page_axial_dimensions[index] = {
+                "horizontal": horizontal,
+                "vertical": vertical,
+            }
         doc.close()
     except Exception:
         return result
@@ -5006,18 +5030,23 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
         preparation_thickness_mm = float(preparation_match.group(1))
         slab_volume_m3 = float(slab_position.get("concrete_volume_m3") or 0)
         slab_area_m2 = slab_volume_m3 / slab_thickness_m
-        large_dimensions = sorted({
-            (float(left) * 1000.0 + float(right)) / 1000.0
-            for left, right in re.findall(r"(?<!\d)(\d{1,2})\s+(\d{3})(?!\d)", fp1_text)
-            if 3.0 <= (float(left) * 1000.0 + float(right)) / 1000.0 <= 50.0
-        })
-        dimension_pairs = [
-            (abs(a * b - slab_area_m2), a, b)
-            for index, a in enumerate(large_dimensions)
-            for b in large_dimensions[index + 1:]
-            if 0.5 <= min(a, b) / max(a, b) <= 1.0
+        axial = page_axial_dimensions.get(fp1_page) or {}
+        horizontal_main = sorted(set(value for value in axial.get("horizontal", []) if value >= 8.0))
+        vertical_main = sorted(set(value for value in axial.get("vertical", []) if value >= 8.0))
+        slab_length_m = min(horizontal_main) if horizontal_main else slab_area_m2 ** 0.5
+        slab_width_m = min(
+            vertical_main,
+            key=lambda value: abs(slab_length_m * value - slab_area_m2),
+        ) if vertical_main else slab_area_m2 / slab_length_m
+        release_candidates = [
+            value for value in (axial.get("horizontal", []) + axial.get("vertical", []))
+            if 0.05 <= value <= 0.5
         ]
-        _, slab_length_m, slab_width_m = min(dimension_pairs) if dimension_pairs else (0, slab_area_m2 ** 0.5, slab_area_m2 ** 0.5)
+        preparation_release_m = min(release_candidates) if release_candidates else 0.0
+        preparation_area_m2 = (
+            (slab_length_m + 2 * preparation_release_m)
+            * (slab_width_m + 2 * preparation_release_m)
+        )
         perimeter_m = 2 * (slab_length_m + slab_width_m)
         right_chain = []
         for word in page_words.get(fp1_page) or []:
@@ -5053,12 +5082,13 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
         insulation_height_m = min(vertical_dimensions) if vertical_dimensions else None
         vertical_membrane_height_m = max(vertical_dimensions) if vertical_dimensions else None
         waterproofing_layers = max(1, fp1_text.count("гидроизоляц"))
-        geometry = [("Площадь плиты ФП1", slab_area_m2, "м²", f"{slab_volume_m3:g} м³ / {slab_thickness_m:g} м")]
+        plan_area_m2 = slab_length_m * slab_width_m
+        geometry = [("Площадь плиты ФП1", plan_area_m2, "м²", f"{slab_length_m:g} м × {slab_width_m:g} м")]
         if crushed_stone_thickness_mm:
             crushed_stone_thickness_m = crushed_stone_thickness_mm / 1000.0
-            geometry.append(("Объём щебёночного основания", slab_area_m2 * crushed_stone_thickness_m, "м³", f"{slab_area_m2:g} м² × {crushed_stone_thickness_m:g} м"))
+            geometry.append(("Объём щебёночного основания", preparation_area_m2 * crushed_stone_thickness_m, "м³", f"({slab_length_m:g}+2×{preparation_release_m:g}) м × ({slab_width_m:g}+2×{preparation_release_m:g}) м × {crushed_stone_thickness_m:g} м"))
         if vertical_membrane_height_m:
-            geometry.append(("Площадь гидроизоляции", waterproofing_layers * slab_area_m2 + perimeter_m * vertical_membrane_height_m, "м²", f"{waterproofing_layers} × {slab_area_m2:g} м² + {perimeter_m:g} м × {vertical_membrane_height_m:g} м"))
+            geometry.append(("Площадь гидроизоляции", waterproofing_layers * plan_area_m2 + perimeter_m * vertical_membrane_height_m, "м²", f"{waterproofing_layers} × {plan_area_m2:g} м² + {perimeter_m:g} м × {vertical_membrane_height_m:g} м"))
         if insulation_height_m:
             geometry.append(("Площадь утепления", perimeter_m * insulation_height_m, "м²", f"{perimeter_m:g} м × {insulation_height_m:g} м"))
         for name, value, unit, calculation in geometry:
