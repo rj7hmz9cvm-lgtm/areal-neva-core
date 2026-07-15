@@ -4114,7 +4114,11 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 (str(task_id),),
             ).fetchall()
             _df_hist = "\\n".join(str(r[0] or "") for r in _df_hist_rows)
-            if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist:
+            _df_isolated_replay = any(marker in _df_hist for marker in (
+                "TOPIC2_CORRECTIVE_REPLAY_AS_NEW_PROJECT",
+                "TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED",
+            ))
+            if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist and not _df_isolated_replay:
                 _df_can_fast_final = True
                 try:
                     _df_pending_loader = globals().get("_t2fdsg_load_pending")
@@ -4178,11 +4182,16 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 "source": str(data.get("source") or ""),
             }, ensure_ascii=False)
             if _df_file_id:
+                _df_repeat_as_new = (
+                    int(topic_id or 0) == 2
+                    and str(data.get("run_as_new_task") or "").strip().lower() in ("1", "true", "yes")
+                    and str(data.get("file_duplicate_choice_intent") or "").strip().lower() == "estimate"
+                )
                 _dupe = conn.execute(
                     "SELECT id,state FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND input_type='drive_file' AND raw_input LIKE ? AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
                     (str(chat_id), int(topic_id or 0), task_id, "%" + _df_file_id + "%"),
                 ).fetchone()
-                if _dupe is not None:
+                if _dupe is not None and not _df_repeat_as_new:
                     _dmsg = "Файл уже есть в этом топике. Предыдущая задача: " + _s(_dupe["id"])[:8]
                     _update_task(conn, task_id, state="DONE", result=_dmsg, error_message="")
                     _history(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
@@ -4192,6 +4201,10 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     _send_once(conn, task_id, str(chat_id), _dmsg, _task_field(task, "reply_to_message_id", None), "file_dup_guard_v1")
                     logger.info("FILE_DUPLICATE_MEMORY_GUARD_V1 task=%s", task_id)
                     return
+                if _dupe is not None and _df_repeat_as_new:
+                    _history(conn, task_id, "TOPIC2_REPEAT_FILE_AS_NEW_AUTHORIZED_BY_OWNER")
+                    _history(conn, task_id, "TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED")
+                    conn.commit()
             _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_{task_id}", _df_meta)
             _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
             # === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
@@ -4284,7 +4297,16 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
 
         # === DUPLICATE_GUARD_CALL_V1 ===
         try:
+            _df_late_repeat_as_new = (
+                int(topic_id or 0) == 2
+                and str(data.get("run_as_new_task") or "").strip().lower() in ("1", "true", "yes")
+                and str(data.get("file_duplicate_choice_intent") or "").strip().lower() == "estimate"
+            )
             _dupe = find_duplicate(conn, str(chat_id), int(topic_id or 0), file_id)
+            if _dupe and _df_late_repeat_as_new:
+                _history(conn, task_id, "TOPIC2_LATE_DUPLICATE_GUARD_BYPASSED_FOR_NEW_TASK")
+                conn.commit()
+                _dupe = None
             if _dupe:
                 file_name = data.get("file_name", "файл")
                 _dupe_msg = duplicate_message(_dupe, file_name)
@@ -29269,6 +29291,14 @@ try:
             "project": "анализ",
         }.get(_gdfor_text(intent), _gdfor_text(intent))
 
+    def _gdfor_parse_intent(raw, topic_id):
+        intent = _ioa_parse(_gdfor_text(raw)) if callable(globals().get("_ioa_parse")) else ""
+        if not intent and int(topic_id or 0) == 2:
+            low = _gdfor_text(raw).strip().lower().replace("ё", "е")
+            if low in ("посчитать смету", "посчитай смету", "сделать смету", "сметный расчет"):
+                intent = "estimate"
+        return intent
+
     def _gdfor_is_technical_topic(topic_id):
         return int(topic_id or 0) in {2, 5, 210, 500}
 
@@ -29323,7 +29353,7 @@ try:
     async def _handle_new(conn, task, chat_id, topic_id):  # noqa: F811
         try:
             raw = _gdfor_text(_task_field(task, "raw_input", ""))
-            intent = _ioa_parse(raw) if callable(globals().get("_ioa_parse")) else ""
+            intent = _gdfor_parse_intent(raw, topic_id)
             if intent:
                 parent = _gdfor_parent(conn, task, chat_id, topic_id)
                 if parent is not None:
@@ -29335,6 +29365,8 @@ try:
                     meta["caption"] = (old_caption + "\n" + chosen_caption).strip() if old_caption else chosen_caption
                     meta["file_duplicate_choice_intent"] = intent
                     meta["file_duplicate_choice_raw"] = raw
+                    if int(topic_id or 0) == 2 and intent == "estimate":
+                        meta["run_as_new_task"] = True
                     conn.execute(
                         """
                         UPDATE tasks
@@ -30214,6 +30246,58 @@ except Exception as _t2rasr_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_READY_ARTIFACT_STATE_RECOVERY_V1 ===
+
+
+# === PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1 ===
+# A price-choice reply must not replace a drive-file task's JSON/file context.
+try:
+    _T2DPC_PREV_PREPARE = globals().get("_t2sc_prepare_parent_for_generation")
+
+    if _T2DPC_PREV_PREPARE:
+        def _t2sc_prepare_parent_for_generation(conn, parent_id, choice, child_id=""):  # noqa: F811
+            row = conn.execute(
+                "SELECT input_type FROM tasks WHERE id=? LIMIT 1",
+                (str(parent_id),),
+            ).fetchone()
+            input_type = ""
+            try:
+                input_type = str(row["input_type"] or "")
+            except Exception:
+                try:
+                    input_type = str(row[0] or "")
+                except Exception:
+                    pass
+            if input_type == "drive_file":
+                _t2sc_hist_once(conn, parent_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + str(choice))
+                _t2sc_hist_once(
+                    conn,
+                    parent_id,
+                    "PATCH_TOPIC2_SINGLE_CANON_PRICE_FLOW_V1:price_choice_bound:" + str(child_id),
+                )
+                _t2sc_hist_once(
+                    conn,
+                    parent_id,
+                    "PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1:RAW_INPUT_PRESERVED",
+                )
+                conn.execute(
+                    "UPDATE tasks SET state='IN_PROGRESS', result='', error_message=?, "
+                    "updated_at=datetime('now') WHERE id=?",
+                    ("TOPIC2_PRICE_CHOICE_CONFIRMED_REPROCESS:" + str(choice), str(parent_id)),
+                )
+                return
+            return _T2DPC_PREV_PREPARE(conn, parent_id, choice, child_id)
+
+        globals()["_t2sc_prepare_parent_for_generation"] = _t2sc_prepare_parent_for_generation
+        logger.info("PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1 installed")
+except Exception as _t2dpc_install_err:
+    try:
+        logger.exception(
+            "PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1_INSTALL_ERR:%s",
+            _t2dpc_install_err,
+        )
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_PRICE_CHOICE_PRESERVE_CONTEXT_V1 ===
 
 
 if __name__ == "__main__":
