@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-15T12:28:31.515668+00:00",
-  "git_sha_before_commit": "0783834c74b44ff9476bb7241a7979ba1b24906c",
+  "generated_at_utc": "2026-07-15T12:58:32.268541+00:00",
+  "git_sha_before_commit": "e71e7dd4b0248d697b702b5e200f39b0ee3b0b48",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 434,
@@ -2194,9 +2194,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 532409,
-      "sha256": "ca3d6e31dc337d1a58f93329361e49f6507892c6f6ed64f6099fec262dd2b1df",
-      "chars": 482486,
+      "size_bytes": 542607,
+      "sha256": "88b25583c8c4754d0c4f8a18579b662f92bbdd87cb1bd52efcb339523bc75dac",
+      "chars": 491172,
       "chunks": 2
     },
     {
@@ -3274,7 +3274,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 124487,
+      "size_bytes": 124489,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3319,7 +3319,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_005.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 340714,
+      "size_bytes": 340663,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3328,7 +3328,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 340723,
+      "size_bytes": 340657,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3337,7 +3337,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 340694,
+      "size_bytes": 340729,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3346,7 +3346,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 354190,
+      "size_bytes": 356704,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3373,7 +3373,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 312565,
+      "size_bytes": 324871,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3409,7 +3409,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_015.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 220557,
+      "size_bytes": 227898,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3481,7 +3481,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34799,
+      "size_bytes": 35024,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3490,7 +3490,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 7544,
+      "size_bytes": 7469,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3499,7 +3499,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 386607,
+      "size_bytes": 386480,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3544,7 +3544,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 6514,
+      "size_bytes": 6387,
       "sha256": "",
       "chars": 0,
       "chunks": 0

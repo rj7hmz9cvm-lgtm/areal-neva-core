@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T12:28:31.509154+00:00
-git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
+generated_at_utc: 2026-07-15T12:58:32.259029+00:00
+git_sha_before_commit: e71e7dd4b0248d697b702b5e200f39b0ee3b0b48
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: ca3d6e31dc337d1a58f93329361e49f6507892c6f6ed64f6099fec262dd2b1df
+SHA256_FULL_FILE: 88b25583c8c4754d0c4f8a18579b662f92bbdd87cb1bd52efcb339523bc75dac
 ====================================================================================================
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
             return template_items
@@ -3853,6 +3853,134 @@ def _topic2_project_incomplete_message_v2(bundle: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _topic2_project_clarifications_v2(conn, task_id: str) -> str:
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY id ASC",
+            (task_id,),
+        ).fetchall()
+        return "\n".join(_s(row[0]).split("clarified:", 1)[1] for row in rows if "clarified:" in _s(row[0]))
+    except Exception:
+        return ""
+
+
+def _topic2_project_manual_rates_v2(text: str) -> Dict[str, Any]:
+    low = _low(text).replace("₽", " руб ")
+    rules = {
+        "rebar_material_per_t": r"арматур[^\n]{0,45}?(\d[\d\s]{3,})[^\n]{0,20}(?:тон|т\b)",
+        "gasblock_material_per_m3": r"газобетон[^\n]{0,35}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
+        "foundation_work_per_m3": r"работ[^\n]{0,30}фундамент[^\n]{0,30}?(\d[\d\s]{3,})",
+        "slab_work_per_m3": r"перекрыт[^\n]{0,35}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
+        "wall_work_per_m3": r"стен[^\n]{0,20}монолит[^\n]{0,25}?(\d[\d\s]{3,})",
+        "concrete_material_per_m3": r"(?<!газо)бетон[^\n]{0,35}?(\d[\d\s]{3,})(?:[^\n]{0,20}(?:куб|м3|м³))?",
+        "column_work_per_m3": r"колонн[^\n]{0,35}?(?:работ[^\n]{0,20}?)?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
+        "masonry_work_per_m3": r"кладк[^\n]{0,25}газобетон[^\n]{0,30}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
+        "stairs_work_per_unit": r"лестниц[^\n]{0,45}?работ[^\n]{0,25}?(\d[\d\s]{3,})[^\n]{0,20}(?:единиц|шт)",
+        "remaining_monolith_work_per_m3": r"(?:р1|р2|р3|ростверк)[^\n]{0,60}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
+        "rostverk_work_per_m": r"(?:^|\n)\s*(\d[\d\s]*)[^\n]{0,20}(?:метр\s+погон|пог\.?\s*м)",
+        "crushed_stone_material_per_m3": r"щеб[^\n]{0,35}?(\d[\d\s]{1,})[^\n]{0,20}(?:куб|м3|м³)",
+        "crushed_stone_work_per_m3": r"щеб[^\n]{0,60}?работ[^\n]{0,20}?(\d[\d\s]{1,})",
+        "waterproofing_material_per_m2": r"гидроизоляц[^\n]{0,35}?материал[^\n]{0,20}?(\d[\d\s]{3,})",
+        "waterproofing_work_per_m2": r"гидроизоляц[^\n]{0,35}?работ[^\n]{0,20}?(\d[\d\s]{3,})",
+        "insulation_material_per_m2": r"утеплен[^\n]{0,35}?материал[^\n]{0,20}?(\d[\d\s]{3,})",
+        "insulation_work_per_m2": r"утеплен[^\n]{0,35}?работ[^\n]{0,20}?(\d[\d\s]{3,})",
+    }
+    out: Dict[str, Any] = {}
+    for key, pattern in rules.items():
+        match = re.search(pattern, low, re.I)
+        if not match:
+            continue
+        try:
+            out[key] = float(match.group(1).replace(" ", ""))
+        except Exception:
+            pass
+    shared_layers = re.search(
+        r"(?:гидроизоляц[^\n]{0,30}утеплен|утеплен[^\n]{0,30}гидроизоляц)"
+        r"[^\n]{0,35}?(\d[\d\s]*)[^\n]{0,20}материал[^\n]{0,20}?(\d[\d\s]*)[^\n]{0,20}работ",
+        low,
+        re.I,
+    )
+    if shared_layers:
+        material_rate = float(shared_layers.group(1).replace(" ", ""))
+        work_rate = float(shared_layers.group(2).replace(" ", ""))
+        out.update({
+            "waterproofing_material_per_m2": material_rate,
+            "waterproofing_work_per_m2": work_rate,
+            "insulation_material_per_m2": material_rate,
+            "insulation_work_per_m2": work_rate,
+        })
+    if "включ" in low and "опалуб" in low and ("вязк" in low or "арматур" in low):
+        out["monolith_rates_include_formwork_rebar"] = not any(x in low for x in ("не включ", "отдельно"))
+    if ("щеб" in low and "гидроизоляц" in low) and any(x in low for x in ("включ", "конечно да", "считать")):
+        out["include_project_layers"] = True
+    return out
+
+
+def _topic2_project_manual_price_message_v2(rates: Dict[str, Any]) -> str:
+    labels = {
+        "rebar_material_per_t": "арматура: {value:g} руб/т",
+        "gasblock_material_per_m3": "газобетон: {value:g} руб/м³",
+        "foundation_work_per_m3": "монолитный фундамент, работы: {value:g} руб/м³",
+        "slab_work_per_m3": "межэтажные перекрытия, работы: {value:g} руб/м³",
+        "wall_work_per_m3": "монолитные стены, работы: {value:g} руб/м³",
+        "concrete_material_per_m3": "бетон В30/В25 с доставкой: {value:g} руб/м³",
+        "column_work_per_m3": "монолитные колонны, работы: {value:g} руб/м³",
+        "masonry_work_per_m3": "кладка газобетона, работы: {value:g} руб/м³",
+        "stairs_work_per_unit": "лестницы, работы: {value:g} руб/ед.",
+        "remaining_monolith_work_per_m3": "элементы Р1/Р2/Р3, работы: {value:g} руб/м³",
+        "rostverk_work_per_m": "ростверки Р1/Р2/Р3, работы: {value:g} руб/пог. м",
+        "crushed_stone_material_per_m3": "щебёночное основание, материал: {value:g} руб/м³",
+        "crushed_stone_work_per_m3": "щебёночное основание, работы: {value:g} руб/м³",
+        "waterproofing_material_per_m2": "гидроизоляция, материал: {value:g} руб/м²",
+        "waterproofing_work_per_m2": "гидроизоляция, работы: {value:g} руб/м²",
+        "insulation_material_per_m2": "утепление, материал: {value:g} руб/м²",
+        "insulation_work_per_m2": "утепление, работы: {value:g} руб/м²",
+    }
+    lines = ["Принял расчёт по текущему проекту и записал ручные расценки:"]
+    for key in labels:
+        if key in rates:
+            lines.append("- " + labels[key].format(value=rates[key]))
+    if rates.get("monolith_rates_include_formwork_rebar") is True:
+        lines.append("- монолитные работы включают опалубку и вязку арматуры")
+    if rates.get("include_project_layers") is True:
+        lines.append("- щебёночное основание, гидроизоляцию и утепление включить")
+    missing: List[str] = []
+    if "concrete_material_per_m3" not in rates:
+        missing.append("бетон В30 и В25: цена материала за м³")
+    if "column_work_per_m3" not in rates:
+        missing.append("колонны К1/К2: цена работ за м³")
+    if "remaining_monolith_work_per_m3" not in rates:
+        if "rostverk_work_per_m" in rates:
+            missing.append(
+                f"для ростверков Р1/Р2/Р3 указано {rates['rostverk_work_per_m']:g} руб/пог. м, "
+                "но в извлечённой ведомости есть только объём 10,5 м³ без погонной длины; "
+                "укажите цену работ за м³ либо подтвердите расчёт длины по геометрии проекта"
+            )
+        else:
+            missing.append("элементы Р1/Р2/Р3: цена работ за м³")
+    if "stairs_work_per_unit" not in rates:
+        missing.append("лестницы Л1/Л2: цена работ за единицу")
+    if "masonry_work_per_m3" not in rates:
+        missing.append("кладка газобетона: цена работ за м³")
+    if "monolith_rates_include_formwork_rebar" not in rates:
+        missing.append("включены ли опалубка и вязка арматуры в монолитные работы")
+    if "include_project_layers" not in rates:
+        missing.append("включать ли щебёночное основание, гидроизоляцию и утепление")
+    if rates.get("include_project_layers") is True:
+        layer_keys = (
+            "crushed_stone_material_per_m3", "crushed_stone_work_per_m3",
+            "waterproofing_material_per_m2", "waterproofing_work_per_m2",
+            "insulation_material_per_m2", "insulation_work_per_m2",
+        )
+        if any(key not in rates for key in layer_keys):
+            missing.append("щебень: материал/работа за м³; гидроизоляция и утепление: материал/работа за м² (совпадающих архивных цен нет)")
+    lines.extend(["", "Для сметы без нулевых цен осталось уточнить:"])
+    for index, item in enumerate(missing, 1):
+        lines.append(f"{index}. {item}.")
+    lines.extend(["", "Интернет-поиск не запускаю."])
+    return "\n".join(lines)
+
+
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
     try:
         task_id = _s(_row_get(task, "id", ""))
@@ -3879,12 +4007,24 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                     from core.pdf_spec_extractor import extract_project_positions_bundle as _t2np_extract
                     bundle = _t2np_extract([current_path], topic_id=TOPIC_ID_STROYKA) or {}
                     if bundle.get("ok") and not bundle.get("POSITIONS_EXTRACTION_COMPLETE"):
-                        text = _topic2_project_incomplete_message_v2(bundle)
+                        clarified_text = _topic2_project_clarifications_v2(conn, task_id)
+                        scope_confirmed = any(marker in _low(clarified_text) for marker in (
+                            "по проект", "по геометр", "рассчитать отсутствующ", "считать по найденн",
+                        ))
+                        manual_rates = _topic2_project_manual_rates_v2(clarified_text)
+                        if scope_confirmed:
+                            text = _topic2_project_manual_price_message_v2(manual_rates)
+                            pending_status = "WAITING_MANUAL_PRICE_INPUT"
+                        else:
+                            text = _topic2_project_incomplete_message_v2(bundle)
+                            pending_status = "WAITING_PROJECT_VOLUME_CLARIFICATION"
                         pending = {
                             "version": "TOPIC2_NEW_PROJECT_PDF_ISOLATION_V2",
-                            "status": "WAITING_PROJECT_VOLUME_CLARIFICATION",
+                            "status": pending_status,
                             "task_id": task_id, "chat_id": chat_id, "topic_id": topic_id,
                             "source_file": current_path, "project_bundle": bundle,
+                            "volume_basis": "CURRENT_PROJECT_DRAWINGS" if scope_confirmed else "AWAITING_USER_CHOICE",
+                            "manual_rates": manual_rates,
                             "created_at": _now(),
                         }
                         _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
@@ -3895,6 +4035,10 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                         _history_safe(conn, task_id, "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO")
                         _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUME_GATE")
                         _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUME_GATE")
+                        if scope_confirmed:
+                            _history_safe(conn, task_id, "TOPIC2_PROJECT_GEOMETRY_CHOICE_CONFIRMED")
+                            _history_safe(conn, task_id, f"TOPIC2_MANUAL_PRICES_ACCEPTED:{len(manual_rates)}")
+                            _history_safe(conn, task_id, "TOPIC2_WAITING_ONLY_MISSING_MANUAL_PRICES")
                         send_res = await _send_text(
                             chat_id, text,
                             _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None),
@@ -3902,7 +4046,7 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                         )
                         kwargs = {
                             "state": "WAITING_CLARIFICATION", "result": text,
-                            "error_message": "TOPIC2_PROJECT_VOLUMES_INCOMPLETE",
+                            "error_message": "TOPIC2_MANUAL_PRICES_INCOMPLETE" if scope_confirmed else "TOPIC2_PROJECT_VOLUMES_INCOMPLETE",
                         }
                         if isinstance(send_res, dict) and send_res.get("bot_message_id"):
                             kwargs["bot_message_id"] = send_res.get("bot_message_id")

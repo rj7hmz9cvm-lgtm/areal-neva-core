@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-15T12:28:31.630401+00:00
-GIT_SHA: 0783834c74b44ff9476bb7241a7979ba1b24906c
+GENERATED_AT: 2026-07-15T12:58:32.386161+00:00
+GIT_SHA: e71e7dd4b0248d697b702b5e200f39b0ee3b0b48
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -71,7 +71,7 @@ FAILED_LAST_24H: 0
 - - topic_2: "Доделай мне нормально эту задачу"
 
 ## RUNTIME_FILE_CATALOG_SUMMARY
-total_files: 72
+total_files: 81
 chats: 1
 
 ## DRIVE_UPLOAD_CONTRACT

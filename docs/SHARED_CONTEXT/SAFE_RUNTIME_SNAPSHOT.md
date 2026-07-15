@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-15T12:28:31.320818+00:00
-git_sha_before_commit: 0783834c74b44ff9476bb7241a7979ba1b24906c
+generated_at_utc: 2026-07-15T12:58:32.070920+00:00
+git_sha_before_commit: e71e7dd4b0248d697b702b5e200f39b0ee3b0b48
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+e71e7dd4b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 0783834c7 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 74fb9a0f5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6849116b0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ f38e2c6fd FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c0c088fcf FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 feeca7b68 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 d0b07e49c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-0c49195a4 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 0783834c74b44ff9476bb7241a7979ba1b24906c
+commit e71e7dd4b0248d697b702b5e200f39b0ee3b0b48
 Author: root <root@graceful-olive.ptr.network>
-Date:   Wed Jul 15 14:58:46 2026 +0300
+Date:   Wed Jul 15 15:28:45 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,22 +82,22 @@ Date:   Wed Jul 15 14:58:46 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  18 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  36 +--
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  18 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  20 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  21 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  81 +++++-
  .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             | 211 +++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             | 229 ++++++++++++++-
  .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |  35 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             | 367 ++++++++++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             | 121 +++++++-
  .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
@@ -105,14 +105,14 @@ Date:   Wed Jul 15 14:58:46 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 273 +++++++--------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  16 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  92 ++++--
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 322 +++++++++++----------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  13 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  65 ++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  44 ++-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  21 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
@@ -120,8 +120,8 @@ Date:   Wed Jul 15 14:58:46 2026 +0300
  .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 73 files changed, 971 insertions(+), 353 deletions(-)
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
+ 73 files changed, 791 insertions(+), 410 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -212,13 +212,11 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 4d38f053-7261-4b52-9fed-02f46c7a23a9|2|text|DONE|Задача завершена|Подтверждение принято|2026-07-15 12:02:54
 - 543774b0-bb23-46c4-8f46-6ac805a81950|2|text|DONE|4|Выбор цен привязан к основной задаче: manual|2026-07-15 11:57:35
 - 137c6019-37af-42b8-bb52-6c354c0f8a69|2|text|DONE|1|Выбор действия по файлу принят: смета|2026-07-15 11:54:45
-- 002da0a4-c252-4c87-b548-fad4b69ad757|2|drive_file|WAITING_CLARIFICATION|{"file_id":"1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me","file_name":"ирина ар проект.pdf","mime_type":"application/pdf","caption"|Принял PDF как новый отдельный проект.
-Объект: Индивидуальный жилой дом
-Обработано страниц: 97
-
-Подтверждено по ведомостям проекта:
-- Арматура всего: 22402 кг
--|2026-07-15 12:27:24
+- 002da0a4-c252-4c87-b548-fad4b69ad757|2|drive_file|WAITING_CLARIFICATION|{"file_id": "1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me", "file_name": "ирина ар проект.pdf", "mime_type": "application/pdf", "ca|Принял расчёт по текущему проекту и записал ручные расценки:
+- арматура: 68000 руб/т
+- газобетон: 7600 руб/м³
+- монолитный фундамент, работы: 5500 руб/м³
+- межэ|2026-07-15 12:58:27
 - 8414e015-55c7-46dd-99da-f51524eb37ec|2|drive_file|CANCELLED|{"file_id": "1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me", "file_name": "ирина ар проект.pdf", "mime_type": "application/pdf", "ca|ирина ар проект.pdf принят и прочитан. Нашёл текущие проектные строки:
 - явная ВОР/спецификация не найдена
 
@@ -272,90 +270,58 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 3b365ab1-9d1d-40c7-92da-ce0c9db43157|5|{"file_id": "1FruamdHLMgllCW3qWggLb3eOcxx_dDFw", "file_name": "photo_-1003725299009_12203.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-07-07 12:46:24
 
 ## LATEST_TASK_HISTORY_20
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUME_GATE|2026-07-15 12:27:24
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUME_GATE|2026-07-15 12:27:24
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO|2026-07-15 12:27:24
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_POSITIONS_EXTRACTED:14|2026-07-15 12:27:24
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_ALL_PAGES_SCANNED:97|2026-07-15 12:27:24
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED|2026-07-15 12:27:24
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_FILE_INTAKE_LOCAL_PATH_OK|2026-07-15 12:27:23
-- 002da0a4-c252-4c87-b548-fad4b69ad757|FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE|2026-07-15 12:27:23
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_CORRECTIVE_REPLAY_AFTER_FAST_FINAL_GUARD|2026-07-15 12:27:09
-- 002da0a4-c252-4c87-b548-fad4b69ad757|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_TELEGRAM_DELIVERED:12418|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PDF_CYRILLIC_OK|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PDF_CREATED:1|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_XLSX_FORMULAS_OK|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_XLSX_ROWS_WRITTEN:27|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_XLSX_TEMPLATE_COPY_OK|2026-07-15 12:25:13
-- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_TEMPLATE_SHEET_SELECTED:AREAL_CALC|2026-07-15 12:25:13
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_WAITING_ONLY_MISSING_MANUAL_PRICES|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_MANUAL_PRICES_ACCEPTED:19|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_GEOMETRY_CHOICE_CONFIRMED|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUME_GATE|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUME_GATE|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_POSITIONS_EXTRACTED:14|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_ALL_PAGES_SCANNED:97|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED|2026-07-15 12:58:26
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_FILE_INTAKE_LOCAL_PATH_OK|2026-07-15 12:58:25
+- 002da0a4-c252-4c87-b548-fad4b69ad757|FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE|2026-07-15 12:58:25
+- 002da0a4-c252-4c87-b548-fad4b69ad757|clarified:Для ростверка оставь сумму 8 500 за куб|2026-07-15T12:58:13.149150+00:00
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_WAITING_ONLY_MISSING_MANUAL_PRICES|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_MANUAL_PRICES_ACCEPTED:18|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_GEOMETRY_CHOICE_CONFIRMED|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUME_GATE|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUME_GATE|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_POSITIONS_EXTRACTED:14|2026-07-15 12:57:38
+- 002da0a4-c252-4c87-b548-fad4b69ad757|TOPIC2_PROJECT_ALL_PAGES_SCANNED:97|2026-07-15 12:57:38
 
 ## MEMORY_DB_COUNT
 - 5368
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 33, "updated_at": "2026-07-15T12:28:31.065010+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-15T12:28:31.065536+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-15T12:28:31.040670+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-15T12:28:31.041452+00:00
-- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-15T12:28:30.980169+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-15T12:28:30.980622+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-15T12:28:30.968666+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-15T12:28:30.969458+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-15T12:28:30.924268+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-15T12:28:30.925128+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:28:30.817445+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.817365+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:28:30.817272+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:28:30.817192+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:28:30.817133+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-15T12:28:30.817067+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.816973+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.816809+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.816606+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.816515+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.816197+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-15T12:28:30.815879+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.815763+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:28:30.815492+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-15T12:28:30.815310+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 33, "updated_at": "2026-07-15T12:58:31.819400+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-15T12:58:31.820089+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-15T12:58:31.795714+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-15T12:58:31.796371+00:00
+- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-15T12:58:31.734691+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-15T12:58:31.735274+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-15T12:58:31.721858+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-15T12:58:31.722442+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-15T12:58:31.688490+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-15T12:58:31.689213+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:58:31.547846+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.547773+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:58:31.547703+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:58:31.547616+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-15T12:58:31.547557+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-15T12:58:31.547476+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.547396+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.547215+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.546935+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.546847+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.546548+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-15T12:58:31.546290+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.546206+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-15T12:58:31.545993+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-15T12:58:31.545798+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Scheduled restart job, restart counter is at 7702.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-areal-task-worker.service: Consumed 3.407s CPU time, 110.8M memory peak, 0B memory swap peak.
-areal-task-worker.service: Scheduled restart job, restart counter is at 7703.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Deactivated successfully.
-areal-task-worker.service: Consumed 4.608s CPU time.
-areal-task-worker.service: Scheduled restart job, restart counter is at 7704.
-Started areal-task-worker.service - Areal Task Worker.
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=e473dafd-f332-4c83-9e36-00a319659cea reason=missing_canon_header
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=fc03d3ed-876d-470c-a037-febc737ee0cb reason=missing_canon_header
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 5h 53min 18.503s CPU time, 590.0M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 36.553s CPU time, 113.7M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 50.708s CPU time, 155.4M memory peak, 0B memory swap peak.
+areal-task-worker.service: Consumed 44.366s CPU time, 197.1M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
@@ -363,29 +329,56 @@ areal-task-worker.service: Failed to kill control group /system.slice/areal-task
 areal-task-worker.service: Failed with result 'exit-code'.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1.
 Started areal-task-worker.service - Areal Task Worker.
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
 Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 9.441s CPU time, 151.3M memory peak, 0B memory swap peak.
+areal-task-worker.service: Consumed 34.105s CPU time, 197.3M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 31.170s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 31.886s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
 /root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   _ts = datetime.datetime.utcnow().isoformat()
 /root/.areal-neva-core/task_worker.py:672: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   "timestamp": datetime.datetime.utcnow().isoformat(),
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-07 23:07:32,042 INFO DAEMON: STT env check groq=True
-2026-07-07 23:07:32,042 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_12362.ogg size=86262 model=whisper-large-v3-turbo
-2026-07-07 23:07:32,326 INFO DAEMON: STT http_status=200
-2026-07-07 23:07:32,327 INFO DAEMON: STT ok transcript_len=175
-2026-07-07 23:07:32,423 INFO DAEMON: Task 6e6cf69b-9ab0-4456-884f-06181875a906 created state=NEW topic_id=2
 2026-07-07 23:07:32,423 INFO DAEMON: Update id=262222479 is handled. Duration 724 ms by bot id=8216054898
 2026-07-07 23:20:49,317 INFO DAEMON: Task e767c66f-d3d2-417d-b04b-56370cf80637 created state=NEW topic_id=2
 2026-07-07 23:20:49,317 INFO DAEMON: Update id=262222480 is handled. Duration 13 ms by bot id=8216054898
@@ -411,3 +404,8 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-07-14 04:25:35,681 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
 2026-07-14 04:25:35,695 WARNING DAEMON: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8216054898)
 2026-07-14 04:26:12,504 INFO DAEMON: Connection established (tryings = 1, bot id = 8216054898)
+2026-07-15 15:36:52,315 INFO DAEMON: Update id=262222493 is handled. Duration 394 ms by bot id=8216054898
+2026-07-15 15:43:22,112 INFO DAEMON: Update id=262222494 is handled. Duration 271 ms by bot id=8216054898
+2026-07-15 15:48:53,992 INFO DAEMON: Update id=262222495 is handled. Duration 208 ms by bot id=8216054898
+2026-07-15 15:54:01,337 INFO DAEMON: Update id=262222496 is handled. Duration 125 ms by bot id=8216054898
+2026-07-15 15:58:13,236 INFO DAEMON: Update id=262222497 is handled. Duration 95 ms by bot id=8216054898
