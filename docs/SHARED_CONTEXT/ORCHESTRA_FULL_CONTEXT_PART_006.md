@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-15T15:28:52.592168+00:00
-git_sha_before_commit: e428f410f46dbb9ab937c81a9b12de0c531e2967
+generated_at_utc: 2026-07-15T15:58:55.360084+00:00
+git_sha_before_commit: 85c6816acf52c1f467bd8a67eb543310b240efea
 part: 6/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/5
-SHA256_FULL_FILE: a86fd47c87387dd8430f65dc4f11af95c3248b4e8c307afcc378287cdb5972b4
+SHA256_FULL_FILE: 8caaa08708e1451131c5299b959bfd04d396692c3f357e7cb8b9af974e249c45
 ====================================================================================================
         _p6_history_20260504(conn, task_id, err)
         conn.commit()

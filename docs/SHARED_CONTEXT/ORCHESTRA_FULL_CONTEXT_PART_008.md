@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-15T15:28:52.614372+00:00
-git_sha_before_commit: e428f410f46dbb9ab937c81a9b12de0c531e2967
+generated_at_utc: 2026-07-15T15:58:55.362348+00:00
+git_sha_before_commit: 85c6816acf52c1f467bd8a67eb543310b240efea
 part: 8/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/5
-SHA256_FULL_FILE: a86fd47c87387dd8430f65dc4f11af95c3248b4e8c307afcc378287cdb5972b4
+SHA256_FULL_FILE: 8caaa08708e1451131c5299b959bfd04d396692c3f357e7cb8b9af974e249c45
 ====================================================================================================
         return s
 
@@ -6832,6 +6832,14 @@ try:
             "project": "анализ",
         }.get(_gdfor_text(intent), _gdfor_text(intent))
 
+    def _gdfor_parse_intent(raw, topic_id):
+        intent = _ioa_parse(_gdfor_text(raw)) if callable(globals().get("_ioa_parse")) else ""
+        if not intent and int(topic_id or 0) == 2:
+            low = _gdfor_text(raw).strip().lower().replace("ё", "е")
+            if low in ("посчитать смету", "посчитай смету", "сделать смету", "сметный расчет"):
+                intent = "estimate"
+        return intent
+
     def _gdfor_is_technical_topic(topic_id):
         return int(topic_id or 0) in {2, 5, 210, 500}
 
@@ -6886,7 +6894,7 @@ try:
     async def _handle_new(conn, task, chat_id, topic_id):  # noqa: F811
         try:
             raw = _gdfor_text(_task_field(task, "raw_input", ""))
-            intent = _ioa_parse(raw) if callable(globals().get("_ioa_parse")) else ""
+            intent = _gdfor_parse_intent(raw, topic_id)
             if intent:
                 parent = _gdfor_parent(conn, task, chat_id, topic_id)
                 if parent is not None:
@@ -7484,13 +7492,6 @@ try:
                 return True
             row = conn.execute(
                 """
-                SELECT h.task_id
-                FROM task_history h
-                JOIN tasks t ON t.id=h.task_id
-                WHERE CAST(t.chat_id AS TEXT)=?
-                  AND COALESCE(t.topic_id,0)=2
-                  AND t.id<>?
-                  AND t.state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','DONE')
 
 ====================================================================================================
 END_FILE: task_worker.py
@@ -7500,8 +7501,15 @@ FILE_CHUNK: 4/5
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 5/5
-SHA256_FULL_FILE: a86fd47c87387dd8430f65dc4f11af95c3248b4e8c307afcc378287cdb5972b4
+SHA256_FULL_FILE: 8caaa08708e1451131c5299b959bfd04d396692c3f357e7cb8b9af974e249c45
 ====================================================================================================
+                SELECT h.task_id
+                FROM task_history h
+                JOIN tasks t ON t.id=h.task_id
+                WHERE CAST(t.chat_id AS TEXT)=?
+                  AND COALESCE(t.topic_id,0)=2
+                  AND t.id<>?
+                  AND t.state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','DONE')
                   AND h.action IN ('TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY:2_pdf','TOPIC2_PRICE_ENRICHMENT_STARTED')
                   AND h.created_at >= datetime('now','-8 hours')
                 ORDER BY h.id DESC
