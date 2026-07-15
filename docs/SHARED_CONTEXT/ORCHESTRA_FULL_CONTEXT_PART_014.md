@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-15T13:58:40.750456+00:00
-git_sha_before_commit: 31bf551ef976323d579d58758721d5731b392f27
+generated_at_utc: 2026-07-15T14:28:41.900769+00:00
+git_sha_before_commit: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 51c299099b0cabfe4936a8d5e20a68d4cf9f69006f09520ee564219c78810db9
+SHA256_FULL_FILE: 18789f0720224c73bcca79f37fefc7a0867ccf00d615db93a572ea659efe9134
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
