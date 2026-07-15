@@ -1,14 +1,39 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-15T14:28:41.895817+00:00
-git_sha_before_commit: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+generated_at_utc: 2026-07-15T14:58:51.022974+00:00
+git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
 part: 8/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/5
-SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
+SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
 ====================================================================================================
+        return s
+
+    # ---- Wrap outbound _send_once / _send_once_ex ----
+    _t2cf_orig_send_once = globals().get("_send_once")
+    _t2cf_orig_send_once_ex = globals().get("_send_once_ex")
+
+    def _t2cf_is_topic2_task(conn, task_id):
+        if conn is None or not task_id:
+            return False
+        try:
+            r = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+            if r and r[0] == 2:
+                return True
+        except Exception:
+            pass
+        return False
+
+    if _t2cf_orig_send_once:
+        def _send_once(conn, task_id, chat_id, text, reply_to=None, kind="result"):
+            try:
+                if isinstance(text, str) and _t2cf_should_sanitize(text):
+                    if _t2cf_is_topic2_task(conn, task_id) or "Предварительная смета готова" in text:
+                        text = _t2cf_sanitize(text)
+            except Exception as _e:
+                try:
                     _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_SO_ERR:%s", _e)
                 except Exception:
                     pass
@@ -7467,6 +7492,17 @@ try:
                   AND h.action IN ('TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY:2_pdf','TOPIC2_PRICE_ENRICHMENT_STARTED')
                   AND h.created_at >= datetime('now','-8 hours')
                 ORDER BY h.id DESC
+
+====================================================================================================
+END_FILE: task_worker.py
+FILE_CHUNK: 4/5
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 5/5
+SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
+====================================================================================================
                 LIMIT 1
                 """,
                 (str(chat_id), str(task_id)),
@@ -7491,17 +7527,6 @@ try:
                     conn.commit()
                 except Exception:
                     pass
-
-====================================================================================================
-END_FILE: task_worker.py
-FILE_CHUNK: 4/5
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: task_worker.py
-FILE_CHUNK: 5/5
-SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
-====================================================================================================
                 bypass = globals().get("_ghmr_prev_handle_new")
                 if bypass:
                     return await bypass(conn, task, chat_id, topic_id)

@@ -1,7 +1,7 @@
 # SINGLE_MODEL_SOURCE
 
-GENERATED_AT: 2026-07-15T14:28:42.378193+00:00
-GIT_SHA: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+GENERATED_AT: 2026-07-15T14:58:51.548374+00:00
+GIT_SHA: 1e368154475979202192796b0148bed89d3f4894
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
 ## PRIORITY_OF_TRUTH
@@ -60,7 +60,7 @@ STATUS: SYNCED_LOCAL
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | UNKNOWN | 3 | 0 |
+| 2 | STROYKA | UNKNOWN | 0 | 2 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |

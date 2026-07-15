@@ -1,14 +1,38 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-15T14:28:41.894977+00:00
-git_sha_before_commit: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+generated_at_utc: 2026-07-15T14:58:51.021983+00:00
+git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
 part: 7/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/5
-SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
+SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
 ====================================================================================================
+                if h_ip:
+                    res = h_ip(conn, t, chat_id_v, topic_id_v)
+                    if _t2fp_inspect.isawaitable(res):
+                        return await res
+                    return res
+            except Exception as _t2fp_e:
+                try:
+                    logger.warning("T2FP_FULL_PIPELINE_ERR task=%s err=%s", task_id, _t2fp_e)
+                except Exception:
+                    pass
+
+        res = _T2FP_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _t2fp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t2fp_wrapped = True
+    logger.info("PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 installed")
+
+# === END_PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 ===
+
+# === PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
+# Root cause: PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1 intercepts topic_2 tasks via
+# _handle_drive_file and _p6e67_try_merge, routing them to _t2fer_run_final_estimate
 # (simplified v2 path → handle_topic2_estimate_final_close → "Позиций: 1").
 # Fix: wrap _t2fer_run_final_estimate so topic_2 calls go to full P2/P3 pipeline instead.
 import logging as _t2rfp_log
@@ -7498,31 +7522,6 @@ try:
         s = _t2cf_re.sub(r"[ \t]+\n", "\n", s)
         s = _t2cf_re.sub(r"\n{3,}", "\n\n", s).strip()
         s = s + "\n\n" + _T2CF_MARKER
-        return s
-
-    # ---- Wrap outbound _send_once / _send_once_ex ----
-    _t2cf_orig_send_once = globals().get("_send_once")
-    _t2cf_orig_send_once_ex = globals().get("_send_once_ex")
-
-    def _t2cf_is_topic2_task(conn, task_id):
-        if conn is None or not task_id:
-            return False
-        try:
-            r = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
-            if r and r[0] == 2:
-                return True
-        except Exception:
-            pass
-        return False
-
-    if _t2cf_orig_send_once:
-        def _send_once(conn, task_id, chat_id, text, reply_to=None, kind="result"):
-            try:
-                if isinstance(text, str) and _t2cf_should_sanitize(text):
-                    if _t2cf_is_topic2_task(conn, task_id) or "Предварительная смета готова" in text:
-                        text = _t2cf_sanitize(text)
-            except Exception as _e:
-                try:
 
 ====================================================================================================
 END_FILE: task_worker.py

@@ -1,14 +1,35 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-15T14:28:41.894076+00:00
-git_sha_before_commit: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+generated_at_utc: 2026-07-15T14:58:51.020957+00:00
+git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
 part: 6/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/5
-SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
+SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
 ====================================================================================================
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6_technadzor_error")
+        return True
+
+    if not isinstance(r, dict) or not r.get("handled"):
+        return False
+
+    msg = _clean(_s(r.get("message") or "Технадзор обработан"), 2000)
+    artifact = _p6_s_20260504(r.get("artifact_path") or "", 2000)
+    result = msg
+    if artifact:
+        result += "\nАртефакт подготовлен и ожидает загрузки/выдачи"
+
+    _p6_update_20260504(conn, task_id, state=_p6_s_20260504(r.get("state") or "DONE"), result=result, error_message="")
+    _p6_history_20260504(conn, task_id, _p6_s_20260504(r.get("history") or "P6_TECHNADZOR_HANDLED"))
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6_technadzor_result")
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
     input_type = _p6_s_20260504(_p6_row_get_20260504(task, "input_type", "text"), 50)
 
@@ -7762,30 +7783,6 @@ if _T2FP_ORIG_HANDLE_NEW and not getattr(_T2FP_ORIG_HANDLE_NEW, "_t2fp_wrapped",
                         pass
                 t["state"] = "IN_PROGRESS"
                 h_ip = globals().get("_handle_in_progress")
-                if h_ip:
-                    res = h_ip(conn, t, chat_id_v, topic_id_v)
-                    if _t2fp_inspect.isawaitable(res):
-                        return await res
-                    return res
-            except Exception as _t2fp_e:
-                try:
-                    logger.warning("T2FP_FULL_PIPELINE_ERR task=%s err=%s", task_id, _t2fp_e)
-                except Exception:
-                    pass
-
-        res = _T2FP_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
-        if _t2fp_inspect.isawaitable(res):
-            return await res
-        return res
-
-    _handle_new._t2fp_wrapped = True
-    logger.info("PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 installed")
-
-# === END_PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 ===
-
-# === PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
-# Root cause: PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1 intercepts topic_2 tasks via
-# _handle_drive_file and _p6e67_try_merge, routing them to _t2fer_run_final_estimate
 
 ====================================================================================================
 END_FILE: task_worker.py

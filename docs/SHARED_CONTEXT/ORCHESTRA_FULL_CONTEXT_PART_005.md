@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-15T14:28:41.893181+00:00
-git_sha_before_commit: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+generated_at_utc: 2026-07-15T14:58:51.020212+00:00
+git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
 part: 5/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/5
-SHA256_FULL_FILE: 91a6aa57ec75569c927e26d3331e43bfdf9bdfe5fd9559206dc1b4e39fba8b1e
+SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -4193,11 +4193,16 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 "source": str(data.get("source") or ""),
             }, ensure_ascii=False)
             if _df_file_id:
+                _df_repeat_as_new = (
+                    int(topic_id or 0) == 2
+                    and str(data.get("run_as_new_task") or "").strip().lower() in ("1", "true", "yes")
+                    and str(data.get("file_duplicate_choice_intent") or "").strip().lower() == "estimate"
+                )
                 _dupe = conn.execute(
                     "SELECT id,state FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND input_type='drive_file' AND raw_input LIKE ? AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
                     (str(chat_id), int(topic_id or 0), task_id, "%" + _df_file_id + "%"),
                 ).fetchone()
-                if _dupe is not None:
+                if _dupe is not None and not _df_repeat_as_new:
                     _dmsg = "Файл уже есть в этом топике. Предыдущая задача: " + _s(_dupe["id"])[:8]
                     _update_task(conn, task_id, state="DONE", result=_dmsg, error_message="")
                     _history(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
@@ -4207,6 +4212,10 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     _send_once(conn, task_id, str(chat_id), _dmsg, _task_field(task, "reply_to_message_id", None), "file_dup_guard_v1")
                     logger.info("FILE_DUPLICATE_MEMORY_GUARD_V1 task=%s", task_id)
                     return
+                if _dupe is not None and _df_repeat_as_new:
+                    _history(conn, task_id, "TOPIC2_REPEAT_FILE_AS_NEW_AUTHORIZED_BY_OWNER")
+                    _history(conn, task_id, "TOPIC2_NEW_PROJECT_CONTEXT_ISOLATED")
+                    conn.commit()
             _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_{task_id}", _df_meta)
             _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
             # === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
@@ -4299,7 +4308,16 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
 
         # === DUPLICATE_GUARD_CALL_V1 ===
         try:
+            _df_late_repeat_as_new = (
+                int(topic_id or 0) == 2
+                and str(data.get("run_as_new_task") or "").strip().lower() in ("1", "true", "yes")
+                and str(data.get("file_duplicate_choice_intent") or "").strip().lower() == "estimate"
+            )
             _dupe = find_duplicate(conn, str(chat_id), int(topic_id or 0), file_id)
+            if _dupe and _df_late_repeat_as_new:
+                _history(conn, task_id, "TOPIC2_LATE_DUPLICATE_GUARD_BYPASSED_FOR_NEW_TASK")
+                conn.commit()
+                _dupe = None
             if _dupe:
                 file_name = data.get("file_name", "файл")
                 _dupe_msg = duplicate_message(_dupe, file_name)
@@ -7174,27 +7192,6 @@ def _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id):
     except Exception as e:
         err = "P6_TECHNADZOR_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
         _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
-        _p6_history_20260504(conn, task_id, err)
-        conn.commit()
-        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6_technadzor_error")
-        return True
-
-    if not isinstance(r, dict) or not r.get("handled"):
-        return False
-
-    msg = _clean(_s(r.get("message") or "Технадзор обработан"), 2000)
-    artifact = _p6_s_20260504(r.get("artifact_path") or "", 2000)
-    result = msg
-    if artifact:
-        result += "\nАртефакт подготовлен и ожидает загрузки/выдачи"
-
-    _p6_update_20260504(conn, task_id, state=_p6_s_20260504(r.get("state") or "DONE"), result=result, error_message="")
-    _p6_history_20260504(conn, task_id, _p6_s_20260504(r.get("history") or "P6_TECHNADZOR_HANDLED"))
-    conn.commit()
-    _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6_technadzor_result")
-    return True
-
-async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
 
 ====================================================================================================
 END_FILE: task_worker.py

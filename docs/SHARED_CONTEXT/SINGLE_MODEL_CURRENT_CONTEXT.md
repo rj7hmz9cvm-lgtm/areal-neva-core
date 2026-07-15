@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-15T14:28:42.571868+00:00
-GIT_SHA: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+GENERATED_AT: 2026-07-15T14:58:51.764085+00:00
+GIT_SHA: 1e368154475979202192796b0148bed89d3f4894
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | UNKNOWN | 3 | 0 |
+| 2 | STROYKA | UNKNOWN | 0 | 2 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -70,8 +70,8 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 3
-failed_24h: 0
+active: 0
+failed_24h: 2
 commits_last_7d: 0
 markers_missing: 5
 - TOPIC2_ESTIMATE_SESSION_CREATED
@@ -80,9 +80,9 @@ markers_missing: 5
 - TOPIC2_XLSX_CREATED
 - TOPIC2_MESSAGE_THREAD_ID_OK
 last_failed:
+- 128047d6 | STALE_TIMEOUT
+- 59424786 | NO_VALID_ARTIFACT
 - ad69b7c1 | STALE_TIMEOUT
-- 341cde94 | STALE_TIMEOUT
-- 5e523179 | STALE_TIMEOUT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат

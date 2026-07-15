@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T14:28:41.901546+00:00
-git_sha_before_commit: 08b7e33dc3a24408f08d4bded7bc63ccb5da4981
+generated_at_utc: 2026-07-15T14:58:51.030202+00:00
+git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 18789f0720224c73bcca79f37fefc7a0867ccf00d615db93a572ea659efe9134
+SHA256_FULL_FILE: c60c5b9705d98ad83a9e1d9eca63baf8a59122290908fcb3bca48c25fe66a520
 ====================================================================================================
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
             return template_items
@@ -1073,6 +1073,8 @@ def _topic2_price_search_no_v1(text: str) -> bool:
 
 def _topic2_final_ready_confirm_phrase_v1(text: str) -> bool:
     low = _low(text or "").replace("[voice]", "").strip(" .,!?:;")
+    if "не доволен" in low or "недоволен" in low:
+        return False
     exact = {
         "готово", "готов", "готова", "готово спасибо",
         "подтверждаю", "закрывай", "можно закрывать",
@@ -1088,11 +1090,68 @@ def _topic2_final_ready_confirm_phrase_v1(text: str) -> bool:
         "задачей закрыта",
         "доволен задачей",
         "доволен результатом",
+        "да доволен",
+        "да я доволен",
+        "я доволен",
+        "да доволеен",
+        "доволеен",
+        "результатом доволен",
+        "можно завершать",
         "задачу завершить",
         "задачу закрыть",
+        "завершай задачу",
+        "завершай запрос",
+        "закрывай задачу",
+        "закрой задачу",
+        "закрыть задачу",
         "хорошая работа",
         "можно закрывать",
+        "результат подходит",
+        "все подходит",
+        "всё подходит",
+        "все верно завершай",
+        "всё верно завершай",
+        "да все верно",
+        "да всё верно",
+        "я же тебе сказал задача завершена",
+        "я же тебе сказал завершай",
+        "да можно",
     ))
+
+
+def _topic2_parent_has_canonical_final_markers_v1(conn, task_id: str) -> bool:
+    rows = conn.execute(
+        "SELECT id, COALESCE(action,'') AS action FROM task_history WHERE task_id=? ORDER BY id",
+        (str(task_id),),
+    ).fetchall()
+    if not rows:
+        return False
+    last_revoke = max(
+        (
+            int(row["id"])
+            for row in rows
+            if "TOPIC2_PREVIOUS_FINAL_REVOKED" in _s(row["action"])
+            or "TOPIC2_EXPLICIT_CONFIRM_REVOKED" in _s(row["action"])
+        ),
+        default=-1,
+    )
+    actions = [_s(row["action"]) for row in rows if int(row["id"]) > last_revoke]
+    required_groups = (
+        ("TOPIC2_TEMPLATE_SELECTED:",),
+        ("TOPIC2_TEMPLATE_FILE_ID:",),
+        ("TOPIC2_TEMPLATE_CACHE_USED", "TOPIC2_TEMPLATE_DRIVE_DOWNLOADED"),
+        ("TOPIC2_TEMPLATE_SHEET_SELECTED:",),
+        ("TOPIC2_XLSX_TEMPLATE_COPY_OK",),
+        ("TOPIC2_XLSX_ROWS_WRITTEN:",),
+        ("TOPIC2_XLSX_FORMULAS_OK",),
+        ("TOPIC2_XLSX_CANON_COLUMNS_OK",),
+        ("TOPIC2_PDF_CREATED",),
+        ("TOPIC2_PDF_CYRILLIC_OK",),
+        ("TOPIC2_DRIVE_UPLOAD_XLSX_OK",),
+        ("TOPIC2_DRIVE_UPLOAD_PDF_OK",),
+        ("TOPIC2_TELEGRAM_DELIVERED",),
+    )
+    return all(any(marker in action for action in actions for marker in group) for group in required_groups)
 
 
 async def _topic2_handle_price_search_confirmation_v1(conn, task, logger=None) -> bool:
@@ -1200,8 +1259,10 @@ async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
             """,
             (str(chat_id), int(topic_id), str(task_id), reply_to, reply_to),
         ).fetchone()
+        if parent and not _topic2_parent_has_canonical_final_markers_v1(conn, _s(parent["id"])):
+            parent = None
     if not parent:
-        parent = conn.execute(
+        candidates = conn.execute(
             """
             SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
             FROM tasks
@@ -1212,10 +1273,17 @@ async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
               AND (COALESCE(result,'') LIKE '%Смета готова%' OR COALESCE(result,'') LIKE '%Смета по извлечённым позициям готова%')
               AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
             ORDER BY updated_at DESC, created_at DESC
-            LIMIT 1
+            LIMIT 20
             """,
             (str(chat_id), int(topic_id), str(task_id)),
-        ).fetchone()
+        ).fetchall()
+        parent = next(
+            (
+                row for row in candidates
+                if _topic2_parent_has_canonical_final_markers_v1(conn, _s(row["id"]))
+            ),
+            None,
+        )
     if not parent:
         return False
 
@@ -3138,6 +3206,19 @@ def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link=""
         f"Лист: {meta['sheet']}",
         f"Цены: {meta['price_mode']}",
         "",
+        "Позиции сметы:",
+    ]
+    for index, row in enumerate((bundle or {}).get("estimate_rows") or [], 1):
+        qty = float(row.get("qty") or 0)
+        work = qty * float(row.get("work_unit_price") or 0)
+        material = qty * float(row.get("material_unit_price") or 0)
+        pdf_lines.append(f"{index}. {_s(row.get('name'))}: {qty:g} {_s(row.get('unit'))}")
+        pdf_lines.append(
+            f"   Работы: {money(work)} руб; материалы: {money(material)} руб; "
+            f"всего: {money(work + material)} руб"
+        )
+    pdf_lines.extend([
+        "",
         "Итого:",
         f"Материалы: {money(totals['materials'])} руб",
         f"Работы: {money(totals['works'])} руб",
@@ -3146,7 +3227,7 @@ def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link=""
         f"Без НДС: {money(totals['without_vat'])} руб",
         f"НДС 22%: {money(totals['vat'])} руб (не начисляется по указанию пользователя)",
         f"С НДС: {money(totals['with_vat'])} руб",
-    ]
+    ])
     if xlsx_link:
         pdf_lines.extend(["", f"Excel: {xlsx_link}"])
     if pdf_link:
@@ -4149,9 +4230,9 @@ def _topic2_project_manual_rates_v2(text: str) -> Dict[str, Any]:
     rules = {
         "rebar_material_per_t": r"арматур[^\n]{0,45}?(\d[\d\s]{3,})[^\n]{0,20}(?:тон|т\b)",
         "gasblock_material_per_m3": r"газобетон[^\n]{0,35}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
-        "foundation_work_per_m3": r"работ[^\n]{0,30}фундамент[^\n]{0,30}?(\d[\d\s]{3,})",
+        "foundation_work_per_m3": r"(?:работ[^\n]{0,30}фундамент|фундамент[^\n]{0,30}работ)[^\n]{0,30}?(\d[\d\s]{3,})",
         "slab_work_per_m3": r"перекрыт[^\n]{0,35}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
-        "wall_work_per_m3": r"стен[^\n]{0,20}монолит[^\n]{0,25}?(\d[\d\s]{3,})",
+        "wall_work_per_m3": r"(?:стен[^\n]{0,20}монолит|монолит[^\n]{0,20}стен)[^\n]{0,25}?(\d[\d\s]{3,})",
         "concrete_material_per_m3": r"(?<!газо)бетон[^\n]{0,35}?(\d[\d\s]{3,})(?:[^\n]{0,20}(?:куб|м3|м³))?",
         "column_work_per_m3": r"колонн[^\n]{0,35}?(?:работ[^\n]{0,20}?)?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
         "masonry_work_per_m3": r"кладк[^\n]{0,25}газобетон[^\n]{0,30}?(\d[\d\s]{3,})[^\n]{0,20}(?:куб|м3|м³)",
@@ -4176,7 +4257,7 @@ def _topic2_project_manual_rates_v2(text: str) -> Dict[str, Any]:
             pass
     shared_layers = re.search(
         r"(?:гидроизоляц[^\n]{0,30}утеплен|утеплен[^\n]{0,30}гидроизоляц)"
-        r"[^\n]{0,35}?(\d[\d\s]*)[^\n]{0,20}материал[^\n]{0,20}?(\d[\d\s]*)[^\n]{0,20}работ",
+        r"[^\n]{0,35}?материал[^\n]{0,20}?(\d[\d\s]*)[^\n]{0,25}работ[^\n]{0,20}?(\d[\d\s]*)",
         low,
         re.I,
     )
@@ -4189,8 +4270,13 @@ def _topic2_project_manual_rates_v2(text: str) -> Dict[str, Any]:
             "insulation_material_per_m2": material_rate,
             "insulation_work_per_m2": work_rate,
         })
-    if "включ" in low and "опалуб" in low and ("вязк" in low or "арматур" in low):
-        out["monolith_rates_include_formwork_rebar"] = not any(x in low for x in ("не включ", "отдельно"))
+    monolith_scope = re.search(
+        r"монолитн[^\n.]{0,40}работ[^\n.]{0,40}(?:не\s+)?включ[^\n.]{0,50}опалуб[^\n.]{0,50}(?:вязк|арматур)",
+        low,
+        re.I,
+    )
+    if monolith_scope:
+        out["monolith_rates_include_formwork_rebar"] = "не включ" not in monolith_scope.group(0)
     if ("щеб" in low and "гидроизоляц" in low) and any(x in low for x in ("включ", "конечно да", "считать")):
         out["include_project_layers"] = True
     if "подъезд" in low:
@@ -4588,9 +4674,13 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                     from core.pdf_spec_extractor import extract_project_positions_bundle as _t2np_extract
                     bundle = _t2np_extract([current_path], topic_id=TOPIC_ID_STROYKA) or {}
                     if bundle.get("ok") and not bundle.get("POSITIONS_EXTRACTION_COMPLETE"):
-                        clarified_text = _topic2_project_clarifications_v2(conn, task_id)
+                        clarified_text = "\n".join(
+                            part for part in (caption, _topic2_project_clarifications_v2(conn, task_id))
+                            if _s(part).strip()
+                        )
                         scope_confirmed = any(marker in _low(clarified_text) for marker in (
-                            "по проект", "по геометр", "рассчитать отсутствующ", "считать по найденн",
+                            "по проект", "текущему проект", "все позиции, найденные в pdf",
+                            "по геометр", "рассчитать отсутствующ", "считать по найденн",
                         ))
                         manual_rates = _topic2_project_manual_rates_v2(clarified_text)
                         unresolved_project_items = list(bundle.get("missing_items") or [])
