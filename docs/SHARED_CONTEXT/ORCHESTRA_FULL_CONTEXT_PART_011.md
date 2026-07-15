@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-15T12:58:32.256006+00:00
-git_sha_before_commit: e71e7dd4b0248d697b702b5e200f39b0ee3b0b48
+generated_at_utc: 2026-07-15T13:28:38.630140+00:00
+git_sha_before_commit: aa22ac5a969c7bb0cb60a64c1f9cfb8f4440df92
 part: 11/22
 
 
@@ -2500,7 +2500,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: fb7ff71c90dab8679b773f73c7179bf24bb6acb60c53ad86462ed247e7a15133
+SHA256_FULL_FILE: 647c7f8a7cc6eacb883ef5d9d83f4ed1a3e8485e7f36b481226f0ee292830f9d
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -4848,6 +4848,247 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
             return current
     return _TOPIC2_ARCHICAD_PREV_POSITIONS_V2(files, topic_id=topic_id)
 # === END_PATCH_TOPIC2_ARCHICAD_PROJECT_ISOLATION_V2 ===
+
+
+# === PATCH_TOPIC2_ARCHICAD_PROJECT_GEOMETRY_V3 ===
+_TOPIC2_ARCHICAD_PREV_GEOMETRY_V3 = extract_project_positions_bundle
+
+
+def _topic2_geometry_quantity_v3(name, value, unit, page, source_file, calculation):
+    return {
+        "name": name,
+        "item": name,
+        "value": round(float(value), 3),
+        "unit": unit,
+        "quantity_kind": "derived_geometry",
+        "source_file": source_file,
+        "page": page,
+        "method": "ARCHICAD_TEXT_LAYER_GEOMETRY_V3",
+        "text": calculation,
+        "calculation": calculation,
+        "confidence": "calculated_from_project_dimensions",
+    }
+
+
+def _topic2_numeric_word_v3(word):
+    text = _topic2_archicad_text_v1(word[4]).replace(" ", "").replace(",", ".")
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", text):
+        return None
+    try:
+        return float(text)
+    except Exception:
+        return None
+
+
+def _topic2_section_geometry_v3(page_words, page_text, element_name):
+    low = _s(page_text).lower()
+    width_m = height_m = None
+    if "схема сечения" in low and "армопояс" in low:
+        label = next((word for word in page_words if "сечен" in _topic2_archicad_text_v1(word[4]).lower()), None)
+        if label:
+            lx, ly = float(label[0]), float(label[1])
+            candidates = []
+            for word in page_words:
+                value = _topic2_numeric_word_v3(word)
+                if value is None or not 100 <= value <= 600:
+                    continue
+                x0, y0, x1, y1 = map(float, word[:4])
+                if lx - 80 <= x0 <= lx + 180 and ly + 35 <= y0 <= ly + 180:
+                    rotated = (y1 - y0) > (x1 - x0) * 1.08
+                    distance = abs(x0 - lx) + abs(y0 - ly)
+                    candidates.append((distance, rotated, value))
+            vertical = sorted((row for row in candidates if row[1]), key=lambda row: row[0])
+            horizontal = sorted((row for row in candidates if not row[1]), key=lambda row: row[0])
+            if vertical and horizontal:
+                height_m = max(row[2] for row in vertical) / 1000.0
+                width_m = max(row[2] for row in horizontal) / 1000.0
+    elif "монолитная балка" in low:
+        label = next((word for word in page_words if "монолит" in _topic2_archicad_text_v1(word[4]).lower()), None)
+        if label:
+            lx, ly = float(label[0]), float(label[1])
+            nearby = []
+            for word in page_words:
+                value = _topic2_numeric_word_v3(word)
+                if value is None or not 100 <= value <= 500:
+                    continue
+                x0, y0, x1, y1 = map(float, word[:4])
+                if lx <= x0 <= lx + 180 and abs(y0 - ly) <= 20 and (x1 - x0) >= (y1 - y0) * 0.8:
+                    nearby.append((y0, x0, value))
+            pair = None
+            for left in nearby:
+                for right in nearby:
+                    if right[1] <= left[1]:
+                        continue
+                    if abs(left[0] - right[0]) <= 3 and abs(left[2] - right[2]) <= 0.01:
+                        pair = (left, right)
+                        break
+                if pair:
+                    break
+            levels = sorted({float(value.replace(",", ".")) for value in re.findall(r"-?\d+[.,]\d{3}", page_text)})
+            level_steps = [abs(b - a) for a, b in zip(levels, levels[1:]) if 0.05 <= abs(b - a) <= 1.0]
+            if pair and level_steps:
+                width_m = (pair[0][2] + pair[1][2]) / 1000.0
+                height_m = min(level_steps)
+    if not width_m or not height_m or not (0.01 <= width_m * height_m <= 2.0):
+        return None
+    return float(width_m), float(height_m)
+
+
+def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dict[str, Any]:  # noqa: F811
+    result = dict(_TOPIC2_ARCHICAD_PREV_GEOMETRY_V3(files, topic_id=topic_id) or {})
+    if result.get("source") != "ARCHICAD_PROJECT_COORDINATE_PARSER_V2" or len(files or []) != 1:
+        return result
+
+    file_path = str(files[0])
+    try:
+        import fitz  # type: ignore
+        doc = fitz.open(file_path)
+        page_words = {index + 1: list(page.get_text("words") or []) for index, page in enumerate(doc)}
+        page_text = {
+            index: _bundle_norm_v1(" ".join(
+                _topic2_archicad_text_v1(word[4])
+                for word in words if len(word) >= 5
+            ))
+            for index, words in page_words.items()
+        }
+        page_width = {index + 1: float(page.rect.width) for index, page in enumerate(doc)}
+        doc.close()
+    except Exception:
+        return result
+
+    source_file = os.path.basename(file_path)
+    positions = list(result.get("positions") or [])
+    quantities = list(result.get("quantities") or [])
+    derived = list(result.get("derived_quantities") or [])
+    evidence = list(result.get("source_evidence") or [])
+
+    for position in positions:
+        name = _s(position.get("name"))
+        if not name.lower().startswith("ростверк"):
+            continue
+        mark = name.split()[-1].lower()
+        page = next((
+            number for number, text in page_text.items()
+            if mark in text.lower()
+            and "спецификация" in text.lower()
+            and any(kind in text.lower() for kind in ("балка", "ростверк", "армопояс"))
+        ), None)
+        if not page:
+            continue
+        section = _topic2_section_geometry_v3(page_words.get(page) or [], page_text.get(page) or "", name)
+        if not section:
+            continue
+        width_m, height_m = section
+        volume = float(position.get("concrete_volume_m3") or 0)
+        if volume <= 0:
+            continue
+        length = round(volume / (width_m * height_m), 3)
+        calculation = f"{volume:g} м³ / ({width_m:g} м × {height_m:g} м) = {length:g} пог. м"
+        position["length_m"] = length
+        position["section_width_m"] = width_m
+        position["section_height_m"] = height_m
+        position["geometry_source_page"] = page
+        position["geometry_calculation"] = calculation
+        item = _topic2_geometry_quantity_v3(
+            f"Длина {name}", length, "пог. м", page, source_file, calculation,
+        )
+        quantities.append(item)
+        derived.append(item)
+        evidence.append(item)
+
+    fp1_page = next((number for number, text in page_text.items() if "схема опалубки" in text.lower() and "щпс" in text.lower() and "плита фп" in text.lower()), None)
+    fp1_text = _s(page_text.get(fp1_page)).lower() if fp1_page else ""
+    slab_position = next((row for row in positions if _s(row.get("name")).lower().startswith("плита фп")), None)
+    slab_thickness_match = re.search(r"толщин[^\n]{0,30}?(\d{2,4})\s*мм", fp1_text, re.I)
+    preparation_match = re.search(r"бетонная подготовка\s*(\d{2,4})\s*мм", fp1_text, re.I)
+    if fp1_page and slab_position and slab_thickness_match and preparation_match and "гидроизоляц" in fp1_text and "пенополистерол" in fp1_text:
+        slab_thickness_m = float(slab_thickness_match.group(1)) / 1000.0
+        preparation_thickness_mm = float(preparation_match.group(1))
+        slab_volume_m3 = float(slab_position.get("concrete_volume_m3") or 0)
+        slab_area_m2 = slab_volume_m3 / slab_thickness_m
+        large_dimensions = sorted({
+            (float(left) * 1000.0 + float(right)) / 1000.0
+            for left, right in re.findall(r"(?<!\d)(\d{1,2})\s+(\d{3})(?!\d)", fp1_text)
+            if 3.0 <= (float(left) * 1000.0 + float(right)) / 1000.0 <= 50.0
+        })
+        dimension_pairs = [
+            (abs(a * b - slab_area_m2), a, b)
+            for index, a in enumerate(large_dimensions)
+            for b in large_dimensions[index + 1:]
+            if 0.5 <= min(a, b) / max(a, b) <= 1.0
+        ]
+        _, slab_length_m, slab_width_m = min(dimension_pairs) if dimension_pairs else (0, slab_area_m2 ** 0.5, slab_area_m2 ** 0.5)
+        perimeter_m = 2 * (slab_length_m + slab_width_m)
+        right_chain = []
+        for word in page_words.get(fp1_page) or []:
+            value = _topic2_numeric_word_v3(word)
+            if value is None or not 20 <= value <= 1000 or float(word[0]) < page_width.get(fp1_page, 0) * 0.90:
+                continue
+            right_chain.append((float(word[1]), value))
+        right_chain.sort()
+        crushed_stone_thickness_mm = None
+        for index in range(len(right_chain) - 2):
+            if abs(right_chain[index][1] - slab_thickness_m * 1000.0) <= 1 and abs(right_chain[index + 1][1] - preparation_thickness_mm) <= 1:
+                crushed_stone_thickness_mm = right_chain[index + 2][1]
+                break
+        vertical_dimensions = []
+        numeric_words = [word for word in (page_words.get(fp1_page) or []) if _topic2_numeric_word_v3(word) is not None]
+        for first in numeric_words:
+            first_value = _topic2_numeric_word_v3(first)
+            if first_value is None or not 100 <= first_value <= 999:
+                continue
+            for second in numeric_words:
+                second_value = _topic2_numeric_word_v3(second)
+                if second_value is None or not 1 <= second_value <= 9:
+                    continue
+                chain_x = float(first[0])
+                section_width = page_width.get(fp1_page, 0)
+                if (
+                    section_width * 0.65 <= chain_x <= section_width * 0.85
+                    and abs(chain_x - float(second[0])) <= 2
+                    and 0 < float(second[1]) - float(first[1]) <= 40
+                ):
+                    vertical_dimensions.append((second_value * 1000.0 + first_value) / 1000.0)
+        vertical_dimensions = sorted(set(value for value in vertical_dimensions if 0.5 <= value <= 5.0))
+        insulation_height_m = min(vertical_dimensions) if vertical_dimensions else None
+        vertical_membrane_height_m = max(vertical_dimensions) if vertical_dimensions else None
+        waterproofing_layers = max(1, fp1_text.count("гидроизоляц"))
+        geometry = [("Площадь плиты ФП1", slab_area_m2, "м²", f"{slab_volume_m3:g} м³ / {slab_thickness_m:g} м")]
+        if crushed_stone_thickness_mm:
+            crushed_stone_thickness_m = crushed_stone_thickness_mm / 1000.0
+            geometry.append(("Объём щебёночного основания", slab_area_m2 * crushed_stone_thickness_m, "м³", f"{slab_area_m2:g} м² × {crushed_stone_thickness_m:g} м"))
+        if vertical_membrane_height_m:
+            geometry.append(("Площадь гидроизоляции", waterproofing_layers * slab_area_m2 + perimeter_m * vertical_membrane_height_m, "м²", f"{waterproofing_layers} × {slab_area_m2:g} м² + {perimeter_m:g} м × {vertical_membrane_height_m:g} м"))
+        if insulation_height_m:
+            geometry.append(("Площадь утепления", perimeter_m * insulation_height_m, "м²", f"{perimeter_m:g} м × {insulation_height_m:g} м"))
+        for name, value, unit, calculation in geometry:
+            item = _topic2_geometry_quantity_v3(name, value, unit, fp1_page, source_file, calculation)
+            quantities.append(item)
+            derived.append(item)
+            evidence.append(item)
+
+        resolved = set()
+        names = {row[0] for row in geometry}
+        if "Объём щебёночного основания" in names:
+            resolved.add("crushed_stone_base_volume_m3")
+        if "Площадь гидроизоляции" in names:
+            resolved.add("waterproofing_area_m2")
+        if "Площадь утепления" in names:
+            resolved.add("insulation_area_m2")
+        missing = [item for item in (result.get("missing_items") or []) if item not in resolved]
+        result["missing_items"] = missing
+
+    result["positions"] = positions
+    result["quantities"] = quantities
+    result["direct_quantities"] = quantities
+    result["derived_quantities"] = derived
+    result["source_evidence"] = evidence
+    result["normalization_evidence"] = evidence
+    result["VOLUMES_COMPLETE"] = not result.get("missing_items")
+    result["POSITIONS_EXTRACTION_COMPLETE"] = not result.get("missing_items")
+    result["source"] = "ARCHICAD_PROJECT_COORDINATE_PARSER_GEOMETRY_V3"
+    return result
+# === END_PATCH_TOPIC2_ARCHICAD_PROJECT_GEOMETRY_V3 ===
 
 ====================================================================================================
 END_FILE: core/pdf_spec_extractor.py

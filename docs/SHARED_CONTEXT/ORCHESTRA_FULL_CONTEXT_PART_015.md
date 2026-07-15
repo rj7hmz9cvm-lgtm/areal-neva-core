@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T12:58:32.259029+00:00
-git_sha_before_commit: e71e7dd4b0248d697b702b5e200f39b0ee3b0b48
+generated_at_utc: 2026-07-15T13:28:38.633788+00:00
+git_sha_before_commit: aa22ac5a969c7bb0cb60a64c1f9cfb8f4440df92
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 88b25583c8c4754d0c4f8a18579b662f92bbdd87cb1bd52efcb339523bc75dac
+SHA256_FULL_FILE: 6a4529d25eb8565ec5f1e83006ec3f5289b46cc1f3ccabd632844735c4a4cf02
 ====================================================================================================
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
             return template_items
@@ -2832,7 +2832,11 @@ def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link=""
         "",
         "Файлы: АР + КР",
         f"Позиции: {len((bundle or {}).get('estimate_rows') or [])}",
-        "Цены: cache/memory/archive + Sonar по недостающим, PRICE_MISSING только где цена не найдена",
+        (
+            "Цены: ручные расценки пользователя, интернет не запускался"
+            if (bundle or {}).get("current_project_manual_rows_ready")
+            else "Цены: cache/memory/archive + Sonar по недостающим, PRICE_MISSING только где цена не найдена"
+        ),
         "",
         "Не закрыто по проекту:",
     ]
@@ -2874,8 +2878,9 @@ async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic
     outdir.mkdir(parents=True, exist_ok=True)
     xlsx_path = str(outdir / f"topic2_ar_kr_{task_id}.xlsx")
     pdf_path = str(outdir / f"topic2_ar_kr_{task_id}.pdf")
-    bundle = _topic2_rebuild_billable_rows_v1(conn, task_id, bundle)
-    bundle = await _topic2_project_bundle_enrich_prices_v1(conn, task_id, bundle)
+    if not (bundle or {}).get("current_project_manual_rows_ready"):
+        bundle = _topic2_rebuild_billable_rows_v1(conn, task_id, bundle)
+        bundle = await _topic2_project_bundle_enrich_prices_v1(conn, task_id, bundle)
     _topic2_project_bundle_create_xlsx_v1(task_id, bundle, xlsx_path)
     _history_safe(conn, task_id, "TOPIC2_XLSX_CREATED")
     _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK")
@@ -2913,7 +2918,11 @@ async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic
         "Объект: АР + КР",
         "Файлы: АР + КР",
         f"Позиции: {len((bundle or {}).get('estimate_rows') or [])}",
-        "Цены: cache/memory/archive + Sonar по недостающим",
+        (
+            "Цены: ручные расценки пользователя, интернет не запускался"
+            if (bundle or {}).get("current_project_manual_rows_ready")
+            else "Цены: cache/memory/archive + Sonar по недостающим"
+        ),
         "",
         "Не закрыто по проекту:",
         *([f"- {_s(x)}" for x in missing] if missing else ["- нет"]),
@@ -3981,6 +3990,167 @@ def _topic2_project_manual_price_message_v2(rates: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _topic2_project_manual_rates_missing_v3(rates: Dict[str, Any]) -> List[str]:
+    required = (
+        "rebar_material_per_t", "gasblock_material_per_m3",
+        "foundation_work_per_m3", "slab_work_per_m3", "wall_work_per_m3",
+        "concrete_material_per_m3", "column_work_per_m3", "masonry_work_per_m3",
+        "stairs_work_per_unit", "remaining_monolith_work_per_m3",
+        "crushed_stone_material_per_m3", "crushed_stone_work_per_m3",
+        "waterproofing_material_per_m2", "waterproofing_work_per_m2",
+        "insulation_material_per_m2", "insulation_work_per_m2",
+        "monolith_rates_include_formwork_rebar", "include_project_layers",
+    )
+    return [key for key in required if key not in rates]
+
+
+def _topic2_current_project_source_v3(row: Dict[str, Any], calculation: str = "") -> Dict[str, Any]:
+    return {
+        "source_type": "CURRENT_PROJECT_PDF",
+        "source_file": _s(row.get("source_file")),
+        "page": row.get("page"),
+        "table_name": _s(row.get("table_name") or row.get("sheet") or "Текущий проект"),
+        "row_text": _s(row.get("row_text") or row.get("text") or row.get("name")),
+        "calculation": calculation or _s(row.get("calculation") or row.get("geometry_calculation")),
+        "confidence": _s(row.get("confidence") or "direct"),
+    }
+
+
+def _topic2_current_project_manual_rows_v3(bundle: Dict[str, Any], rates: Dict[str, Any]) -> Dict[str, Any]:
+    prepared = dict(bundle or {})
+    rows: List[Dict[str, Any]] = []
+
+    def add_row(section, name, unit, qty, work_price, material_price, source, key):
+        row = _topic2_billable_row_v1(section, name, unit, qty, key + ".material", key, source)
+        row.update({
+            "work_unit_price": float(work_price) if work_price is not None else None,
+            "material_unit_price": float(material_price) if material_price is not None else None,
+            "work_price_source": "USER_CONFIRMED_MANUAL" if work_price is not None else "NOT_APPLICABLE_OR_INCLUDED",
+            "material_price_source": "USER_CONFIRMED_MANUAL" if material_price is not None else "NOT_APPLICABLE_OR_INCLUDED",
+            "work_price_status": "USER_CONFIRMED" if work_price is not None else "NOT_APPLICABLE",
+            "material_price_status": "USER_CONFIRMED" if material_price is not None else "NOT_APPLICABLE",
+            "supplier": "Расценка пользователя",
+            "source_url": "",
+            "checked_at": _now(),
+        })
+        rows.append(row)
+
+    for position in prepared.get("positions") or []:
+        if not isinstance(position, dict):
+            continue
+        name = _s(position.get("name"))
+        low = _low(name)
+        source = _topic2_current_project_source_v3(position)
+        if _s(position.get("position_type")) == "project_structural_element":
+            volume = float(position.get("concrete_volume_m3") or 0)
+            rebar_t = float(position.get("rebar_mass_kg") or 0) / 1000.0
+            if "плита фп" in low:
+                section, work = "02 Фундаменты", rates["foundation_work_per_m3"]
+            elif "плита пп" in low:
+                section, work = "03 Монолитные перекрытия", rates["slab_work_per_m3"]
+            elif "колонн" in low:
+                section, work = "03 Монолитные колонны", rates["column_work_per_m3"]
+            elif "стен" in low:
+                section, work = "03 Монолитные стены", rates["wall_work_per_m3"]
+            elif "ростверк" in low:
+                section, work = "02 Ростверки", rates["remaining_monolith_work_per_m3"]
+            elif "лестниц" in low:
+                section, work = "03 Монолитные лестницы", None
+            else:
+                continue
+            add_row(
+                section, f"Бетон и монолитные работы: {name}", "м³", volume,
+                work, rates["concrete_material_per_m3"], source,
+                "current_project.concrete." + re.sub(r"\W+", "_", low),
+            )
+            if rebar_t > 0:
+                add_row(
+                    section, f"Арматура: {name}", "т", rebar_t,
+                    None, rates["rebar_material_per_t"], source,
+                    "current_project.rebar." + re.sub(r"\W+", "_", low),
+                )
+            if "лестниц" in low:
+                add_row(
+                    section, f"Устройство лестницы: {name}", "шт", 1,
+                    rates["stairs_work_per_unit"], None, source,
+                    "current_project.stairs_work." + re.sub(r"\W+", "_", low),
+                )
+        elif _s(position.get("position_type")) == "masonry_material":
+            volume = float(position.get("volume_m3") or 0)
+            add_row(
+                "04 Стены и перегородки", f"Газобетон и кладка: {name}", "м³", volume,
+                rates["masonry_work_per_m3"], rates["gasblock_material_per_m3"], source,
+                "current_project.masonry." + re.sub(r"\W+", "_", low),
+            )
+
+    derived_by_name = {
+        _s(row.get("name")): row for row in (prepared.get("derived_quantities") or [])
+        if isinstance(row, dict)
+    }
+    layer_rows = (
+        (
+            "01 Основание", "Щебёночное основание", "Объём щебёночного основания", "м³",
+            rates["crushed_stone_work_per_m3"], rates["crushed_stone_material_per_m3"],
+            "current_project.layers.crushed_stone",
+        ),
+        (
+            "05 Гидроизоляция и утепление", "Гидроизоляция по проекту", "Площадь гидроизоляции", "м²",
+            rates["waterproofing_work_per_m2"], rates["waterproofing_material_per_m2"],
+            "current_project.layers.waterproofing",
+        ),
+        (
+            "05 Гидроизоляция и утепление", "Утепление по проекту", "Площадь утепления", "м²",
+            rates["insulation_work_per_m2"], rates["insulation_material_per_m2"],
+            "current_project.layers.insulation",
+        ),
+    )
+    for section, name, quantity_name, unit, work, material, key in layer_rows:
+        quantity = derived_by_name.get(quantity_name)
+        if not quantity:
+            continue
+        add_row(
+            section, name, unit, quantity.get("value"), work, material,
+            _topic2_current_project_source_v3(quantity), key,
+        )
+
+    audit = []
+    for row_no, row in enumerate(rows, 1):
+        for kind, price_key, status_key, source_key in (
+            ("work", "work_unit_price", "work_price_status", "work_price_source"),
+            ("material", "material_unit_price", "material_price_status", "material_price_source"),
+        ):
+            if row.get(price_key) is None:
+                continue
+            audit.append({
+                "estimate_row_no": row_no,
+                "position_key": row.get("position_key"),
+                "material_total_key": row.get("material_total_key"),
+                "public_name": row.get("name"),
+                "price_kind": kind,
+                "unit": row.get("unit"),
+                "unit_price": row.get(price_key),
+                "price_source": row.get(source_key),
+                "status": row.get(status_key),
+                "supplier": "Расценка пользователя",
+                "source_url": "",
+                "checked_at": _now(),
+                "cache_hit": False,
+                "sonar_attempted": False,
+                "note": "Текущее явное уточнение пользователя",
+            })
+
+    prepared["estimate_rows"] = rows
+    prepared["evidence_only_rows"] = list(prepared.get("quantities") or [])
+    prepared["price_audit"] = audit
+    prepared["price_items"] = audit
+    prepared["missing_items"] = []
+    prepared["VOLUMES_COMPLETE"] = True
+    prepared["POSITIONS_EXTRACTION_COMPLETE"] = True
+    prepared["current_project_manual_rows_ready"] = True
+    prepared["price_mode"] = "USER_CONFIRMED_MANUAL_NO_INTERNET"
+    return prepared
+
+
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
     try:
         task_id = _s(_row_get(task, "id", ""))
@@ -4012,6 +4182,44 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                             "по проект", "по геометр", "рассчитать отсутствующ", "считать по найденн",
                         ))
                         manual_rates = _topic2_project_manual_rates_v2(clarified_text)
+                        unresolved_project_items = list(bundle.get("missing_items") or [])
+                        if manual_rates.get("monolith_rates_include_formwork_rebar") is True:
+                            unresolved_project_items = [
+                                item for item in unresolved_project_items if item != "formwork_area_m2"
+                            ]
+                        missing_manual_rates = _topic2_project_manual_rates_missing_v3(manual_rates)
+                        if scope_confirmed and not unresolved_project_items and not missing_manual_rates:
+                            prepared_bundle = _topic2_current_project_manual_rows_v3(bundle, manual_rates)
+                            estimate_rows = list(prepared_bundle.get("estimate_rows") or [])
+                            names = "\n".join(_low(row.get("name")) for row in estimate_rows)
+                            forbidden_old = any(token in names for token in ("фм1/фм2", "бфм1", "ангар"))
+                            if not estimate_rows or forbidden_old:
+                                _history_safe(conn, task_id, "TOPIC2_CURRENT_PROJECT_FINAL_BLOCKED:row_validation")
+                                _update_task_safe(
+                                    conn, task_id, state="FAILED",
+                                    error_message="TOPIC2_CURRENT_PROJECT_ROWS_INVALID",
+                                )
+                                return True
+                            _history_safe(
+                                conn, task_id,
+                                f"TOPIC2_PROJECT_ALL_PAGES_SCANNED:{(bundle.get('files') or [{}])[0].get('pages_seen', 0)}",
+                            )
+                            _history_safe(conn, task_id, f"TOPIC2_PROJECT_POSITIONS_EXTRACTED:{len(bundle.get('positions') or [])}")
+                            _history_safe(conn, task_id, "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_YES")
+                            _history_safe(conn, task_id, "TOPIC2_VOLUME_COMPLETENESS_GATE_OK")
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_NOT_REQUESTED_NO_INTERNET")
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED:manual_user_rates")
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:manual_user_rates")
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_DONE:manual_user_rates")
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:manual_user_rates")
+                            _history_safe(conn, task_id, f"TOPIC2_CURRENT_PROJECT_ESTIMATE_ROWS:{len(estimate_rows)}")
+                            _memory_save(chat_id, f"topic_2_project_bundle_{task_id}", prepared_bundle)
+                            await _topic2_project_bundle_send_artifacts_v1(
+                                conn, task_id, chat_id, topic_id,
+                                _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None),
+                                prepared_bundle,
+                            )
+                            return True
                         if scope_confirmed:
                             text = _topic2_project_manual_price_message_v2(manual_rates)
                             pending_status = "WAITING_MANUAL_PRICE_INPUT"
