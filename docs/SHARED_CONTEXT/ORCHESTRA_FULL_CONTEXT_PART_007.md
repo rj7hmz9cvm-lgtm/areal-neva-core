@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-15T14:58:51.021983+00:00
-git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
+generated_at_utc: 2026-07-15T15:28:52.603056+00:00
+git_sha_before_commit: e428f410f46dbb9ab937c81a9b12de0c531e2967
 part: 7/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/5
-SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
+SHA256_FULL_FILE: a86fd47c87387dd8430f65dc4f11af95c3248b4e8c307afcc378287cdb5972b4
 ====================================================================================================
                 if h_ip:
                     res = h_ip(conn, t, chat_id_v, topic_id_v)

@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-15T14:58:51.030202+00:00
-git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
+generated_at_utc: 2026-07-15T15:28:52.675123+00:00
+git_sha_before_commit: e428f410f46dbb9ab937c81a9b12de0c531e2967
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: c60c5b9705d98ad83a9e1d9eca63baf8a59122290908fcb3bca48c25fe66a520
+SHA256_FULL_FILE: 0c9f06a855dc7a17a3fba98eeca19b5c02cb0602b04157ed4ddfd5974c8cb5c2
 ====================================================================================================
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
             return template_items
@@ -1299,6 +1299,13 @@ async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
     _update_task_safe(conn, parent_id, state="DONE", error_message="")
     _history_safe(conn, parent_id, "state:DONE")
     try:
+        _memory_save(chat_id, f"topic_2_estimate_pending_{parent_id}", {
+            "status": "DONE",
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "completed_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
         _memory_save(chat_id, f"topic_2_user_input_{parent_id}", {
             "task_id": parent_id,
             "topic_id": int(topic_id),
@@ -3172,7 +3179,10 @@ def _topic2_project_summary_v4(bundle: Dict[str, Any], xlsx_link: str = "", pdf_
             f"Объект: {meta['object']}   Материал: {meta['material']}   "
             f"Площадь: {meta['area']}   Этажность: {meta['floors']}   Регион: {meta['region']}"
         ),
-        f"Шаблон: {meta['template']}   Лист: {meta['sheet']}   Цены: {meta['price_mode']}",
+        (
+            f"Шаблон: {meta['template']}   Лист: {meta['sheet']}   "
+            f"Цены: {meta['price_mode']}   Логистика: {money(totals['logistics'])} руб"
+        ),
         "",
         "Итого:",
         f"  Материалы: {money(totals['materials'])} руб",
@@ -3293,6 +3303,8 @@ async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic
 
     result = _topic2_project_summary_v4(bundle, xlsx_link, pdf_link) + "\n\nПодтверди или пришли правки"
     send_res = await _send_text(str(chat_id), result, reply_to, int(topic_id or 0))
+    if int(topic_id or 0) == TOPIC_ID_STROYKA:
+        _history_safe(conn, task_id, "TOPIC2_MESSAGE_THREAD_ID_OK")
     kwargs = {"state": "AWAITING_CONFIRMATION", "result": result, "error_message": None}
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
         kwargs["bot_message_id"] = send_res.get("bot_message_id")
@@ -4667,12 +4679,15 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
             is_pdf = file_name.lower().endswith(".pdf") or "pdf" in mime_type
             is_estimate = any(word in _low(caption + " " + raw_input) for word in ("смет", "стоимость", "посчитать"))
             if task_id and is_pdf and is_estimate:
+                _history_safe(conn, task_id, "TOPIC2_ESTIMATE_SESSION_CREATED")
                 import glob as _t2np_glob
                 paths = _t2np_glob.glob(str(BASE / "runtime" / "drive_files" / f"{task_id}_*"))
                 current_path = next((path for path in paths if path.lower().endswith(".pdf") and os.path.getsize(path) > 1000), "")
                 if current_path:
                     from core.pdf_spec_extractor import extract_project_positions_bundle as _t2np_extract
                     bundle = _t2np_extract([current_path], topic_id=TOPIC_ID_STROYKA) or {}
+                    if bundle.get("ok"):
+                        _history_safe(conn, task_id, "TOPIC2_CONTEXT_READY")
                     if bundle.get("ok") and not bundle.get("POSITIONS_EXTRACTION_COMPLETE"):
                         clarified_text = "\n".join(
                             part for part in (caption, _topic2_project_clarifications_v2(conn, task_id))
@@ -4723,6 +4738,7 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                             _update_task_safe(conn, task_id, **kwargs)
                             return True
                         if scope_confirmed and not unresolved_project_items and not missing_manual_rates:
+                            _history_safe(conn, task_id, "TOPIC2_LOGISTICS_CONFIRMED")
                             prepared_bundle = _topic2_current_project_manual_rows_v3(bundle, manual_rates)
                             estimate_rows = list(prepared_bundle.get("estimate_rows") or [])
                             names = "\n".join(_low(row.get("name")) for row in estimate_rows)

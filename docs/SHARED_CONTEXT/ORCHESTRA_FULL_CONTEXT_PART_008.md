@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-15T14:58:51.022974+00:00
-git_sha_before_commit: 1e368154475979202192796b0148bed89d3f4894
+generated_at_utc: 2026-07-15T15:28:52.614372+00:00
+git_sha_before_commit: e428f410f46dbb9ab937c81a9b12de0c531e2967
 part: 8/22
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/5
-SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
+SHA256_FULL_FILE: a86fd47c87387dd8430f65dc4f11af95c3248b4e8c307afcc378287cdb5972b4
 ====================================================================================================
         return s
 
@@ -6898,6 +6898,8 @@ try:
                     meta["caption"] = (old_caption + "\n" + chosen_caption).strip() if old_caption else chosen_caption
                     meta["file_duplicate_choice_intent"] = intent
                     meta["file_duplicate_choice_raw"] = raw
+                    if int(topic_id or 0) == 2 and intent == "estimate":
+                        meta["run_as_new_task"] = True
                     conn.execute(
                         """
                         UPDATE tasks
@@ -7489,9 +7491,6 @@ try:
                   AND COALESCE(t.topic_id,0)=2
                   AND t.id<>?
                   AND t.state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','DONE')
-                  AND h.action IN ('TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY:2_pdf','TOPIC2_PRICE_ENRICHMENT_STARTED')
-                  AND h.created_at >= datetime('now','-8 hours')
-                ORDER BY h.id DESC
 
 ====================================================================================================
 END_FILE: task_worker.py
@@ -7501,8 +7500,11 @@ FILE_CHUNK: 4/5
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 5/5
-SHA256_FULL_FILE: 98288e938d982707924fd8a01f6ca93676a731d5361dc1ab19335bf621444a73
+SHA256_FULL_FILE: a86fd47c87387dd8430f65dc4f11af95c3248b4e8c307afcc378287cdb5972b4
 ====================================================================================================
+                  AND h.action IN ('TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY:2_pdf','TOPIC2_PRICE_ENRICHMENT_STARTED')
+                  AND h.created_at >= datetime('now','-8 hours')
+                ORDER BY h.id DESC
                 LIMIT 1
                 """,
                 (str(chat_id), str(task_id)),
