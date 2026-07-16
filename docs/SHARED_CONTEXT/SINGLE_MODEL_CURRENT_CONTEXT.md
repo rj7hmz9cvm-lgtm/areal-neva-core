@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-16T14:35:02.970793+00:00
-GIT_SHA: 88822fba0bcff541fb60571bd7be221a9d7f4ed1
+GENERATED_AT: 2026-07-16T15:02:27.952310+00:00
+GIT_SHA: 8bada831ce0db3e9970ae27d104b6812f2c2c29e
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 2 |
+| 2 | STROYKA | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -71,7 +71,7 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 0
-failed_24h: 2
+failed_24h: 0
 commits_last_7d: 1
 recent_commits:
 - cdd3c08c1|topic2: save 2026-07-15 canonical PDF live closure
