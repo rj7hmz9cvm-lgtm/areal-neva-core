@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-16T13:35:03.362145+00:00
-GIT_SHA: 1facca91c6845c8530d6e4134693fdf065e70fe8
+GENERATED_AT: 2026-07-16T14:02:14.557375+00:00
+GIT_SHA: bd95ac666841cc05001a703006361dc2d662e00c
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -75,10 +75,7 @@ failed_24h: 2
 commits_last_7d: 1
 recent_commits:
 - cdd3c08c1|topic2: save 2026-07-15 canonical PDF live closure
-markers_missing: 4
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
-- TOPIC2_LOGISTICS_CONFIRMED
+markers_missing: 1
 - TOPIC2_MESSAGE_THREAD_ID_OK
 last_failed:
 - 128047d6 | STALE_TIMEOUT
@@ -88,7 +85,7 @@ blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 4
+NEXT_ACTION: live-test / close missing markers: 1
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
