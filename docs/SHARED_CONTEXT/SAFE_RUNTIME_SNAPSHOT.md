@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-16T12:31:59.342196+00:00
-git_sha_before_commit: 56848ba33e2b8d7c7c30c58978b03655af449a33
+generated_at_utc: 2026-07-16T12:35:02.119116+00:00
+git_sha_before_commit: 6c083e59528dcfa0f92ec06bba63f5071099002d
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+6c083e595 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 56848ba33 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 b2aec1868 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 0c3869eeb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ f7a8e4bfa FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 cf9149785 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3470301ba FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 ea52bba53 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-35b684629 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 56848ba33e2b8d7c7c30c58978b03655af449a33
-Author: Ila <ilakuznecov@mac.local>
-Date:   Thu Jul 16 15:05:07 2026 +0300
+commit 6c083e59528dcfa0f92ec06bba63f5071099002d
+Author: root <root@graceful-olive.ptr.network>
+Date:   Thu Jul 16 15:32:06 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -105,14 +105,14 @@ Date:   Thu Jul 16 15:05:07 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 160 ++++++++++-----------
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 200 ++++++++++-----------
  .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   9 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  59 ++++----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  97 +++++-----
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  15 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  53 +++---
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
@@ -121,7 +121,7 @@ Date:   Thu Jul 16 15:05:07 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 267 insertions(+), 264 deletions(-)
+ 73 files changed, 322 insertions(+), 325 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
