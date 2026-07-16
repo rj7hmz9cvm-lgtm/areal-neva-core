@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-16T13:32:11.499564+00:00
-GIT_SHA: 657ca1e338c2ad337fc6d589f0c910bef80fe210
+GENERATED_AT: 2026-07-16T13:35:02.766517+00:00
+GIT_SHA: 1facca91c6845c8530d6e4134693fdf065e70fe8
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -39,13 +39,12 @@ FAILED_LAST_24H: 2
 - clarified:Лестница по стоимости работ 120 000 единица щебень 1200 м кубический б
 - clarified:2800 метр погонный
 - clarified:Для ростверка оставь сумму 8 500 за куб
-- TOPIC2_PREVIOUS_FINAL_REVOKED:volume_geometry_and_identity_audit
+- clarified:Логистика это 10 доставок по 28 000
+- TOPIC2_DELIVERY_COUNT_PARSER_REQUEUE
 - FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
 - TOPIC2_FILE_INTAKE_LOCAL_PATH_OK
 - TOPIC2_LOGISTICS_CONFIRMATION_REQUIRED
 - TOPIC2_FINAL_BLOCKED_UNTIL_LOGISTICS_CONFIRMATION
-- clarified:Логистика это 10 доставок по 28 000
-- TOPIC2_DELIVERY_COUNT_PARSER_REQUEUE
 - clarified:Разгрузка не нужна накладные расходы 5% от общей стоимости работ
 - clarified:Тебе зачем эта информация да есть подъезд
 - TOPIC2_PROJECT_ALL_PAGES_SCANNED:97
@@ -58,6 +57,7 @@ FAILED_LAST_24H: 2
 - TOPIC2_PRICE_ENRICHMENT_DONE:manual_user_rates
 - TOPIC2_PRICE_CHOICE_CONFIRMED:manual_user_rates
 - TOPIC2_CURRENT_PROJECT_ESTIMATE_ROWS:33
+- TOPIC2_XLSX_CREATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
