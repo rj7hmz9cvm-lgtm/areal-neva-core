@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-16T23:35:02.263316+00:00
-GIT_SHA: bc0f1bb71520692aff9c3912b0187d0ac8866169
+GENERATED_AT: 2026-07-17T00:03:32.382519+00:00
+GIT_SHA: f2c4a3d0fe2f6fa7ae5449d7a8fead8e7bc36b9d
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -28,23 +28,7 @@ FAILED_LAST_24H: 0
 - cdd3c08c1|topic2: save 2026-07-15 canonical PDF live closure
 
 ## MARKERS_LAST_24H
-- LIVE_TEST_REPEAT_AS_NEW_AUTHORIZED_BY_OWNER
-- LIVE_TEST_FILE_OFFER_ESTIMATE_CHOICE_AUTHORIZED_BY_OWNER
-- LIVE_TEST_ARCHIVE_BLANK_PRICE_CHOICE_AUTHORIZED_BY_OWNER
-- LIVE_TEST_RETRY_AFTER_DRIVE_CONTEXT_PRESERVE_FIX
-- LIVE_TEST_RETRY_ARCHIVE_CHOICE_WITHOUT_MANUAL_CONTAMINATION
-- LIVE_TEST_EXPLICIT_COMPLETION_AUTHORIZED_BY_OWNER
-- clarified:по проекту. стоимость арматуры 68000 тонна. газобетон 7600 куб. Стоимо
-- clarified:Смету включаем все позиции которые есть в проекте. Бетон с доставкой м
-- clarified:Лестница по стоимости работ 120 000 единица щебень 1200 м кубический б
-- clarified:2800 метр погонный
-- clarified:Для ростверка оставь сумму 8 500 за куб
-- clarified:Логистика это 10 доставок по 28 000
-- clarified:Разгрузка не нужна накладные расходы 5% от общей стоимости работ
-- clarified:Тебе зачем эта информация да есть подъезд
-- created:NEW
-- clarified:Всё я доволен можно завершать работу
-- clarified:Да я доволен совершай задачу
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
