@@ -1,7 +1,7 @@
 # direction: auto_parts_search
 
-GENERATED_AT: 2026-07-17T23:07:37.089139+00:00
-GIT_SHA: 4f007a3ddbc1b288358853688e40488964fa0c38
+GENERATED_AT: 2026-07-17T23:10:02.670696+00:00
+GIT_SHA: 5ac60c5e17f7eb5455f9f9bd636867c8488d5244
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: auto_parts_search
