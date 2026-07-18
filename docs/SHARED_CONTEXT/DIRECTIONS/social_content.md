@@ -1,7 +1,7 @@
 # direction: social_content
 
-GENERATED_AT: 2026-07-18T22:40:39.966697+00:00
-GIT_SHA: dc44c483ba937f4222d1244a1a0383a11c39acd7
+GENERATED_AT: 2026-07-18T22:45:02.562438+00:00
+GIT_SHA: dfe2dc9bf8754df86d15e062a5c37c43cfa10b59
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: social_content
