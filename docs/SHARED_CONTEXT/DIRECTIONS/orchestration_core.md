@@ -1,7 +1,7 @@
 # direction: orchestration_core
 
-GENERATED_AT: 2026-07-21T19:35:02.215442+00:00
-GIT_SHA: 391017ab1d95a3a0b88a33c8be3897b63b654916
+GENERATED_AT: 2026-07-21T20:00:01.459245+00:00
+GIT_SHA: a80a489d590fc87d844f02c5d53d55025a7ff147
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: orchestration_core
