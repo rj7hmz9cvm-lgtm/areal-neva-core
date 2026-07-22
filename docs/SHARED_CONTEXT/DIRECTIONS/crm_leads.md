@@ -1,7 +1,7 @@
 # direction: crm_leads
 
-GENERATED_AT: 2026-07-22T10:32:11.775809+00:00
-GIT_SHA: 0a3240107a5fe86a48dcab483378ee51cdb8bb76
+GENERATED_AT: 2026-07-22T10:35:02.580498+00:00
+GIT_SHA: 2faf9526b1bdab3cb0d4f25afef6ceda8f6627f4
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: crm_leads
