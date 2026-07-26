@@ -1,7 +1,7 @@
 # direction: general_chat
 
-GENERATED_AT: 2026-07-26T04:20:03.091067+00:00
-GIT_SHA: 5fa58ee246ec48958989a8a82c5a9bd3d2db2be5
+GENERATED_AT: 2026-07-26T04:47:20.295905+00:00
+GIT_SHA: 84b4070d1b95c2ebbec0954b06ef983c8cd7997b
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: general_chat
