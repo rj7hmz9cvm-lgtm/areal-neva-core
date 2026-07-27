@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-27T17:25:02.441398+00:00
-GIT_SHA: 89a1daf6707e06507548e1e9c94b8716bb87dd8a
+GENERATED_AT: 2026-07-27T17:53:08.493552+00:00
+GIT_SHA: 3661cb501964333f436abf18f4428b8a450e923d
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | UNKNOWN | 0 | 0 |
+| 2 | STROYKA | UNKNOWN | 0 | 1 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -71,26 +71,26 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 0
-failed_24h: 0
+failed_24h: 1
 commits_last_7d: 0
-markers_missing: 14
+markers_missing: 13
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
 - TOPIC2_PRICE_ENRICHMENT_DONE
-- TOPIC2_PRICE_CHOICE_CONFIRMED
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
 - TOPIC2_PDF_CREATED
+- TOPIC2_PDF_CYRILLIC_OK
 last_failed:
+- d019c976 | STROYKA_QG_FAILED:TOO_FEW_ITEMS:0
 - 128047d6 | STALE_TIMEOUT
 - 59424786 | NO_VALID_ARTIFACT
-- ad69b7c1 | STALE_TIMEOUT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 14
+NEXT_ACTION: live-test / close missing markers: 13
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
