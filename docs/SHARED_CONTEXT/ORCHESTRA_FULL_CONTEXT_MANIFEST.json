@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-29T00:00:01.930318+00:00",
-  "git_sha_before_commit": "4035782e38676e92f8db24ca9539e631930a437d",
+  "generated_at_utc": "2026-07-29T00:29:42.792770+00:00",
+  "git_sha_before_commit": "5805e44f1e8fd1842f873422cc66de5401c42933",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 435,
@@ -3490,7 +3490,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34298,
+      "size_bytes": 34307,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3508,7 +3508,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 386983,
+      "size_bytes": 386888,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3553,7 +3553,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 5225,
+      "size_bytes": 5130,
       "sha256": "",
       "chars": 0,
       "chunks": 0
