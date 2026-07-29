@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-28T23:59:37.201482+00:00
-GIT_SHA: cc9aa086185ed463804431f6ae639e6783040675
+GENERATED_AT: 2026-07-29T00:00:02.022416+00:00
+GIT_SHA: 4035782e38676e92f8db24ca9539e631930a437d
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -28,10 +28,7 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- created:NEW
-- clarified:Отменяю задачу
-- continued:Отмена задачи
-- cancelled
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
