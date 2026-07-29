@@ -1,7 +1,7 @@
 # direction: spreadsheets
 
-GENERATED_AT: 2026-07-29T02:30:01.334048+00:00
-GIT_SHA: 2ca982a89dd36b4ce3b9777def4a2acfeb6acf47
+GENERATED_AT: 2026-07-29T02:35:02.930142+00:00
+GIT_SHA: 2eb11d09ed4ed665e6aefbe165608299109c8729
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: spreadsheets
