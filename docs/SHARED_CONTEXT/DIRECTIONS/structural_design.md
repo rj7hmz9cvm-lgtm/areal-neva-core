@@ -1,7 +1,7 @@
 # direction: structural_design
 
-GENERATED_AT: 2026-07-30T04:35:02.873365+00:00
-GIT_SHA: 702ec5cbb73655f06faeae12e583683077cd22f9
+GENERATED_AT: 2026-07-30T05:02:43.920189+00:00
+GIT_SHA: b1f86de3176801f9751c62374671fea116b18ba5
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: structural_design
