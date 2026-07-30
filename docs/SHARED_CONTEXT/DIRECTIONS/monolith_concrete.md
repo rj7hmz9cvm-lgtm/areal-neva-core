@@ -1,7 +1,7 @@
 # direction: monolith_concrete
 
-GENERATED_AT: 2026-07-30T21:40:02.329797+00:00
-GIT_SHA: 39cfd63a72a53861d6368aa0233746b817863e07
+GENERATED_AT: 2026-07-30T22:06:34.629665+00:00
+GIT_SHA: d44610d1f1538d252e846199c0b6d04f8d7bdb6a
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: monolith_concrete
