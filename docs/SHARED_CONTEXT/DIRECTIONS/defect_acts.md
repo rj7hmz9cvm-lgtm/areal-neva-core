@@ -1,7 +1,7 @@
 # direction: defect_acts
 
-GENERATED_AT: 2026-07-30T06:35:02.966649+00:00
-GIT_SHA: d0379c36e57866e63b9ea45ba3b64db6556adfeb
+GENERATED_AT: 2026-07-30T07:03:00.974165+00:00
+GIT_SHA: d45fed97e3811017bf5210787509f60259b7cacf
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: defect_acts
