@@ -1,7 +1,7 @@
 # direction: ocr_photo
 
-GENERATED_AT: 2026-08-02T16:20:02.512864+00:00
-GIT_SHA: fa46dc484c9603c93abb4f99c3b82b4c4fa6b80f
+GENERATED_AT: 2026-08-02T16:48:42.652324+00:00
+GIT_SHA: 3e9e7ded8a9c72afd158147cba004c555ee7abfa
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: ocr_photo
