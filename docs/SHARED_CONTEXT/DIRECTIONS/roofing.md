@@ -1,7 +1,7 @@
 # direction: roofing
 
-GENERATED_AT: 2026-08-02T00:20:02.945484+00:00
-GIT_SHA: 807c49c3352e581d80ec90ac2ccdd895d8fc7e32
+GENERATED_AT: 2026-08-02T00:46:10.348712+00:00
+GIT_SHA: 03425da719e5e88427baf7e7a194baabb4ed5e63
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: roofing
