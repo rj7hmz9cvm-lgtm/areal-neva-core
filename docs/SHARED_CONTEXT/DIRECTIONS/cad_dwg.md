@@ -1,7 +1,7 @@
 # direction: cad_dwg
 
-GENERATED_AT: 2026-08-02T20:20:02.484555+00:00
-GIT_SHA: 5ab9f06fa176bf2fc8d103099b7e3d7937f40114
+GENERATED_AT: 2026-08-02T20:49:10.427502+00:00
+GIT_SHA: b18f29c56bbd762f5aacbb9e04b5919af11ecd8c
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: cad_dwg
