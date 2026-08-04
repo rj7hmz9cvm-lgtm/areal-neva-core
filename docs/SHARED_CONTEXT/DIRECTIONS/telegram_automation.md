@@ -1,7 +1,7 @@
 # direction: telegram_automation
 
-GENERATED_AT: 2026-08-04T05:52:57.429472+00:00
-GIT_SHA: 7af65b4903371420732d0841320e5cdf3d6c9bf2
+GENERATED_AT: 2026-08-04T05:55:03.011152+00:00
+GIT_SHA: f4bc41d2790ba1d56f462b9a706ce140d6076fd4
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: telegram_automation
