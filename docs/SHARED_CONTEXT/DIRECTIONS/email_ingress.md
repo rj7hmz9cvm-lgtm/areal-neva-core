@@ -1,7 +1,7 @@
 # direction: email_ingress
 
-GENERATED_AT: 2026-08-04T23:25:37.405408+00:00
-GIT_SHA: b417e9383946b0d4754c3f966256e9e6c55cd8c7
+GENERATED_AT: 2026-08-04T23:30:02.702071+00:00
+GIT_SHA: 44e9a8dc2bef60919fb0c969abb97f19c99cd1db
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: email_ingress
