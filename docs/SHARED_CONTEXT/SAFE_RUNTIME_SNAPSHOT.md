@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-08-05T23:00:00.739552+00:00
-git_sha_before_commit: 033dbb40443c905db91c188b1ec429ecebef4d0f
+generated_at_utc: 2026-08-05T23:05:01.721880+00:00
+git_sha_before_commit: ca238d1b548998fb4dad206c4542c9eb29da49f3
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+ca238d1b5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 033dbb404 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 a12a2c647 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 66afd9cc3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,89 +40,88 @@ b20acd8fe FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 2cf38f5f2 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 a9ec13751 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6744a962d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-4f318d26a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 033dbb40443c905db91c188b1ec429ecebef4d0f
-Author: Ila <ilakuznecov@mac.local>
-Date:   Thu Aug 6 01:35:07 2026 +0300
+commit ca238d1b548998fb4dad206c4542c9eb29da49f3
+Author: root <root@graceful-olive.ptr.network>
+Date:   Thu Aug 6 02:00:05 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
- .../DIRECTIONS/construction_search.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
- .../DIRECTIONS/google_drive_storage.md             |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
- .../DIRECTIONS/orchestration_core.md               |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
- .../DIRECTIONS/technical_supervision.md            |   4 +-
- .../DIRECTIONS/telegram_automation.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 158 ++++++++++-----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 +++----
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 248 insertions(+), 248 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  6 +--
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |  2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |  4 +-
+ .../DIRECTIONS/construction_search.md              |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |  4 +-
+ .../DIRECTIONS/google_drive_storage.md             |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |  4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |  4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |  4 +-
+ .../DIRECTIONS/orchestration_core.md               |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |  4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |  4 +-
+ .../DIRECTIONS/technical_supervision.md            |  4 +-
+ .../DIRECTIONS/telegram_automation.md              |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |  4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |  4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |  6 +--
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  6 +--
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  6 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |  4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 58 +++++++++++-----------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  4 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 48 +++++++++---------
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |  4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  4 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |  4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |  4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |  4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |  4 +-
+ 73 files changed, 198 insertions(+), 198 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -285,6 +285,11 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 5393
 
 ## LATEST_MEMORY_20
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 33, "updated_at": "2026-08-05T23:00:01.095679+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-08-05T23:00:01.096490+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-08-05T23:00:01.067191+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-08-05T23:00:01.067781+00:00
+- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-08-05T23:00:01.018967+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-08-05T23:00:01.019468+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-08-05T23:00:01.006467+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-08-05T23:00:01.007193+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-08-05T23:00:00.968966+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-08-05T23:00:00.969783+00:00
 - topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-08-05T23:00:00.841761+00:00
 - topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.841675+00:00
 - topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-08-05T23:00:00.841564+00:00
@@ -300,11 +305,6 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.839923+00:00
 - topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.839692+00:00
 - topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-08-05T23:00:00.839489+00:00
-- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.839372+00:00
-- topic_210_file_804884fa-c197-4dca-8e1d-5bbaec49e36f|{"task_id": "804884fa-c197-4dca-8e1d-5bbaec49e36f", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.839063+00:00
-- topic_210_file_af2ca8ad-cfae-4109-935e-c167bd83bd6a|{"task_id": "af2ca8ad-cfae-4109-935e-c167bd83bd6a", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.838790+00:00
-- topic_210_file_69b99676-9f07-42cb-858f-fc7b92810beb|{"task_id": "69b99676-9f07-42cb-858f-fc7b92810beb", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.838458+00:00
-- topic_210_file_da881d3e-cbab-452b-84bb-3e2439a9f138|{"task_id": "da881d3e-cbab-452b-84bb-3e2439a9f138", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-05T23:00:00.838383+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
