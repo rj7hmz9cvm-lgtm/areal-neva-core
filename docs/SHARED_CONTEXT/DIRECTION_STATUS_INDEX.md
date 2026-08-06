@@ -1,7 +1,7 @@
 # DIRECTION_STATUS_INDEX
 
-GENERATED_AT: 2026-08-06T18:33:09.929340+00:00
-GIT_SHA: f170e351c85017a256493c58cdf204280f7ebc89
+GENERATED_AT: 2026-08-06T18:35:02.484332+00:00
+GIT_SHA: 6865d2638bf5bbdedca9b498ebc33a0b5fae9d90
 Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 
 | direction | enabled | engine | topic_ids | bound_status |
