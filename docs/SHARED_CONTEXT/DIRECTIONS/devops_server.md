@@ -1,7 +1,7 @@
 # direction: devops_server
 
-GENERATED_AT: 2026-08-06T05:00:59.326314+00:00
-GIT_SHA: 6d2e2128df26df58abdc4a5aa05b712f84590abc
+GENERATED_AT: 2026-08-06T05:05:03.197800+00:00
+GIT_SHA: b630dde06564759c75967501d570a55aae21e8f4
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: devops_server
