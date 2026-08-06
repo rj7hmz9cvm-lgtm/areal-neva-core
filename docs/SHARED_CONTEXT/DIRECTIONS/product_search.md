@@ -1,7 +1,7 @@
 # direction: product_search
 
-GENERATED_AT: 2026-08-06T15:05:02.476553+00:00
-GIT_SHA: 60ae443c2b63c43505ce44a6d18ba1ebdfa2380c
+GENERATED_AT: 2026-08-06T15:32:47.499591+00:00
+GIT_SHA: b22355918ad07e1677883aaa3c4578e270521322
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: product_search
