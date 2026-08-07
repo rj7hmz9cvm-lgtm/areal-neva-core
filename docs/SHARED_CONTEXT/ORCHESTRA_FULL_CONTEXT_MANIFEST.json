@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-07T11:06:07.037698+00:00",
-  "git_sha_before_commit": "1f40320bf8419ad3627f3fe9b0c6de6f17683a54",
+  "generated_at_utc": "2026-08-07T11:10:02.616003+00:00",
+  "git_sha_before_commit": "f44c00b97d3baccfa731c4ccecb4e72ba105f6cd",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 435,
@@ -3490,7 +3490,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34426,
+      "size_bytes": 34472,
       "sha256": "",
       "chars": 0,
       "chunks": 0
