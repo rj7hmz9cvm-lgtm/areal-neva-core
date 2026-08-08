@@ -1,7 +1,7 @@
 # direction: memory_archive
 
-GENERATED_AT: 2026-08-08T10:10:02.382192+00:00
-GIT_SHA: 1c5f01f7543a532432568abb2feb823a7d410521
+GENERATED_AT: 2026-08-08T10:39:18.324121+00:00
+GIT_SHA: 1fcdc313cd39bf28db701680a617498c564f7d96
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: memory_archive
