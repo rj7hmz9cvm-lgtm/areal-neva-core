@@ -1,7 +1,7 @@
 # direction: technical_supervision
 
-GENERATED_AT: 2026-08-10T02:50:02.427118+00:00
-GIT_SHA: aafd579381c940c813a48ba366007fc52432e376
+GENERATED_AT: 2026-08-10T03:18:02.677662+00:00
+GIT_SHA: bd310637004aec0b25c852161928a787c6b87cef
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: technical_supervision
