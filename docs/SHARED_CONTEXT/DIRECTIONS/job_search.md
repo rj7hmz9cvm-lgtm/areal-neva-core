@@ -1,7 +1,7 @@
 # direction: job_search
 
-GENERATED_AT: 2026-08-15T10:40:40.004066+00:00
-GIT_SHA: 24f7a0baf4bfeada8b44252372ffdee80ace5f1a
+GENERATED_AT: 2026-08-15T10:45:03.203286+00:00
+GIT_SHA: 17f6834dc221acbe5b738c3ec95360797f428bed
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: job_search
