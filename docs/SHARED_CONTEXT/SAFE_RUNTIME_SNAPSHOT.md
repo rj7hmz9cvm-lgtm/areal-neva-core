@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-08-17T14:30:02.662184+00:00
-git_sha_before_commit: 1c6672c447a17080481f7b9b9610087257bb43c2
+generated_at_utc: 2026-08-17T14:35:01.996341+00:00
+git_sha_before_commit: 38b87bcdb243749258893ec0ddd8746921af6521
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+38b87bcdb2 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 1c6672c447 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 b938d43d34 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 cd652ebdaa FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ f3a3fbb8b9 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 669572b8a3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 e22ba74a07 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 1240310675 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-b9610fc5b5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 1c6672c447a17080481f7b9b9610087257bb43c2
+commit 38b87bcdb243749258893ec0ddd8746921af6521
 Author: Ila <ilakuznecov@mac.local>
-Date:   Mon Aug 17 17:25:08 2026 +0300
+Date:   Mon Aug 17 17:30:08 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,7 +82,7 @@ Date:   Mon Aug 17 17:25:08 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   6 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
@@ -105,9 +105,9 @@ Date:   Mon Aug 17 17:25:08 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 198 ++++++++++-----------
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 158 ++++++++++-----------
  .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 +++----
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
@@ -121,7 +121,7 @@ Date:   Mon Aug 17 17:25:08 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 267 insertions(+), 267 deletions(-)
+ 73 files changed, 248 insertions(+), 248 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
