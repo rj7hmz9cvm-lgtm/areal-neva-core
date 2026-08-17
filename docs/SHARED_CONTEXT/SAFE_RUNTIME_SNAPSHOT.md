@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-08-17T19:20:36.217944+00:00
-git_sha_before_commit: 6aff180d9359da4e33e1cf5b6c167a8dc4b0804d
+generated_at_utc: 2026-08-17T19:25:01.822381+00:00
+git_sha_before_commit: da341927c8fe3c9537668618a577c3c28f8a72aa
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+da341927c8 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6aff180d93 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3c0ea8c204 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 303b058b40 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ ece2ff7018 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 5b255ae5f0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 51567b804a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 944d29f6e6 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-1b61b42cc9 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 6aff180d9359da4e33e1cf5b6c167a8dc4b0804d
-Author: Ila <ilakuznecov@mac.local>
-Date:   Mon Aug 17 21:55:08 2026 +0300
+commit da341927c8fe3c9537668618a577c3c28f8a72aa
+Author: root <root@graceful-olive.ptr.network>
+Date:   Mon Aug 17 22:20:42 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -105,9 +105,9 @@ Date:   Mon Aug 17 21:55:08 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 160 ++++++++++-----------
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 130 ++++++++++-----------
  .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 +++----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++++----
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
@@ -121,7 +121,7 @@ Date:   Mon Aug 17 21:55:08 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 249 insertions(+), 249 deletions(-)
+ 73 files changed, 234 insertions(+), 234 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -392,10 +392,10 @@ File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
   File "/root/.areal-neva-core/.venv/lib/python3.12/site-packages/aiogram/client/session/aiohttp.py", line 176, in make_request
     raise TelegramNetworkError(method=method, message=f"{type(e).__name__}: {e}") from e
 aiogram.exceptions.TelegramNetworkError: HTTP Client says - ClientConnectorDNSError: Cannot connect to host api.telegram.org:443 ssl:default [Temporary failure in name resolution]
-2026-08-17 22:20:06,780 ERROR DAEMON: Unclosed client session
-client_session: <aiohttp.client.ClientSession object at 0x70e3516235f0>
+2026-08-17 22:24:28,956 ERROR DAEMON: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7d4c7d7d39b0>
 telegram-ingress.service: Main process exited, code=exited, status=1/FAILURE
 telegram-ingress.service: Failed with result 'exit-code'.
-telegram-ingress.service: Consumed 1.581s CPU time.
-telegram-ingress.service: Scheduled restart job, restart counter is at 2.
+telegram-ingress.service: Consumed 1.524s CPU time.
+telegram-ingress.service: Scheduled restart job, restart counter is at 8.
 Started telegram-ingress.service - AREAL telegram ingress.
