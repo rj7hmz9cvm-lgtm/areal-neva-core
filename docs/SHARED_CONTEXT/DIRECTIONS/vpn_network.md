@@ -1,7 +1,7 @@
 # direction: vpn_network
 
-GENERATED_AT: 2026-08-17T15:30:02.495002+00:00
-GIT_SHA: 60508dc70cf9c5c275ad7ca8a6f35a2c5f4c1e39
+GENERATED_AT: 2026-08-17T15:35:02.718114+00:00
+GIT_SHA: d2389b09ae197c59a516de9e93e61d78a5ea40be
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: vpn_network
