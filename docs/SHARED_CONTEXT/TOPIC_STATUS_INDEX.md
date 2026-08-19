@@ -1,7 +1,7 @@
 # TOPIC_STATUS_INDEX
 
-GENERATED_AT: 2026-08-19T14:00:03.209477+00:00
-GIT_SHA: 0aa8289054fbba41b34181bd9fdba43b0e3effb3
+GENERATED_AT: 2026-08-19T14:29:09.012390+00:00
+GIT_SHA: 880df7dbb20077331d1453d2ebc75e36b18515f1
 
 | topic_id | name | role | status | active | failed_24h | source |
 |----------|------|------|--------|--------|------------|--------|
