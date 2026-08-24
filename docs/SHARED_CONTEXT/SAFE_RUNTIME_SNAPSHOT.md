@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-08-24T10:25:02.480470+00:00
-git_sha_before_commit: 3d61e360d77ac17344dbadcef830d44007183ad0
+generated_at_utc: 2026-08-24T10:50:02.115237+00:00
+git_sha_before_commit: f84baa6ad95eff48608d52345610047edf6388cc
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+f84baa6ad9 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3d61e360d7 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 37d837f433 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 864fe4b3a4 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,89 +40,88 @@ a806c5198d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 a63f821292 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 091a4bae8c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 8479deefad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-45dcb091f5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 3d61e360d77ac17344dbadcef830d44007183ad0
-Author: root <root@graceful-olive.ptr.network>
-Date:   Mon Aug 24 13:23:21 2026 +0300
+commit f84baa6ad95eff48608d52345610047edf6388cc
+Author: Ila <ilakuznecov@mac.local>
+Date:   Mon Aug 24 13:25:07 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
- .../DIRECTIONS/construction_search.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
- .../DIRECTIONS/google_drive_storage.md             |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
- .../DIRECTIONS/orchestration_core.md               |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
- .../DIRECTIONS/technical_supervision.md            |   4 +-
- .../DIRECTIONS/telegram_automation.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 200 ++++++++++-----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++---
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 73 files changed, 269 insertions(+), 269 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  6 +--
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |  2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |  4 +-
+ .../DIRECTIONS/construction_search.md              |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |  4 +-
+ .../DIRECTIONS/google_drive_storage.md             |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |  4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |  4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |  4 +-
+ .../DIRECTIONS/orchestration_core.md               |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |  4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |  4 +-
+ .../DIRECTIONS/technical_supervision.md            |  4 +-
+ .../DIRECTIONS/telegram_automation.md              |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |  4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |  4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |  6 +--
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  6 +--
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  6 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |  4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 18 ++++----
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  4 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 48 +++++++++++-----------
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |  4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  4 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |  4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |  4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |  4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |  4 +-
+ 73 files changed, 178 insertions(+), 178 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -199,15 +199,31 @@ docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|3056
-- CANCELLED|879
-- DONE|753
+- FAILED|3057
+- CANCELLED|880
+- DONE|754
 - ARCHIVED|381
 
 ## CORE_DB_OPEN_TASKS
 - 0
 
 ## LATEST_TASKS_15
+- 071666e3-fc97-4941-8a82-6f7512c4660b|500|text|DONE|отмена задачи|Вижу текущий контекст. Продолжаю по нему.
+Кратко: Новых подтверждённых живых контактов по текущему запросу не найдено
+
+checked_at: 2026-08-24T10:49:19Z
+source_s|2026-08-24 10:49:38
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|500|text|CANCELLED|https://www.ozon.ru/product/moyushchiy-pylesos-s-parom-dlya-himchistki-mebeli-kovrov-divanov-i-avtomobilya-1700-vt-dlya-|Новых подтверждённых живых контактов по текущему запросу не найдено
+
+checked_at: 2026-08-24T10:49:19Z
+source_status: PARTIAL если источник/дата не подтверждены |2026-08-24T10:49:47.054393+00:00
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|500|text|FAILED|ты в теме?|Да, в теме. 
+
+Текущие данные по алмазной резке в СПб и ЛО:
+
+1. **"АлмазСтройРезка"** 
+ - Телефон: +7 (812) 123-45-67 
+ - Цены: от 2500 ₽/м.п. (мин. заказ 15 000|2026-08-24 10:48:20
 - 8be95000-3319-4fdb-b0ac-478b8d6a8ab5|2|text|DONE|3|Выбор цен привязан к основной задаче: reliable|2026-07-27 17:50:46
 - 63ffa3d4-092b-4747-b605-ce4495fcebbf|2|text|CANCELLED|[VOICE] Мне нужно сделать расчет ангара. Высота одной стены 7 метров, высота другой стены 8 метров. Размеры 36 на 12. Ну|Выберите уровень цен для сметы:
 
@@ -241,13 +257,9 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 Основа сметы: только текущий текст задачи
 Старые сметы, ВОР, профлист и старые Drive-ссылки |2026-07-15 14:32:31
 - 4d38f053-7261-4b52-9fed-02f46c7a23a9|2|text|DONE|Задача завершена|Подтверждение принято|2026-07-15 12:02:54
-- 543774b0-bb23-46c4-8f46-6ac805a81950|2|text|DONE|4|Выбор цен привязан к основной задаче: manual|2026-07-15 11:57:35
-- 137c6019-37af-42b8-bb52-6c354c0f8a69|2|text|DONE|1|Выбор действия по файлу принят: смета|2026-07-15 11:54:45
-- 002da0a4-c252-4c87-b548-fad4b69ad757|2|drive_file|DONE|{"file_id": "1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me", "file_name": "ирина ар проект.pdf", "mime_type": "application/pdf", "ca|✅ Смета готова
-
-Объект: Индивидуальный жилой дом   Материал: монолитный железобетон и газобетон   Площадь: 151.9 м² (пятно ФП1)   Этажность: 2 надземных этажа +|2026-07-15 14:32:02
 
 ## LATEST_FAILED_10
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|500|ты в теме?|SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS|2026-08-24 10:48:20
 - d019c976-5e46-475d-bcd7-c9f349eb0ea1|2|{"file_id":"1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me","file_name":"ирина ар проект.pdf","mime_type":"application/pdf","caption"|STROYKA_QG_FAILED:TOO_FEW_ITEMS:0|2026-07-27 17:52:29
 - 128047d6-f2e5-41c9-aff2-507f630741dd|2|{"file_id":"1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me","file_name":"ирина ар проект.pdf","mime_type":"application/pdf","caption"|STALE_TIMEOUT|2026-07-15 14:52:09
 - 59424786-6dd7-4d24-8d92-53ec8bff9435|2|{"file_id":"1TunRGTRQg-4HJSKsxH-FzKN-3ceT56Me","file_name":"ирина ар проект.pdf","mime_type":"application/pdf","caption"|NO_VALID_ARTIFACT|2026-07-15 14:35:16
@@ -257,34 +269,42 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 9d7440b6-a7ab-4600-948f-e1b0e91510d4|2|Эти два файла это один проект. Посчитай стоимость строительства и материалов по проекту. Цены работ и материалов найди в|STALE_TIMEOUT|2026-07-07 16:05:42
 - e65b555f-62e2-4a86-b203-39b3c1fd110c|2|Эти два файла это один проект. Посчитай стоимость строительства и материалов по проекту. Цены работ и материалов найди в|STALE_TIMEOUT|2026-07-07 15:58:42
 - 7300d5f5-94eb-488d-95e1-2f0b516740de|5|{"file_id": "1E1iHSjskAwDbfr3xk8EUsD3KP2FBab-i", "file_name": "photo_-1003725299009_12206.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-07-07 12:46:28
-- 2d607bf6-c874-4a5b-9cfd-f7d89b44f866|5|{"file_id": "1eqCReGl0w3ra1m5_Qn0oX9CcYxvWor0v", "file_name": "photo_-1003725299009_12208.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-07-07 12:46:28
 
 ## LATEST_TASK_HISTORY_20
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|cancelled|2026-08-24T10:49:47.054821+00:00
+- 071666e3-fc97-4941-8a82-6f7512c4660b|ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK|2026-08-24 10:49:38
+- 071666e3-fc97-4941-8a82-6f7512c4660b|created:NEW|2026-08-24T10:49:37.372723+00:00
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|reply_sent:p6_topic500_search_result|2026-08-24 10:49:19
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION|2026-08-24 10:49:19
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|P6_TOPIC500_CLOSED_STALE_SEARCH_SESSION_BEFORE_RUN|2026-08-24 10:49:12
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE|2026-08-24 10:49:12
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|state:IN_PROGRESS|2026-08-24 10:49:11
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|PATCH_GLOBAL_HISTORICAL_MEMORY_RECALL_V1:SKIP_TOPIC500_EXPLICIT_SEARCH|2026-08-24 10:49:11
+- 34490737-d0a5-4b14-a39b-c4986cfb41cd|created:NEW|2026-08-24T10:49:10.965678+00:00
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|reply_sent:error|2026-08-24 10:48:20
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS|2026-08-24 10:48:19
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|result:Да, в теме. 
+
+Текущие данные по алмазной резке в СПб и ЛО:
+
+1. **"АлмазСтройРезка"** 
+ - Телефон: +7 (812) 123-45-67 
+ - Цены: от 2500 ₽/м.п. (мин. заказ 15 000 ₽) 
+
+2. **"Б|2026-08-24 10:48:19
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|state:IN_PROGRESS|2026-08-24 10:48:08
+- 0e670fb0-71bc-4091-8b15-1e0557c55cf1|created:NEW|2026-08-24T10:48:07.096034+00:00
 - d019c976-5e46-475d-bcd7-c9f349eb0ea1|PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:DONE|2026-07-27 17:52:29
 - d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_LOGISTICS_DISTANCE_KM:0|2026-07-27 17:52:29
 - d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_CHOICE_CONFIRMED:reliable|2026-07-27 17:52:26
 - d019c976-5e46-475d-bcd7-c9f349eb0ea1|PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:START|2026-07-27 17:52:26
 - d019c976-5e46-475d-bcd7-c9f349eb0ea1|PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:PARENT_RAW_ENRICHED|2026-07-27 17:52:26
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_FINAL_GATE_V1:CLEARED|2026-07-27 17:52:26
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_SONAR_DONE:formwork_material,formwork_work,rebar_work,sand_work,gravel_work|2026-07-27 17:52:25
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_SOURCE_FOUND:gravel_work:stroikahome.ru:CONFIRMED|2026-07-27 17:52:25
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Устройство щебеночного основания с уплотнением работы|2026-07-27 17:52:02
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_CACHE_BEFORE_SONAR:gravel_work|2026-07-27 17:52:02
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_SOURCE_FOUND:sand_work:Фундамент98:CONFIRMED|2026-07-27 17:52:02
-- 63ffa3d4-092b-4747-b605-ce4495fcebbf|cancelled|2026-07-27T17:51:58.466369+00:00
-- 63ffa3d4-092b-4747-b605-ce4495fcebbf|continued:Отмена задачи|2026-07-27T17:51:55.040136+00:00
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Устройство песчаной подушки с послойным уплотнением работы|2026-07-27 17:51:53
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_CACHE_BEFORE_SONAR:sand_work|2026-07-27 17:51:53
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_SOURCE_FOUND:rebar_work:fundament-spb.com:CONFIRMED|2026-07-27 17:51:53
-- 63ffa3d4-092b-4747-b605-ce4495fcebbf|clarified:Отменяю задачу|2026-07-27T17:51:50.915139+00:00
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Армирование фундаментной плиты работы|2026-07-27 17:51:29
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_CACHE_BEFORE_SONAR:rebar_work|2026-07-27 17:51:29
-- d019c976-5e46-475d-bcd7-c9f349eb0ea1|TOPIC2_PRICE_SOURCE_FOUND:formwork_work:Ds Structures:CONFIRMED|2026-07-27 17:51:29
 
 ## MEMORY_DB_COUNT
-- 5393
+- 5394
 
 ## LATEST_MEMORY_20
+- topic_500_archive_0e670fb0|{"task_id": "0e670fb0-71bc-4091-8b15-1e0557c55cf1", "chat_id": "-1003725299009", "topic_id": 500, "direction": "internet_search", "engine": "search_supplier", "input_type": "text",|2026-08-24T10:48:19.858610
 - topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 33, "updated_at": "2026-08-24T10:23:14.814206+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-08-24T10:23:14.815275+00:00
 - topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-08-24T10:23:14.790765+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-08-24T10:23:14.791844+00:00
 - topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-08-24T10:23:14.742711+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-08-24T10:23:14.743166+00:00
@@ -304,11 +324,8 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-08-24T10:23:14.569726+00:00
 - topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-24T10:23:14.569605+00:00
 - topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-08-24T10:23:14.569144+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-08-24T10:23:14.568889+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed with result 'exit-code'.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1.
 Started areal-task-worker.service - Areal Task Worker.
@@ -367,15 +384,10 @@ areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 18h 59min 10.416s CPU time, 189.8M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
+/root/.areal-neva-core/task_worker.py:6968: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  checked_at = _p6t500_dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-08-22 04:15:42,815 ERROR DAEMON: Failed to fetch updates - TelegramNetworkError: HTTP Client says - Request timeout error
-2026-08-22 04:15:42,815 WARNING DAEMON: Sleep for 2.976394 seconds and try again... (tryings = 5, bot id = 8216054898)
-2026-08-22 04:15:55,932 INFO DAEMON: Connection established (tryings = 6, bot id = 8216054898)
-2026-08-23 04:13:46,055 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
-2026-08-23 04:13:46,066 WARNING DAEMON: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8216054898)
-2026-08-23 04:13:47,100 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
-2026-08-23 04:13:47,100 WARNING DAEMON: Sleep for 1.444180 seconds and try again... (tryings = 1, bot id = 8216054898)
 2026-08-23 04:14:27,545 INFO DAEMON: Connection established (tryings = 2, bot id = 8216054898)
 2026-08-24 04:14:22,719 ERROR DAEMON: Failed to fetch updates - TelegramRetryAfter: Telegram server says - Flood control exceeded on method 'GetUpdates'. Retry in 5 seconds.
 Original description: Too Many Requests: retry after 5
@@ -399,3 +411,10 @@ Original description: Too Many Requests: retry after 5
 2026-08-24 04:33:21,089 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
 2026-08-24 04:33:21,089 WARNING DAEMON: Sleep for 1.199201 seconds and try again... (tryings = 1, bot id = 8216054898)
 2026-08-24 04:33:55,215 INFO DAEMON: Connection established (tryings = 2, bot id = 8216054898)
+2026-08-24 13:48:07,108 INFO DAEMON: Task 0e670fb0-71bc-4091-8b15-1e0557c55cf1 created state=NEW topic_id=500
+2026-08-24 13:48:07,111 INFO DAEMON: Update id=262222510 is handled. Duration 118 ms by bot id=8216054898
+2026-08-24 13:49:10,970 INFO DAEMON: Task 34490737-d0a5-4b14-a39b-c4986cfb41cd created state=NEW topic_id=500
+2026-08-24 13:49:10,970 INFO DAEMON: Update id=262222511 is handled. Duration 23 ms by bot id=8216054898
+2026-08-24 13:49:37,376 INFO DAEMON: Task 071666e3-fc97-4941-8a82-6f7512c4660b created state=NEW topic_id=500
+2026-08-24 13:49:37,376 INFO DAEMON: Update id=262222512 is handled. Duration 19 ms by bot id=8216054898
+2026-08-24 13:49:47,285 INFO DAEMON: Update id=262222513 is handled. Duration 235 ms by bot id=8216054898
