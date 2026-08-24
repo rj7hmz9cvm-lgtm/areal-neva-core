@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-08-24T12:55:02.033631+00:00
-git_sha_before_commit: a3ade625da7a0d3fe8ea7c74da9c6a9bded42b3f
+generated_at_utc: 2026-08-24T13:23:53.387532+00:00
+git_sha_before_commit: 36e847b7674962faeec8135bf51ed032d2163f1a
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+36e847b767 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 a3ade625da FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 ac0d149469 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 0ceffed960 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ f9763cbb80 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 1d0e863e2c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 ffb69f0397 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 a7dd441b1e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-1d5a3b07de FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit a3ade625da7a0d3fe8ea7c74da9c6a9bded42b3f
-Author: root <root@graceful-olive.ptr.network>
-Date:   Mon Aug 24 15:53:58 2026 +0300
+commit 36e847b7674962faeec8135bf51ed032d2163f1a
+Author: Ila <ilakuznecov@mac.local>
+Date:   Mon Aug 24 15:55:07 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
