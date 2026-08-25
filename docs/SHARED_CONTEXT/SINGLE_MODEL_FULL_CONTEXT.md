@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-08-25T22:05:02.530098+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:16.081788+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -4483,8 +4483,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-08-25T22:05:02.177582+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.754654+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -5353,8 +5353,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-08-25T22:05:02.218700+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.795925+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -6047,8 +6047,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-08-25T22:05:02.263617+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.835377+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -6150,8 +6150,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-08-25T22:05:02.293317+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.860640+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6760,8 +6760,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-08-25T22:05:02.333105+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.888737+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -7332,8 +7332,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-08-25T22:05:02.365922+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.926484+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -7436,8 +7436,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-08-25T22:05:02.394858+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.954214+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7532,8 +7532,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-08-25T22:05:02.432244+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:15.985385+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7625,8 +7625,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-08-25T22:05:02.461880+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:16.016592+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7729,8 +7729,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-08-25T22:05:02.492444+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:16.046664+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7838,8 +7838,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-08-25T22:05:02.518148+00:00
-GIT_SHA: d7ceadb4ca6aaee5b0cbfdb2b265a9ea841bff4d
+GENERATED_AT: 2026-08-25T22:31:16.073740+00:00
+GIT_SHA: 21802d555f41946aaaac7aa729ae1cdadd8bd019
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
