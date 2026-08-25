@@ -1,7 +1,7 @@
 # direction: photo_cleanup
 
-GENERATED_AT: 2026-08-25T04:56:50.124301+00:00
-GIT_SHA: a7817dca4c4427d61e5a86e363eae733eb0e90b1
+GENERATED_AT: 2026-08-25T05:00:03.256414+00:00
+GIT_SHA: 899803558e50bc24c0a67ba1adaf779f7cbb4f73
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: photo_cleanup
