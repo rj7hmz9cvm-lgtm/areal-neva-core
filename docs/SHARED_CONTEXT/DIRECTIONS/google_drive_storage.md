@@ -1,7 +1,7 @@
 # direction: google_drive_storage
 
-GENERATED_AT: 2026-08-25T14:30:03.292344+00:00
-GIT_SHA: d9d52bc77261feea4b8afd3a067d17a2ff2ef213
+GENERATED_AT: 2026-08-25T14:59:40.185036+00:00
+GIT_SHA: 9d97812bcc984e97f41240adf97624424c1ebd10
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: google_drive_storage
