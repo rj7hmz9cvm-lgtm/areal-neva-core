@@ -1,0 +1,417 @@
+{
+  "chat_id": "UNKNOWN",
+  "chat_name": "TECHNICAL_QUESTIONS_VARTEMYAGI_ENGINEERING",
+  "exported_at": "2026-08-26T17:25:57Z",
+  "source_model": "Codex (GPT-5)",
+  "system": {
+    "project": "ChatGPT project Технические вопросы / AREAL-NEVA",
+    "operating_mode": [
+      "FACT_ONLY",
+      "ZERO_ASSUMPTIONS",
+      "CANON_LOCK",
+      "NO_UNSANCTIONED_CHANGES"
+    ],
+    "ssot": "GitHub repository rj7hmz9cvm-lgtm/areal-neva-core, branch main",
+    "heavy_file_storage": "Google Drive",
+    "github_export_scope": "One new CLEAN JSON file in chat_exports only; no existing repository file may be changed or overwritten by this export"
+  },
+  "architecture": {
+    "context_continuity": "GitHub CLEAN chat exports preserve verified decisions for later ChatGPT chats and other models; heavy project files and generated estimates remain on Google Drive",
+    "estimate_layers": [
+      "Client estimate: consolidated work, material and total values without internal brands or detailed specification",
+      "Internal calculation: brands, quantities, unit prices, sources, reserves and technical assumptions",
+      "Separate detailed specification: generated only when requested or needed for procurement"
+    ],
+    "calculation_reference": "Galf Design engineering calculator is the primary professional reference for radiator, underfloor-heating, heating and water-supply calculations; the internal estimate calculator is used as a working calculator and is extended only when an explicitly required item is missing",
+    "estimate_template": "M-80 workbook structure is the preferred Saint Petersburg estimate presentation reference, adapted for engineering communications"
+  },
+  "pipeline": [
+    "Read project rules and all provided project files",
+    "Inspect architectural plans and the reference OV/VK project",
+    "Count fixtures, heated areas, radiators, pipe routes and boiler-room components",
+    "Check calculations against Galf Design references and the working estimate calculator",
+    "Prepare client-facing consolidated estimate and separate internal calculation",
+    "Validate formulas, totals, visible brands and workbook structure",
+    "Store heavy source/result files on Google Drive",
+    "Write a CLEAN factual session export to GitHub for cross-chat continuity",
+    "Future chats must read this export before changing or extending the estimate"
+  ],
+  "files": {
+    "project_rules": [
+      "Технические_вопросы_инструкции_проекта(1).json",
+      "алгоритм-работы.txt",
+      "язон-файл-алгоритма.txt"
+    ],
+    "project_sources": [
+      "Вартемяги АР.pdf",
+      "Ольховка ОВ и ВК 31.07.pdf"
+    ],
+    "estimate_references": [
+      "М-80.xlsx",
+      "Спецификация Романовка Запрос 26.04.19 ВК.xlsx",
+      "Предложение Сантехработы Мира 37 (1).xlsx",
+      "Материал на Мироздание Поветкин).xlsx"
+    ],
+    "final_workbook": {
+      "name": "Смета_Вартемяги_инженерные_коммуникации_v2.xlsx",
+      "sheets": [
+        "Смета заказчику",
+        "Внутренний расчёт",
+        "Схема котельной"
+      ],
+      "google_drive_file_id": "1qyyReuTX6iE9BnzQN48s1GsgQz1ciWBp",
+      "google_drive_url": "https://docs.google.com/spreadsheets/d/1qyyReuTX6iE9BnzQN48s1GsgQz1ciWBp/edit",
+      "format": "XLSX",
+      "size_bytes": 27940,
+      "status": "FINAL_V2_VERIFIED"
+    },
+    "preliminary_workbook": {
+      "name": "Смета_Вартемяги_инженерные_коммуникации_предварительная.xlsx",
+      "google_drive_file_id": "1TTbe8cWv8nSJUWiIIwVWYvqwCtoQ0SW5",
+      "google_drive_url": "https://docs.google.com/spreadsheets/d/1TTbe8cWv8nSJUWiIIwVWYvqwCtoQ0SW5/edit",
+      "status": "PRESERVED_NOT_OVERWRITTEN"
+    },
+    "general_template": {
+      "name": "Шаблон_сметы_инженерные_коммуникации.xlsx",
+      "google_drive_file_id": "1GHjcSNMC5flE13xfNKqabRi9qLFKilUi",
+      "google_drive_url": "https://drive.google.com/file/d/1GHjcSNMC5flE13xfNKqabRi9qLFKilUi/view",
+      "location": "Root of СМЕТЫ",
+      "status": "PRESERVED_UNCHANGED"
+    }
+  },
+  "code": {
+    "source_code_changes": "None",
+    "estimate_builder_used": "build_vartemyagi_estimate_v2.mjs",
+    "repository_runtime_changes": "None",
+    "note": "The builder is a working-session implementation detail; the canonical deliverable is the verified Google Drive workbook and this factual export"
+  },
+  "patches": [],
+  "commands": [
+    "Read GitHub SSOT/bootstrap, current context, direction/topic indexes and CHAT_EXPORT_PROTOCOL.md",
+    "Inspected existing ChatGPT exports in chat_exports, including GPT_DIRECT examples",
+    "Built and recalculated the Vartemyagi XLSX estimate",
+    "Verified workbook formulas, totals, sheet names and removal of internal brands from the client sheet",
+    "Created and renamed the Google Drive object folder with object name, scope and date",
+    "Uploaded the preliminary and final V2 estimates to that folder",
+    "Prepared this new append-only GitHub CLEAN export"
+  ],
+  "db": "UNKNOWN; no database read or write was required for this engineering estimate session",
+  "memory": {
+    "purpose": "Prevent later chats and models from forgetting, replacing or independently redesigning the established engineering estimate",
+    "mandatory_start_rule": "Before any Vartemyagi or engineering-estimate work, read this export and the linked final V2 workbook",
+    "continuity_rule": "Treat approved calculations, formulas, workbook structure, source links, brands used internally and client presentation rules as the current baseline",
+    "change_rule": "Do not delete, silently replace, simplify, re-price, rebrand, restructure or overwrite the baseline without a direct owner command",
+    "extension_rule": "New information must be appended as new positions, documented corrections or a new sequential workbook version such as v3; preserve v2",
+    "cross_chat_rule": "This rule applies to new ChatGPT chats in this project and to other models or projects whenever they are given access to this GitHub SSOT",
+    "conflict_rule": "If a future instruction conflicts with the baseline or lacks critical data, stop and ask one short clarification question instead of improvising"
+  },
+  "services": {
+    "github": "Used only for read verification and creation of this one new CLEAN export file",
+    "google_drive": "Used as storage for heavy source and result files",
+    "full_context_aggregator": "Defined in repository context; live runtime state was not verified and no server action was performed",
+    "server": "Not accessed and not changed during final GitHub export"
+  },
+  "canons": [
+    "Any unsanctioned change is categorically forbidden",
+    "Only verified facts may be recorded; missing facts are UNKNOWN",
+    "Do not claim completion before validation",
+    "GitHub writes require direct owner permission; that permission was explicitly given for this session export",
+    "Heavy artifacts belong on Google Drive, not GitHub",
+    "GitHub receives one CLEAN JSON object in chat_exports and no secrets",
+    "Existing export files must never be overwritten",
+    "INSTALLED is not VERIFIED without factual checks",
+    "The current owner instruction has priority over prior drafts or assistant assumptions"
+  ],
+  "decisions": {
+    "commercial_strategy": [
+      "Prepare a competitive bare-minimum preliminary offer",
+      "Do not add equipment or functionality that the customer did not request",
+      "Client-facing rows remain understandable and consolidated; detailed brands and components stay in the internal calculation"
+    ],
+    "heating": [
+      "Bedrooms receive budget steel panel radiators, type 22, height 500 mm",
+      "All other applicable rooms receive underfloor heating",
+      "Underfloor-heating wall offset is 100 mm on every side",
+      "Underfloor-heating pipe step is 200 mm",
+      "At 200 mm step the theoretical density is 5.0 running metres per square metre, not 7.0",
+      "Accepted underfloor-heating quantity includes feeds and reserve",
+      "Each bedroom radiator is connected by its own 20 mm supply and return route to the boiler room"
+    ],
+    "boiler_room": [
+      "One budget Baxi single-circuit gas boiler, 24 kW",
+      "One budget indirect water heater, 150 L",
+      "No electric boiler",
+      "No hydraulic separator",
+      "No automation, servos, remote access or leak-protection system",
+      "No voltage stabilizer in the current competitive estimate",
+      "No DHW recirculation",
+      "Simple heating supply/return collectors without automation",
+      "Heating expansion vessel not less than 18 L",
+      "Cold-water/DHW expansion vessel 10 L",
+      "Boiler-room piping in Zeissler/TIM press stainless steel",
+      "STOUT shutoff valves and branch manifolds; water manifolds must have manual regulating handles and must not be flag-type",
+      "Underfloor-heating collector may have flowmeters but no actuators"
+    ],
+    "materials": [
+      "Use STOUT pipes and fittings for internal pricing",
+      "Use STOUT shutoff valves and water/heating branch manifolds for internal pricing",
+      "Use the least expensive suitable steel radiators for the competitive estimate",
+      "Boiler-room stainless pipe and fittings budget basis is 40000 RUB",
+      "Shutoff-valve budget basis is 15000 RUB",
+      "Boiler distribution-collector budget basis is 35000 RUB"
+    ],
+    "water_and_sanitary": [
+      "Three wall-hung toilet installations are required in rooms 02, 08 and 13",
+      "Use AlcaPlast installation with matte-black M578 button, fastening and sound insulation for the current price basis",
+      "Installation unit price supplied by the owner is 22580 RUB",
+      "Sewerage is excluded because it is already installed below the foundation",
+      "Water-supply line unit rates may consolidate pipe, insulation, collector-end fitting, water socket and sleeves into an average running-metre rate"
+    ],
+    "presentation": [
+      "Client estimate columns are work, material and total",
+      "Client estimate does not expose internal material brands unless the customer asks for a detailed specification",
+      "Transport and overhead costs are included and shown according to the workbook formulas",
+      "A separate detailed procurement specification may be created later"
+    ]
+  },
+  "estimate_continuity_contract": {
+    "status": "MANDATORY_APPEND_ONLY_BASELINE",
+    "protected_artifact": "Смета_Вартемяги_инженерные_коммуникации_v2.xlsx",
+    "owner_rule": "The estimate is a cumulative, extendable working source and must not be damaged",
+    "allowed_without_new_owner_instruction": [
+      "Read the workbook and this export",
+      "Explain the verified current calculation",
+      "Identify missing information without changing the baseline"
+    ],
+    "requires_direct_owner_instruction": [
+      "Add or change positions",
+      "Change quantities, prices, formulas, brands, structure or assumptions",
+      "Create a new estimate version",
+      "Replace any current technical decision"
+    ],
+    "forbidden": [
+      "Overwrite or delete V2",
+      "Silently recalculate using different assumptions",
+      "Add premium equipment, automation or unrequested options",
+      "Mix data from another object",
+      "Treat examples such as M-80 as project facts"
+    ],
+    "versioning": "All approved future changes go to v3, v4 and later; previous versions remain preserved"
+  },
+  "vartemyagi_calculation": {
+    "areas_m2": {
+      "internal_total": 207.0,
+      "bedrooms_10_12_total": 40.6,
+      "non_bedroom_gross": 166.4,
+      "underfloor_heating_active_after_wall_offsets": 149.1
+    },
+    "underfloor_heating": {
+      "wall_offset_mm": 100,
+      "pipe_step_mm": 200,
+      "theoretical_density_m_per_m2": 5.0,
+      "theoretical_pipe_m": 745.5,
+      "accepted_pipe_with_feeds_and_reserve_m": 820,
+      "procurement_m": 1000,
+      "procurement_coils": "2 x 500 m STOUT",
+      "loops": 12
+    },
+    "toilet_installations": {
+      "quantity": 3,
+      "rooms": [
+        "02",
+        "08",
+        "13"
+      ],
+      "unit_price_rub": 22580,
+      "material_total_rub": 67740
+    },
+    "radiators": [
+      {
+        "room": "10",
+        "area_m2": 11.7,
+        "type": 22,
+        "height_mm": 500,
+        "size_mm": "500x1000"
+      },
+      {
+        "room": "11",
+        "area_m2": 16.9,
+        "type": 22,
+        "height_mm": 500,
+        "size_mm": "500x1400"
+      },
+      {
+        "room": "12",
+        "area_m2": 12.0,
+        "type": 22,
+        "height_mm": 500,
+        "size_mm": "500x1000"
+      }
+    ],
+    "radiator_pipe_20mm": {
+      "scope": "Total supply plus return from three radiators to the boiler room",
+      "accepted_m": 90
+    },
+    "water_supply": {
+      "cold_lines": 12,
+      "hot_lines": 7,
+      "accepted_total_pipe_m": 198
+    },
+    "sewerage": {
+      "included": false,
+      "reason": "Already installed below the foundation"
+    }
+  },
+  "estimate_totals_rub": {
+    "work": 396811.0,
+    "internal_materials_before_transport": 769364.0,
+    "materials_including_3_percent_transport": 792444.92,
+    "grand_total": 1189255.92,
+    "client_internal_material_control_difference": 0.0
+  },
+  "reference_sources": {
+    "professional_calculation": [
+      {
+        "name": "Galf Design engineering calculator",
+        "url": "https://galfdesign.github.io/engineering-calculator/",
+        "use": "Primary professional calculation reference for heating, radiators, underfloor heating and water supply"
+      },
+      {
+        "name": "Galf AI analog selection",
+        "url": "https://galfai.ru/analogi/",
+        "use": "Reference for suitable product analogs"
+      }
+    ],
+    "working_calculator": {
+      "name": "Universal estimate calculator",
+      "url": "https://smeta-teplograd.ky3bkuh6at9l.chatgpt.site/",
+      "use": "Working project calculator; extend only when a required calculation or position is actually missing"
+    },
+    "pricing_and_products": [
+      {
+        "name": "Baxi ECO Life 1.24F product reference",
+        "url": "https://www.teplograd.ru/catalog/serie/nastennye_kotly/gazovyy_kotel_baxi_eco_life_1_24f"
+      },
+      {
+        "name": "Rommer GT 150 L indirect water heater reference",
+        "url": "https://www.teplograd.ru/catalog/serie/bojlery_kosvennogo_nagreva/rommer_gt_150l_napolnyy"
+      },
+      {
+        "name": "STOUT PEX-a pipe official catalog",
+        "url": "https://www.stout.ru/catalog/truby-i-fitingi/truby-iz-sshitogo-polietilena/truba-pex-a/"
+      }
+    ]
+  },
+  "google_drive": {
+    "parent_folder": {
+      "name": "СМЕТЫ",
+      "id": "1EgSm-Bq_x1-gJbe1SgAt5ANM6--F4WKC",
+      "url": "https://drive.google.com/drive/folders/1EgSm-Bq_x1-gJbe1SgAt5ANM6--F4WKC"
+    },
+    "object_folder": {
+      "name": "Вартемяги — инженерные коммуникации — 26.08.2026",
+      "id": "1hMxwySsPGO1dQmRpSHU6RIsSb0b2j9oi",
+      "url": "https://drive.google.com/drive/folders/1hMxwySsPGO1dQmRpSHU6RIsSb0b2j9oi",
+      "verified_contents_count": 2
+    },
+    "storage_rule": "Heavy project PDFs, reference workbooks and generated estimate files remain on Google Drive; GitHub stores clean factual context and links"
+  },
+  "errors": [
+    {
+      "error": "The interactive estimate calculator was initially confused with an older local Excel estimate",
+      "correction": "The deployed calculator was identified and its current role was recorded"
+    },
+    {
+      "error": "An earlier assistant made unauthorized GitHub changes outside the user's intended scope",
+      "correction": "Absolute no-unsanctioned-change rule confirmed; this export is explicitly authorized and limited to one new chat_exports file"
+    },
+    {
+      "error": "Initial boiler-room draft included Viessmann, an electric boiler and an expensive ACV tank",
+      "correction": "Replaced by the approved competitive basis: one Baxi 24 kW single-circuit gas boiler and one budget 150 L indirect tank"
+    },
+    {
+      "error": "Initial spoken approximation suggested about 7 m of pipe per m2 at 200 mm step",
+      "correction": "Checked geometry gives 5.0 m/m2 theoretical; final accepted quantity is 820 m including feeds and reserve"
+    },
+    {
+      "error": "Internal brands were initially visible on the client estimate sheet",
+      "correction": "Brands were removed from the client sheet and retained only in the internal calculation"
+    },
+    {
+      "error": "Initial Google Drive folder name was too generic",
+      "correction": "Folder renamed to Вартемяги — инженерные коммуникации — 26.08.2026"
+    },
+    {
+      "error": "A raw GitHub URL read failed in one attempt",
+      "correction": "Connected GitHub file access was used successfully"
+    }
+  ],
+  "solutions": [
+    "Use a two-layer estimate so the customer sees simple work/material/total values while the company retains a procurement-grade internal calculation",
+    "Use a protected versioned workbook rather than rewriting the same file",
+    "Use Galf Design as the professional engineering reference and M-80 as the presentation reference",
+    "Store large artifacts on Google Drive and preserve stable links in the GitHub CLEAN export",
+    "Record explicit exclusions to prevent later chats from adding unrequested equipment",
+    "Use one append-only session export so later models can load the exact verified state"
+  ],
+  "state": {
+    "session_result": "VARTEMYAGI_ENGINEERING_ESTIMATE_V2_COMPLETE_AND_VERIFIED",
+    "estimate_status": "PRELIMINARY_COMPETITIVE_ESTIMATE, not a working OV/VK design",
+    "continuity_status": "BASELINE_PROTECTED_APPEND_ONLY",
+    "github_export_status": "PREPARED_FOR_CREATE_AND_READBACK_VERIFICATION",
+    "other_repository_files_changed_by_this_export": false
+  },
+  "what_working": [
+    "Final V2 workbook exists on Google Drive",
+    "Workbook contains client estimate, internal calculation and boiler-room scheme sheets",
+    "Formula errors equal 0",
+    "Client/internal material difference control equals 0 RUB",
+    "Client sheet contains no internal brands",
+    "Work, material, transport and grand-total formulas recalculate",
+    "Google Drive object folder has a clear object name, scope and date",
+    "Preliminary file and V2 file are both preserved",
+    "General estimate template remains unchanged in the СМЕТЫ root folder"
+  ],
+  "what_broken": [
+    "No confirmed broken formula or broken final workbook component remains",
+    "Cross-chat visibility still depends on future chats reading GitHub SSOT as required",
+    "Live full-context aggregator state was not verified in this session"
+  ],
+  "what_not_done": [
+    "A final working OV/VK design was not produced",
+    "Envelope-based room-by-room heat-loss calculation was not completed because detailed thermal inputs were not supplied",
+    "Final pipe routes and exact fitting counts require a working layout or verified site routing",
+    "Current supplier prices and availability must be rechecked immediately before procurement",
+    "No new client PDF was created as part of the final continuity export",
+    "No server FULL chat export was created",
+    "No Telegram canon, runtime engine, README, project index, configuration or LATEST_HANDOFF file was changed"
+  ],
+  "current_breakpoint": "For the next approved revision, start from the protected V2 workbook and this export, obtain only the missing project facts, recheck current Saint Petersburg prices, then create v3 without modifying or deleting v2",
+  "root_causes": [
+    "Earlier loss of continuity occurred because calculations, links and owner decisions were not kept together in one durable factual export",
+    "Assistant improvisation occurred when examples or typical solutions were treated as requested equipment",
+    "Customer-facing and internal procurement detail were previously mixed in one presentation layer",
+    "Unversioned edits create a risk that later chats silently replace an approved estimate"
+  ],
+  "verification": [
+    "Final workbook recalculation: work 396811.00 RUB",
+    "Final workbook recalculation: materials including 3 percent transport 792444.92 RUB",
+    "Final workbook recalculation: grand total 1189255.92 RUB",
+    "Internal materials before transport 769364.00 RUB",
+    "Client/internal material control difference 0.00 RUB",
+    "Workbook formula errors 0",
+    "Client-sheet internal-brand check passed",
+    "Final Google Drive V2 file ID verified as 1qyyReuTX6iE9BnzQN48s1GsgQz1ciWBp",
+    "Google Drive object folder verified with exactly two Vartemyagi estimate files",
+    "JSON syntax and mandatory-field verification must pass before GitHub creation",
+    "GitHub main readback and commit verification must pass before status becomes SUCCESS"
+  ],
+  "limits": [
+    "This CLEAN export contains only facts visible or verified during the current ChatGPT session",
+    "No passwords, tokens, credentials, private configuration values, database contents or server secrets are included",
+    "Google Drive links identify the intended artifacts but access still follows the owner's Drive permissions",
+    "The estimate is preliminary and must not be represented as a stamped engineering design",
+    "Product links and prices may change after 2026-08-26",
+    "Future models in unrelated projects can use this context only if they are provided access to this GitHub SSOT"
+  ]
+}
