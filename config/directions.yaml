@@ -323,7 +323,11 @@
         "объем работ",
         "вор",
         "фер",
-        "тер"
+        "тер",
+        "отоплен",
+        "водоснабжен",
+        "сантех",
+        "петрович"
       ],
       "input_types": [
         "text",
@@ -350,7 +354,19 @@
         "items_required",
         "total_required",
         "xlsx_required"
-      ]
+      ],
+      "strong_aliases": [
+        "калькулятор смет",
+        "сметчик",
+        "теплоград"
+      ],
+      "calculator_registry": "core.estimate_calculator_registry",
+      "calculator_url": "https://smeta-teplograd.ky3bkuh6at9l.chatgpt.site/",
+      "supplier_defaults": {
+        "heating_water": "Теплоград",
+        "general_construction": "Петрович",
+        "custom": "Другой поставщик"
+      }
     },
     "defect_acts": {
       "title": "Акты дефектов",
