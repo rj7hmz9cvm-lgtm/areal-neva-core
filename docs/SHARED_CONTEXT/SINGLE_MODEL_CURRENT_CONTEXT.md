@@ -21,6 +21,24 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
 
+## UNIVERSAL_ESTIMATE_CALCULATOR
+SITE_STATUS: VERIFIED
+CORE_STATUS: INSTALLED
+CANON_REGISTRY: core/estimate_calculator_registry.py
+DIRECTION: estimates
+URL: https://smeta-teplograd.ky3bkuh6at9l.chatgpt.site/
+ACCESS: owner_only
+
+DEFAULT_SUPPLIERS:
+- Отопление и водоснабжение → Теплоград
+- Общестроительные материалы → Петрович
+- Остальные поставщики → ручной выбор
+
+MODEL_RULE:
+- При запросах на строительную смету использовать направление estimates
+- Ссылку и параметры калькулятора получать из core/estimate_calculator_registry.py
+- Не считать цену и наличие подтверждёнными без актуальной проверки
+
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
 ### ЧТО INSTALLED НО НЕ VERIFIED (факт из NOT_CLOSED)
 DATE_UNKNOWN
