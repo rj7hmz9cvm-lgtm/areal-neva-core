@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-26T00:01:52.416327+00:00",
-  "git_sha_before_commit": "9725b8bb1d3139095776260c4c8d00f7160a6787",
+  "generated_at_utc": "2026-08-26T00:05:02.206842+00:00",
+  "git_sha_before_commit": "4e94ad299c9bffd184d4b45f307c4cc9682cfee1",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 435,
@@ -3490,7 +3490,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34639,
+      "size_bytes": 34697,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3508,7 +3508,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 387030,
+      "size_bytes": 387013,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3580,7 +3580,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 1762,
+      "size_bytes": 1745,
       "sha256": "",
       "chars": 0,
       "chunks": 0
