@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-08-26T02:05:02.271365+00:00
-git_sha_before_commit: ccebfd6a820d0a296cbb2af876cd4c7572743b63
+generated_at_utc: 2026-08-26T02:32:04.854630+00:00
+git_sha_before_commit: 1b2cf6c13b2681e3a122217e0ab4c846cc75d6b0
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+1b2cf6c13b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 ccebfd6a82 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 69aacd017d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 54f9db76ae FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ aeed61cb56 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 59b2aa8b2d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 0bcc3a143f FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 2799b9801b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-f0cdbf9fa5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit ccebfd6a820d0a296cbb2af876cd4c7572743b63
-Author: root <root@graceful-olive.ptr.network>
-Date:   Wed Aug 26 05:02:06 2026 +0300
+commit 1b2cf6c13b2681e3a122217e0ab4c846cc75d6b0
+Author: Ila <ilakuznecov@mac.local>
+Date:   Wed Aug 26 05:05:07 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -388,11 +388,6 @@ Started areal-task-worker.service - Areal Task Worker.
   checked_at = _p6t500_dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-Original description: Too Many Requests: retry after 5
-(background on this error at: https://core.telegram.org/bots/faq#my-bot-is-hitting-limits-how-do-i-avoid-this)
-2026-08-24 04:14:25,070 WARNING DAEMON: Sleep for 1.726152 seconds and try again... (tryings = 2, bot id = 8216054898)
-2026-08-24 04:14:28,203 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
-2026-08-24 04:14:28,203 WARNING DAEMON: Sleep for 2.315383 seconds and try again... (tryings = 3, bot id = 8216054898)
 2026-08-24 04:15:40,785 ERROR DAEMON: Failed to fetch updates - TelegramNetworkError: HTTP Client says - Request timeout error
 2026-08-24 04:15:40,785 WARNING DAEMON: Sleep for 3.045818 seconds and try again... (tryings = 4, bot id = 8216054898)
 2026-08-24 04:15:56,661 INFO DAEMON: Connection established (tryings = 5, bot id = 8216054898)
@@ -418,3 +413,8 @@ Original description: Too Many Requests: retry after 5
 2026-08-26 04:12:18,292 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
 2026-08-26 04:12:18,292 WARNING DAEMON: Sleep for 1.339468 seconds and try again... (tryings = 1, bot id = 8216054898)
 2026-08-26 04:12:56,193 INFO DAEMON: Connection established (tryings = 2, bot id = 8216054898)
+2026-08-26 05:13:49,073 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
+2026-08-26 05:13:49,073 WARNING DAEMON: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8216054898)
+2026-08-26 05:13:50,104 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
+2026-08-26 05:13:50,104 WARNING DAEMON: Sleep for 1.357815 seconds and try again... (tryings = 1, bot id = 8216054898)
+2026-08-26 05:14:22,405 INFO DAEMON: Connection established (tryings = 2, bot id = 8216054898)
